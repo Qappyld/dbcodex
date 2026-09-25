@@ -5,7 +5,7 @@
 - **Phase :** découverte produit / design.
 - **Dernière mise à jour :** 25 septembre 2026.
 - **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
-- **Série active :** QCM final, questions 8 à 10.
+- **Série active :** aucune ; les questions 8 et 10 sont différées à la demande de l'utilisateur.
 
 ## Décisions acquises
 
@@ -73,6 +73,13 @@
 - Si l'interface MCP Apps locale n'est pas rendue dans Codex, l'architecture devra employer une autre surface officiellement prise en charge dans Codex ; une application ouverte seulement dans un navigateur externe ne satisferait pas la V1.
 - Les sorties SVG et structurées restent utiles comme mode dégradé et pour les tests, mais ne remplacent pas le diagramme interactif dans Codex.
 
+### Stratégie de tests validée — série 5
+
+- La V1 applique une barrière qualité complète.
+- Les tests couvrent un corpus DBML, les contrats du parser, la préservation sans perte, Git et les vues.
+- Les rendus PNG/SVG disposent de références vérifiables.
+- Des parcours de bout en bout dans Codex, des contrôles d'accessibilité et des budgets de performance sont bloquants pour la sortie de la V1.
+
 ## Nuances enregistrées
 
 - `View All` est une règle propre à dbcodex ; elle ne doit pas être confondue avec la vue `Default` de DBML/dbdiagram.
@@ -95,9 +102,9 @@
 9. **Collaboration et partage :** Git couvre la V1 ; hébergement et temps réel sont reportés.
 10. **Intelligence artificielle :** Codex orchestre les outils locaux ; aucun second service d'IA ni envoi implicite de fichier dans la V1.
 11. **Sécurité et confidentialité :** traitement local, absence de télémétrie par défaut et consentement explicite pour tout futur accès réseau.
-12. **Licence et gouvernance :** question 8 du QCM final.
-13. **Stratégie de tests :** question 9 du QCM final.
-14. **Publication et distribution :** question 10 du QCM final.
+12. **Licence et gouvernance :** décision 8 différée ; à résoudre avant la première release publique contenant l'implémentation.
+13. **Stratégie de tests :** résolue par `9A`.
+14. **Publication et distribution :** décision 10 différée ; à résoudre avant la première distribution du plugin.
 
 ## Série 1 — périmètre fonctionnel de la V1 — validée
 
@@ -175,9 +182,9 @@ Sources officielles : [architecture des plugins](https://developers.openai.com/p
 
 **Réponse validée :** `7A`, avec fonctionnement interactif dans Codex exigé pour la V1.
 
-## Série 5 — QCM final
+## Série 5 — QCM final — partiellement validée puis suspendue
 
-Après cette série, il ne restera aucun arbitrage produit bloquant. Les choix précis de bibliothèques seront proposés dans la conception technique et validés par le prototype Codex.
+Il reste **deux décisions différées**, la licence et la distribution. Elles ne bloquent pas la conception technique, mais devront être reprises avant toute publication correspondante. Les choix précis de bibliothèques seront proposés dans la conception technique et validés par le prototype Codex.
 
 ### 8. Quelle licence open source adopter ?
 
@@ -185,11 +192,15 @@ Après cette série, il ne restera aucun arbitrage produit bloquant. Les choix p
 - **B — MIT.** Licence permissive très courte et familière, mais sans concession explicite de brevets.
 - **C — MPL-2.0.** Copyleft limité aux fichiers modifiés ; protège davantage les améliorations du cœur, avec plus d'obligations pour les réutilisateurs.
 
+**Décision différée à la demande de l'utilisateur.**
+
 ### 9. Quel niveau de tests imposer à la V1 ?
 
 - **A — Barrière qualité complète.** Corpus DBML, contrats du parser, préservation sans perte, tests Git et vues, rendus de référence PNG/SVG, parcours de bout en bout dans Codex, accessibilité et budgets de performance.
 - **B — Socle standard.** Tests unitaires et d'intégration, quelques parcours Codex et rendus de référence, sans corpus étendu ni budget de performance bloquant.
 - **C — Validation minimale.** Cas heureux et vérification manuelle dans Codex ; livraison plus rapide, mais risque élevé de régressions sur les fichiers complexes.
+
+**Réponse validée :** `9A`.
 
 ### 10. Quel canal de distribution viser en premier ?
 
@@ -201,6 +212,8 @@ Après cette série, il ne restera aucun arbitrage produit bloquant. Les choix p
 
 Sources officielles : [packager et tester un plugin](https://developers.openai.com/plugins/build/plugins), [soumettre un plugin](https://developers.openai.com/plugins/deploy/submission).
 
+**Décision différée à la demande de l'utilisateur.**
+
 ## Historique des séries
 
 - **Première version de la série 1 — questions 1 à 8 :** retirée sans réponse à la demande de l'utilisateur, car trop détaillée.
@@ -208,4 +221,4 @@ Sources officielles : [packager et tester un plugin](https://developers.openai.c
 - **Série 2 — questions 4 et 5 :** validée le 25 septembre 2026 avec `4A`, `5A`.
 - **Série 3 — question 6 :** validée le 25 septembre 2026 avec `6A`.
 - **Série 4 — question 7 :** validée le 25 septembre 2026 avec `7A` et la contrainte supplémentaire d'un fonctionnement interactif directement dans Codex.
-- **Série 5 — questions 8 à 10 :** proposée le 25 septembre 2026 comme QCM final condensé.
+- **Série 5 — questions 8 à 10 :** `9A` validée le 25 septembre 2026 ; les décisions 8 (licence) et 10 (distribution) ont été différées à la demande de l'utilisateur.
