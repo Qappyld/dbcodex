@@ -51,7 +51,7 @@ Le prototype utilise un SVG React et des interactions natives plutôt qu'un mote
 
 Le dépôt devient un workspace npm TypeScript comprenant quatre unités indépendantes :
 
-1. **Plugin** — manifeste `.codex-plugin/plugin.json`, skill dbcodex et déclaration `.mcp.json` pour lancer le serveur local.
+1. **Plugin** — manifeste portable `plugin.json`, skill dbcodex et déclaration portable `mcp.json` pour lancer le serveur local. Le format de compatibilité `.codex-plugin/plugin.json` / `.mcp.json` n'est pas utilisé par le nouveau projet.
 2. **Core** — contrats du modèle `SchemaGraph`, adaptateur `@dbml/core`, diagnostics, politique de chemins et stockage des dispositions.
 3. **MCP** — outils locaux, ressource UI et traduction entre contrats MCP et core.
 4. **UI** — application React/Vite autonome, sans accès direct au système de fichiers, rendue dans la surface MCP Apps.
