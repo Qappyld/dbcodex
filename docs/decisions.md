@@ -5,7 +5,7 @@
 - **Phase :** découverte produit / design.
 - **Dernière mise à jour :** 25 septembre 2026.
 - **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
-- **Série active :** QCM 1 condensé, questions 1 à 3, en attente de réponse.
+- **Série active :** QCM 2 condensé, questions 4 et 5, en attente de réponse.
 
 ## Décisions acquises
 
@@ -39,20 +39,32 @@
 - Deux ou trois architectures seront comparées avant recommandation.
 - Le parser officiel ou compatible sera privilégié, sous réserve de licence et de capacités vérifiées.
 
+### Périmètre V1 validé — série 1
+
+- La V1 inclut un éditeur DBML textuel avec validation et aperçu du diagramme synchronisés.
+- Le texte DBML reste la source de vérité pour la structure ; la sauvegarde doit préserver sans perte les syntaxes, commentaires et éléments non rendus graphiquement.
+- La disposition visuelle est également interactive : les tables peuvent être déplacées et leurs positions persistées sans imposer leur écriture dans le DBML.
+- L'édition structurelle directement depuis le diagramme reste hors V1.
+- La lecture et la validation couvrent le DBML actuel, notamment les projets multi-fichiers, groupes, couleurs, notes, `TablePartial`, `Records`, `Dep`, vues et métadonnées.
+- Les valeurs potentiellement sensibles, notamment `Records`, restent masquées par défaut.
+- Les grands diagrammes disposent de trois niveaux de détail, recherche/filtres, adapter/recentrer, auto-layout déterministe relançable et positions manuelles persistantes.
+- La minimap est reportée après la V1.
+
 ## Nuances enregistrées
 
 - `View All` est une règle propre à dbcodex ; elle ne doit pas être confondue avec la vue `Default` de DBML/dbdiagram.
 - Le déplacement des tables suppose une persistance, mais son emplacement (DBML, sidecar ou stockage Codex) reste ouvert.
 - Le parser officiel `@dbml/core` est un candidat, pas encore un choix architectural.
 - « Local-first » n'interdit pas de futures fonctions réseau explicites ; il interdit tout envoi implicite.
+- Le passage de `1A` à `1B` ajoute l'édition textuelle et la sauvegarde, mais pas l'édition structurelle depuis le diagramme.
 
 ## Points ouverts par catégorie
 
-1. **Périmètre fonctionnel V1 :** série 1 ci-dessous.
-2. **Couverture DBML :** fidélité exacte, modules, diagnostics et stratégie de compatibilité.
-3. **Édition visuelle :** opérations, source de vérité, conflits et préservation sans perte.
-4. **Système de vues :** critères de sélection, héritage, positions et cycle de vie.
-5. **Import/export :** dialectes, formats et garanties de fidélité.
+1. **Périmètre fonctionnel V1 :** résolu par la série 1.
+2. **Couverture DBML :** couverture complète en lecture/validation décidée ; détails de compatibilité à spécifier sans nouvel arbitrage produit.
+3. **Édition :** édition textuelle incluse en V1 ; édition structurelle visuelle hors V1, sauf disposition des tables.
+4. **Système de vues :** question 4 de la série 2.
+5. **Import/export :** question 5 de la série 2.
 6. **Architecture Codex :** formes d'intégration et frontières de composants.
 7. **Expérience utilisateur :** navigation, raccourcis, thèmes et accessibilité.
 8. **Persistance locale et Git :** sidecars, emplacement, diff et conflits.
@@ -63,7 +75,7 @@
 13. **Stratégie de tests :** corpus, round-trip, rendu et performance.
 14. **Publication et distribution :** packaging, versioning et canaux.
 
-## Série 1 — périmètre fonctionnel de la V1
+## Série 1 — périmètre fonctionnel de la V1 — validée
 
 Après cette série, il restera environ **12 à 18 décisions structurantes** pour l'ensemble des autres catégories. Les choix réversibles ou déjà couverts par une recommandation forte ne feront plus l'objet d'une question séparée.
 
@@ -89,7 +101,25 @@ Répondre sous la forme `1A, 2C, 3B` ; les nuances en texte libre sont acceptée
 - **B — Navigation complète.** Même socle avec minimap escamotable dès la V1 ; meilleure orientation, mais plus de travail de rendu et d'accessibilité.
 - **C — Navigation minimale.** Zoom, pan, recherche et déplacement seulement ; V1 plus courte, mais expérience limitée sur les grands modèles.
 
+**Réponses validées :** `1B` (correction remplaçant `1A`), `2A`, `3A`.
+
+## Série 2 — vues puis import/export
+
+Après cette série, il restera environ **8 à 12 décisions structurantes**. Les deux catégories restent séparées ci-dessous.
+
+### 4. Système de vues de la V1
+
+- **A — Vues DBML complètes et indépendantes.** Une vue peut sélectionner tables, groupes, schémas et notes, possède sa propre disposition, tandis que `View All` ajoute automatiquement tout nouvel élément et reste non supprimable.
+- **B — Vues limitées aux tables.** Chaque vue garde sa disposition, mais groupes, schémas et notes ne peuvent pas servir de critères.
+- **C — Filtres partageant une disposition unique.** Les vues sont plus simples, mais déplacer une table affecte toutes les vues et limite les présentations spécialisées.
+
+### 5. Import et export supplémentaires en V1
+
+- **A — Aucun format supplémentaire.** La V1 ouvre le DBML et exporte PNG/SVG comme déjà décidé ; SQL, CSV, PDF et connexions directes sont reportés.
+- **B — Ajouter import SQL et export PDF.** Facilite l'adoption, avec davantage de conversions imparfaites et de tests.
+- **C — Ajouter aussi CSV et connexion directe.** Offre une entrée très large, mais augmente fortement le périmètre et les risques liés aux données et identifiants.
+
 ## Historique des séries
 
 - **Première version de la série 1 — questions 1 à 8 :** retirée sans réponse à la demande de l'utilisateur, car trop détaillée.
-- **Série 1 condensée — questions 1 à 3 :** proposée le 25 septembre 2026, réponses en attente.
+- **Série 1 condensée — questions 1 à 3 :** validée le 25 septembre 2026 avec `1B`, `2A`, `3A`. Le choix initial `1A` a été explicitement remplacé par `1B`.
