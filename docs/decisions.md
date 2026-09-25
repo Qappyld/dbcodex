@@ -5,7 +5,7 @@
 - **Phase :** découverte produit / design.
 - **Dernière mise à jour :** 25 septembre 2026.
 - **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
-- **Série active :** QCM 3, question 6 sur le versioning, en attente de réponse.
+- **Série active :** QCM 4, question 7 sur l'architecture Codex, en attente de réponse.
 
 ## Décisions acquises
 
@@ -58,6 +58,13 @@
 - La V1 n'ajoute aucun autre format : DBML en entrée, PNG et SVG en sortie.
 - Import SQL/CSV, connexion directe et export PDF sont reportés.
 
+### Versioning validé — série 3
+
+- Le versioning du modèle est natif Git.
+- dbcodex affiche l'historique et permet de comparer les versions du DBML et des dispositions.
+- La restauration demande une confirmation explicite.
+- dbcodex ne crée jamais de commit automatiquement.
+
 ## Nuances enregistrées
 
 - `View All` est une règle propre à dbcodex ; elle ne doit pas être confondue avec la vue `Default` de DBML/dbdiagram.
@@ -73,9 +80,9 @@
 3. **Édition :** édition textuelle incluse en V1 ; édition structurelle visuelle hors V1, sauf disposition des tables.
 4. **Système de vues :** résolu par `4A`.
 5. **Import/export :** résolu par `5A`.
-6. **Architecture Codex :** formes d'intégration et frontières de composants.
+6. **Architecture Codex :** question 7 de la série 4, avec trois architectures comparées.
 7. **Expérience utilisateur :** navigation, raccourcis, thèmes et accessibilité.
-8. **Persistance locale et Git :** versioning demandé ; question 6 de la série 3.
+8. **Persistance locale et Git :** versioning Git natif résolu par `6A` ; format des dispositions à préciser dans la conception.
 9. **Collaboration et partage :** Git, liens, hébergement et éventuel temps réel.
 10. **Intelligence artificielle :** cas d'usage, consentement et validation par diff.
 11. **Sécurité et confidentialité :** modèle de menace, sandbox et télémétrie.
@@ -129,7 +136,7 @@ Après cette série, il restera environ **8 à 12 décisions structurantes**. Le
 
 **Réponses validées :** `4A`, `5A`.
 
-## Série 3 — versioning
+## Série 3 — versioning — validée
 
 Après cette question, il restera environ **6 à 10 décisions structurantes**.
 
@@ -141,9 +148,26 @@ Après cette question, il restera environ **6 à 10 décisions structurantes**.
 
 > Le choix porte sur l'historique du modèle utilisateur, pas sur le versioning des releases du plugin, qui sera traité avec la publication.
 
+**Réponse validée :** `6A`.
+
+## Série 4 — architecture du plugin Codex
+
+Après cette question, il restera environ **5 à 8 décisions structurantes**.
+
+### 7. Quelle architecture doit servir de base ?
+
+- **A — Plugin portable local-first avec skill, MCP local et UI locale.** Le skill orchestre le workflow, un serveur MCP `stdio` local expose parsing/validation/fichiers/Git, et une interface web locale fournit éditeur et diagramme. Un prototype de compatibilité vérifie d'abord l'affichage interactif dans Codex ; SVG et résultats structurés restent disponibles si la surface ne rend pas l'UI MCP Apps.
+- **B — Plugin skill + CLI sans MCP.** Le skill lance des scripts locaux et une application web autonome. C'est plus simple et entièrement local, mais le dialogue structuré entre Codex, le modèle et l'interface est plus faible.
+- **C — Plugin avec serveur MCP HTTPS distant et UI MCP Apps.** C'est le chemin le plus direct pour la publication universelle et l'UI ChatGPT, mais les fichiers locaux devraient être transmis au serveur et le fonctionnement hors ligne serait perdu.
+
+> Recommandation A : elle respecte le traitement local et garde des frontières nettes. La documentation OpenAI confirme les plugins portables, les skills et les MCP locaux `stdio`, mais documente explicitement l'UI iframe pour ChatGPT et indique que certaines capacités sont propres à la surface. La compatibilité UI Codex est donc un risque à lever avant tout choix de moteur graphique.
+
+Sources officielles : [architecture des plugins](https://developers.openai.com/plugins/concepts/plugins), [packaging](https://developers.openai.com/plugins/build/plugins), [serveur MCP](https://developers.openai.com/plugins/build/mcp-server), [UI MCP Apps](https://developers.openai.com/plugins/build/chatgpt-ui).
+
 ## Historique des séries
 
 - **Première version de la série 1 — questions 1 à 8 :** retirée sans réponse à la demande de l'utilisateur, car trop détaillée.
 - **Série 1 condensée — questions 1 à 3 :** validée le 25 septembre 2026 avec `1B`, `2A`, `3A`. Le choix initial `1A` a été explicitement remplacé par `1B`.
 - **Série 2 — questions 4 et 5 :** validée le 25 septembre 2026 avec `4A`, `5A`.
-- **Série 3 — question 6 :** proposée le 25 septembre 2026, réponse en attente.
+- **Série 3 — question 6 :** validée le 25 septembre 2026 avec `6A`.
+- **Série 4 — question 7 :** proposée le 25 septembre 2026, réponse en attente.
