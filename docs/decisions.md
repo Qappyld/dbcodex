@@ -5,7 +5,7 @@
 - **Phase :** découverte produit / design.
 - **Dernière mise à jour :** 25 septembre 2026.
 - **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
-- **Série active :** QCM 2 condensé, questions 4 et 5, en attente de réponse.
+- **Série active :** QCM 3, question 6 sur le versioning, en attente de réponse.
 
 ## Décisions acquises
 
@@ -50,6 +50,14 @@
 - Les grands diagrammes disposent de trois niveaux de détail, recherche/filtres, adapter/recentrer, auto-layout déterministe relançable et positions manuelles persistantes.
 - La minimap est reportée après la V1.
 
+### Vues et formats V1 validés — série 2
+
+- Les vues peuvent sélectionner tables, groupes, schémas et notes.
+- Chaque vue possède sa propre disposition.
+- `View All` reste non supprimable et intègre automatiquement tout nouvel élément du modèle.
+- La V1 n'ajoute aucun autre format : DBML en entrée, PNG et SVG en sortie.
+- Import SQL/CSV, connexion directe et export PDF sont reportés.
+
 ## Nuances enregistrées
 
 - `View All` est une règle propre à dbcodex ; elle ne doit pas être confondue avec la vue `Default` de DBML/dbdiagram.
@@ -63,11 +71,11 @@
 1. **Périmètre fonctionnel V1 :** résolu par la série 1.
 2. **Couverture DBML :** couverture complète en lecture/validation décidée ; détails de compatibilité à spécifier sans nouvel arbitrage produit.
 3. **Édition :** édition textuelle incluse en V1 ; édition structurelle visuelle hors V1, sauf disposition des tables.
-4. **Système de vues :** question 4 de la série 2.
-5. **Import/export :** question 5 de la série 2.
+4. **Système de vues :** résolu par `4A`.
+5. **Import/export :** résolu par `5A`.
 6. **Architecture Codex :** formes d'intégration et frontières de composants.
 7. **Expérience utilisateur :** navigation, raccourcis, thèmes et accessibilité.
-8. **Persistance locale et Git :** sidecars, emplacement, diff et conflits.
+8. **Persistance locale et Git :** versioning demandé ; question 6 de la série 3.
 9. **Collaboration et partage :** Git, liens, hébergement et éventuel temps réel.
 10. **Intelligence artificielle :** cas d'usage, consentement et validation par diff.
 11. **Sécurité et confidentialité :** modèle de menace, sandbox et télémétrie.
@@ -103,7 +111,7 @@ Répondre sous la forme `1A, 2C, 3B` ; les nuances en texte libre sont acceptée
 
 **Réponses validées :** `1B` (correction remplaçant `1A`), `2A`, `3A`.
 
-## Série 2 — vues puis import/export
+## Série 2 — vues puis import/export — validée
 
 Après cette série, il restera environ **8 à 12 décisions structurantes**. Les deux catégories restent séparées ci-dessous.
 
@@ -119,7 +127,23 @@ Après cette série, il restera environ **8 à 12 décisions structurantes**. Le
 - **B — Ajouter import SQL et export PDF.** Facilite l'adoption, avec davantage de conversions imparfaites et de tests.
 - **C — Ajouter aussi CSV et connexion directe.** Offre une entrée très large, mais augmente fortement le périmètre et les risques liés aux données et identifiants.
 
+**Réponses validées :** `4A`, `5A`.
+
+## Série 3 — versioning
+
+Après cette question, il restera environ **6 à 10 décisions structurantes**.
+
+### 6. Quel versioning intégrer à dbcodex ?
+
+- **A — Versioning Git natif.** Afficher l'historique, comparer les versions du DBML et des dispositions, et restaurer après confirmation ; dbcodex ne crée pas de commit automatiquement.
+- **B — Historique local interne.** Créer automatiquement des snapshots comparables et restaurables, même sans dépôt Git, mais maintenir un second historique propre au plugin.
+- **C — Système hybride.** Conserver des snapshots internes et proposer en plus des points de version Git explicites ; couverture maximale, mais deux historiques à comprendre et maintenir.
+
+> Le choix porte sur l'historique du modèle utilisateur, pas sur le versioning des releases du plugin, qui sera traité avec la publication.
+
 ## Historique des séries
 
 - **Première version de la série 1 — questions 1 à 8 :** retirée sans réponse à la demande de l'utilisateur, car trop détaillée.
 - **Série 1 condensée — questions 1 à 3 :** validée le 25 septembre 2026 avec `1B`, `2A`, `3A`. Le choix initial `1A` a été explicitement remplacé par `1B`.
+- **Série 2 — questions 4 et 5 :** validée le 25 septembre 2026 avec `4A`, `5A`.
+- **Série 3 — question 6 :** proposée le 25 septembre 2026, réponse en attente.
