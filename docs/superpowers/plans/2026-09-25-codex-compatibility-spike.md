@@ -113,6 +113,9 @@ Use a private ESM workspace, pin exact dependency versions in `package-lock.json
     "@dbml/core": "10.2.0",
     "write-file-atomic": "7.0.1",
     "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/write-file-atomic": "4.0.3"
   }
 }
 ```
