@@ -6,6 +6,7 @@
 - **Dernière mise à jour :** 25 septembre 2026.
 - **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
 - **Série active :** aucune ; les questions 8 et 10 sont différées à la demande de l'utilisateur.
+- **Conception active :** prototype de compatibilité Codex approuvé oralement ; spécification écrite en attente de revue finale.
 
 ## Décisions acquises
 
