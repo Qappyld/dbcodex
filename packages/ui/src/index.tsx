@@ -9,7 +9,13 @@ interface OpenResult {
   sourcePath: string;
   graph: SchemaGraph | null;
   layout: LayoutDocument;
-  diagnostics: Array<{ severity: string; message: string }>;
+  diagnostics: Array<{
+    severity: string;
+    message: string;
+    code?: string | number;
+    location?: { start: { line: number; column: number } };
+  }>;
+  layoutWarnings: string[];
 }
 
 function readStructuredContent(value: unknown): OpenResult | null {
@@ -40,9 +46,19 @@ function Root() {
     return <p role="status">Waiting for a DBML document…</p>;
   }
   if (!result.graph) {
+    const diagnostic = result.diagnostics[0];
+    const detail = diagnostic
+      ? [
+          diagnostic.message,
+          diagnostic.code === undefined ? null : `Code ${diagnostic.code}.`,
+          diagnostic.location
+            ? `Line ${diagnostic.location.start.line}, column ${diagnostic.location.start.column}.`
+            : null,
+        ].filter(Boolean).join(" ")
+      : "Unknown parser error.";
     return <section role="alert">
       <h1>Unable to display this DBML document</h1>
-      <p>{result.diagnostics[0]?.message ?? "Unknown parser error."}</p>
+      <p>{detail}</p>
     </section>;
   }
 
@@ -51,13 +67,22 @@ function Root() {
     <DiagramApp
       graph={result.graph}
       saved={saved}
+      warnings={result.layoutWarnings}
       save={async (tableId, position) => {
-        await bridge.callTool("save_layout", {
+        const response = await bridge.callTool("save_layout", {
           path: result.sourcePath,
           view: "View All",
           tableId,
           ...position,
         });
+        if (
+          response &&
+          typeof response === "object" &&
+          "isError" in response &&
+          response.isError === true
+        ) {
+          throw new Error("The layout could not be saved.");
+        }
       }}
     />
   );

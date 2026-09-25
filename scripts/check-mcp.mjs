@@ -13,6 +13,7 @@ const serverEntry = process.argv[2]
 const workspace = await mkdtemp(path.join(os.tmpdir(), "dbcodex-mcp-"));
 await mkdir(path.join(workspace, "fixtures"));
 await copyFile(path.join(root, "fixtures/basic.dbml"), path.join(workspace, "fixtures/basic.dbml"));
+await mkdir(path.join(workspace, "fixtures", "directory.dbml"));
 const transport = new StdioClientTransport({
   command: process.execPath,
   args: [serverEntry],
@@ -68,6 +69,27 @@ try {
   assert.equal(result.structuredContent?.graph?.tables?.length, 3);
   assert.equal(result.structuredContent?.graph?.relations?.length, 2);
   assert.ok(elapsedMs < 2_000, `open_dbml took ${elapsedMs.toFixed(1)} ms`);
+
+  const unknownTable = await client.callTool({
+    name: "save_layout",
+    arguments: {
+      path: "fixtures/basic.dbml",
+      view: "View All",
+      tableId: "public.does_not_exist",
+      x: 1,
+      y: 2,
+    },
+  });
+  assert.equal(unknownTable.isError, true);
+  assert.match(JSON.stringify(unknownTable), /does not exist/);
+
+  const filesystemFailure = await client.callTool({
+    name: "open_dbml",
+    arguments: { path: "fixtures/directory.dbml" },
+  });
+  assert.equal(filesystemFailure.isError, true);
+  assert.match(JSON.stringify(filesystemFailure), /failed without exposing file contents/);
+  assert.ok(!JSON.stringify(filesystemFailure).includes(workspace));
 
   const saveStarted = performance.now();
   const saveResult = await client.callTool({

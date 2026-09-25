@@ -39,7 +39,13 @@ describe("parseDbml", () => {
 
     expect(result.graph).toBeNull();
     expect(result.diagnostics).toHaveLength(1);
-    expect(result.diagnostics[0]).toMatchObject({ severity: "error" });
+    expect(result.diagnostics[0]).toMatchObject({
+      severity: "error",
+      code: 1005,
+      location: {
+        start: { line: 1, column: expect.any(Number) },
+      },
+    });
     expect(result.diagnostics[0]?.message).not.toContain("Table users {");
   });
 

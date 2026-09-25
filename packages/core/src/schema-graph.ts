@@ -1,6 +1,11 @@
 export interface Diagnostic {
   severity: "error" | "warning";
   message: string;
+  code?: string | number;
+  location?: {
+    start: { line: number; column: number };
+    end?: { line: number; column: number };
+  };
 }
 
 export interface GraphColumn {

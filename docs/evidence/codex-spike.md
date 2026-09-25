@@ -5,7 +5,7 @@ Date : 25 septembre 2026
 ## Environnement
 
 - Codex CLI : `0.155.0-alpha.16.4`
-- Plugin installé : `dbcodex@dbcodex-local`, version `0.1.0-dev.0+codex.20260925133941`
+- Plugin installé : `dbcodex@dbcodex-local`, version `0.1.0-dev.0+codex.20260925140051`
 - Système : Microsoft Windows 11 Professionnel `10.0.26200` (build 26200)
 - Node.js : `v24.13.1`
 - npm : `11.8.0`
@@ -20,9 +20,13 @@ Date : 25 septembre 2026
 | Démarrage MCP depuis le cache Codex | PASS | Handshake stdio, liste des outils et ressource MCP Apps validés depuis le chemin installé. |
 | Appel par une nouvelle session Codex | PASS | `codex exec --ephemeral` a appelé `dbcodex.open_dbml` et obtenu 3 tables et 2 relations sans commande shell. |
 | Ressource UI | PASS automatisé | URI `ui://dbcodex/diagram-v1.html`, MIME `text/html;profile=mcp-app`, HTML autonome et CSP sans domaine autorisé. |
-| Ouverture MCP installée | PASS | 26,0 ms, budget inférieur à 2 s. |
-| Sauvegarde MCP installée | PASS | 8,9 ms, budget inférieur à 100 ms. |
+| Ouverture MCP installée | PASS | 23,1 ms, budget inférieur à 2 s. |
+| Sauvegarde MCP installée | PASS | 12,0 ms, budget inférieur à 100 ms. |
 | Persistance | PASS automatisé | `public.posts` sauvegardée à `{ x: 170, y: 130 }`, puis retrouvée exactement après réouverture. |
+| Confinement des sidecars | PASS automatisé | Les symlinks/jonctions sous `.dbcodex` sont rejetés avant toute création hors workspace. |
+| Écritures concurrentes | PASS automatisé | Deux mises à jour simultanées du même sidecar sont sérialisées sans perte. |
+| Erreurs MCP | PASS automatisé | Les tables inconnues sont refusées et les erreurs inattendues ne révèlent aucun chemin absolu. |
+| Coordonnées SVG | PASS composant | Les pixels du pointeur sont transformés par l’inverse du CTM avant persistance. |
 | Dépendances UI distantes | PASS statique | `verify:offline-ui` ne trouve aucun `src`/`href` distant, `fetch`, XHR, WebSocket ou EventSource. |
 | Rendu dans Codex desktop | NON EXÉCUTÉ | Le plugin a été installé après le démarrage de la tâche courante ; une nouvelle tâche desktop est nécessaire. |
 | Glisser-déposer dans Codex desktop | NON EXÉCUTÉ | Couvert par test de composant, mais pas encore observé dans l’hôte desktop réel. |

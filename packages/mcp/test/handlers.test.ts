@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -70,5 +70,36 @@ describe("MCP handlers", () => {
 
     expect(result.structuredContent.graph).toBeNull();
     expect(JSON.stringify(result)).not.toContain("Table secret {");
+  });
+
+  it("rejects unknown table IDs without creating layout state", async () => {
+    const root = await workspace();
+    const result = await createHandlers(root).saveLayout({
+      path: "schema.dbml",
+      view: "View All",
+      tableId: "public.does_not_exist",
+      x: 120,
+      y: 80,
+    });
+
+    expect(result).toMatchObject({
+      isError: true,
+      content: [{ text: "The table does not exist in the DBML graph." }],
+    });
+    await expect(readFile(join(root, ".dbcodex", "layouts", "schema.dbml.layout.json"), "utf8"))
+      .rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("sanitizes unexpected filesystem failures", async () => {
+    const root = await workspace();
+    await mkdir(join(root, "directory.dbml"));
+
+    const result = await createHandlers(root).openDbml({ path: "directory.dbml" });
+
+    expect(result).toMatchObject({
+      isError: true,
+      content: [{ text: "dbcodex failed without exposing file contents." }],
+    });
+    expect(JSON.stringify(result)).not.toContain(root);
   });
 });

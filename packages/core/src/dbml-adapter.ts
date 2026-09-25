@@ -1,10 +1,61 @@
 import { Parser } from "@dbml/core";
 import type {
+  Diagnostic,
   GraphColumn,
   GraphRelationEnd,
   ParseResult,
   SchemaGraph,
 } from "./schema-graph.js";
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function parserDiagnostics(error: unknown): Diagnostic[] {
+  if (!error || typeof error !== "object" || !("diags" in error)) {
+    return [{ severity: "error", message: "Unable to parse DBML." }];
+  }
+  const raw = (error as { diags?: unknown }).diags;
+  if (!Array.isArray(raw)) {
+    return [{ severity: "error", message: "Unable to parse DBML." }];
+  }
+
+  const diagnostics = raw.slice(0, 20).flatMap((item): Diagnostic[] => {
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+    const diagnostic = item as {
+      code?: unknown;
+      location?: {
+        start?: { line?: unknown; column?: unknown };
+        end?: { line?: unknown; column?: unknown };
+      };
+    };
+    const code = typeof diagnostic.code === "number" || typeof diagnostic.code === "string"
+      ? diagnostic.code
+      : undefined;
+    const start = diagnostic.location?.start;
+    const end = diagnostic.location?.end;
+    const validStart = typeof start?.line === "number" && typeof start.column === "number";
+    const validEnd = typeof end?.line === "number" && typeof end.column === "number";
+    return [{
+      severity: "error",
+      message: "Unable to parse DBML.",
+      ...(code === undefined ? {} : { code }),
+      ...(validStart ? {
+        location: {
+          start: { line: start.line as number, column: start.column as number },
+          ...(validEnd ? {
+            end: { line: end.line as number, column: end.column as number },
+          } : {}),
+        },
+      } : {}),
+    }];
+  });
+  return diagnostics.length > 0
+    ? diagnostics
+    : [{ severity: "error", message: "Unable to parse DBML." }];
+}
 
 function canonicalTableId(schemaName: string | null, tableName: string): string {
   return `${schemaName ?? "public"}.${tableName}`;
@@ -40,9 +91,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
               nullable: !field.not_null,
             };
           })
-          .sort((left: GraphColumn, right: GraphColumn) =>
-            left.id.localeCompare(right.id),
-          );
+          .sort((left: GraphColumn, right: GraphColumn) => compareText(left.id, right.id));
 
         return {
           id: tableId,
@@ -51,7 +100,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
           columns,
         };
       })
-      .sort((left, right) => left.id.localeCompare(right.id));
+      .sort((left, right) => compareText(left.id, right.id));
 
     const relations = Object.values(model.refs)
       .map((reference) => {
@@ -78,7 +127,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
           target: ends[1],
         };
       })
-      .sort((left, right) => left.id.localeCompare(right.id));
+      .sort((left, right) => compareText(left.id, right.id));
 
     const graph: SchemaGraph = {
       sourcePath,
@@ -87,15 +136,10 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
     };
 
     return { graph, diagnostics: [] };
-  } catch {
+  } catch (error) {
     return {
       graph: null,
-      diagnostics: [
-        {
-          severity: "error",
-          message: "Unable to parse DBML.",
-        },
-      ],
+      diagnostics: parserDiagnostics(error),
     };
   }
 }

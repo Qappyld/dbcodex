@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -67,6 +67,38 @@ describe("layout store", () => {
     await expect(saveNodePosition(root, "main.dbml", "View All", "public.users", { x: 1, y: 2 }))
       .rejects.toMatchObject({ code: "INVALID_LAYOUT" });
     await expect(readFile(sidecar, "utf8")).resolves.toBe("{ invalid");
+  });
+
+  it("rejects a layout directory that is a symlink or junction", async () => {
+    const root = await makeTempWorkspace(roots);
+    const outside = await makeTempWorkspace(roots);
+    await symlink(outside, join(root, ".dbcodex"), process.platform === "win32" ? "junction" : "dir");
+
+    await expect(saveNodePosition(root, "main.dbml", "View All", "public.users", { x: 1, y: 2 }))
+      .rejects.toMatchObject({ code: "OUTSIDE_WORKSPACE" });
+    await expect(readdir(outside)).resolves.toEqual([]);
+  });
+
+  it("serializes concurrent updates to the same sidecar", async () => {
+    const root = await makeTempWorkspace(roots);
+
+    await Promise.all([
+      saveNodePosition(root, "main.dbml", "View All", "public.users", { x: 20, y: 30 }),
+      saveNodePosition(root, "main.dbml", "View All", "public.posts", { x: 10, y: 15 }),
+    ]);
+
+    await expect(loadLayout(root, "main.dbml")).resolves.toMatchObject({
+      document: {
+        views: {
+          "View All": {
+            nodes: {
+              "public.posts": { x: 10, y: 15 },
+              "public.users": { x: 20, y: 30 },
+            },
+          },
+        },
+      },
+    });
   });
 
   it.each([

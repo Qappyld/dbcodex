@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dbcodex",
-  "version": "0.1.0-dev.0+codex.20260925133941",
+  "version": "0.1.0-dev.0+codex.20260925140051",
   "description": "Open and explore local DBML diagrams directly in Codex.",
   "repository": "https://github.com/Qappyld/dbcodex",
   "extensions": {

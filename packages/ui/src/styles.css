@@ -65,6 +65,22 @@ body {
   font-size: 0.8125rem;
 }
 
+.save-status {
+  color: var(--dbc-muted);
+  font-size: 0.8125rem;
+}
+
+.diagram-alert {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--dbc-border);
+  background: var(--dbc-surface);
+  color: var(--dbc-text);
+}
+
+.diagram-alert p {
+  margin: 0;
+}
+
 button {
   min-height: 2rem;
   padding: 0.25rem 0.75rem;
