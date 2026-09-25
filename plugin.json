@@ -1,0 +1,21 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "dbcodex",
+  "version": "0.1.0-dev.0",
+  "description": "Open and explore local DBML diagrams directly in Codex.",
+  "repository": "https://github.com/Qappyld/dbcodex",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "dbcodex",
+        "shortDescription": "Explore local DBML diagrams in Codex",
+        "longDescription": "Open, validate, and interact with local DBML diagrams without sending schema files to an external service.",
+        "developerName": "Qappyld",
+        "category": "Developer Tools",
+        "capabilities": ["Read", "Write"],
+        "defaultPrompt": ["Open fixtures/basic.dbml with dbcodex."],
+        "brandColor": "#6D5EF5"
+      }
+    }
+  }
+}
