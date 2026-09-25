@@ -20,6 +20,11 @@ export interface SaveLayoutInput {
   y: number;
 }
 
+export type WorkspaceRoots =
+  | string
+  | readonly string[]
+  | (() => Promise<readonly string[]>);
+
 function toolError(message: string) {
   return {
     isError: true as const,
@@ -34,11 +39,37 @@ function sanitizedError(error: unknown) {
   return toolError("dbcodex failed without exposing file contents.");
 }
 
-export function createHandlers(workspaceRoot: string) {
+async function workspaceRoots(input: WorkspaceRoots): Promise<readonly string[]> {
+  if (typeof input === "function") return input();
+  return typeof input === "string" ? [input] : input;
+}
+
+async function resolveFromWorkspaceRoots(roots: WorkspaceRoots, path: string) {
+  let notFound: PathPolicyError | undefined;
+
+  for (const workspaceRoot of await workspaceRoots(roots)) {
+    try {
+      return {
+        workspaceRoot,
+        resolved: await resolveWorkspaceDbml(workspaceRoot, path),
+      };
+    } catch (error) {
+      if (error instanceof PathPolicyError && error.code === "NOT_FOUND") {
+        notFound = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw notFound ?? new PathPolicyError("NOT_FOUND", "The DBML file does not exist.");
+}
+
+export function createHandlers(roots: WorkspaceRoots) {
   return {
     openDbml: async ({ path }: OpenDbmlInput) => {
       try {
-        const resolved = await resolveWorkspaceDbml(workspaceRoot, path);
+        const { workspaceRoot, resolved } = await resolveFromWorkspaceRoots(roots, path);
         const source = await readFile(resolved.absolutePath, "utf8");
         const parsed = parseDbml(source, resolved.relativePath);
         const layout = await loadLayout(workspaceRoot, resolved.relativePath);
@@ -68,7 +99,7 @@ export function createHandlers(workspaceRoot: string) {
 
     saveLayout: async (input: SaveLayoutInput) => {
       try {
-        const resolved = await resolveWorkspaceDbml(workspaceRoot, input.path);
+        const { workspaceRoot, resolved } = await resolveFromWorkspaceRoots(roots, input.path);
         const source = await readFile(resolved.absolutePath, "utf8");
         const parsed = parseDbml(source, resolved.relativePath);
         if (!parsed.graph) {

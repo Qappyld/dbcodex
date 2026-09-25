@@ -5,8 +5,37 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
+import { fileURLToPath } from "node:url";
 import { createHandlers } from "./handlers.js";
 import { loadUiHtml, UI_RESOURCE_URI } from "./ui-resource.js";
+
+interface RootsClient {
+  getClientCapabilities(): { roots?: unknown } | undefined;
+  listRoots(): Promise<{ roots: Array<{ uri: string }> }>;
+}
+
+export function createWorkspaceRootProvider(
+  client: RootsClient,
+  fallbackRoot: string,
+): () => Promise<readonly string[]> {
+  return async () => {
+    if (!client.getClientCapabilities()?.roots) return [fallbackRoot];
+
+    try {
+      const result = await client.listRoots();
+      const roots = result.roots.flatMap(({ uri }) => {
+        try {
+          return new URL(uri).protocol === "file:" ? [fileURLToPath(uri)] : [];
+        } catch {
+          return [];
+        }
+      });
+      return roots.length > 0 ? roots : [fallbackRoot];
+    } catch {
+      return [fallbackRoot];
+    }
+  };
+}
 
 export const buildToolDefinitions = () => ({
   open: {
@@ -48,7 +77,9 @@ export function createServer(workspaceRoot: string): McpServer {
     name: "dbcodex",
     version: "0.1.0-dev.0",
   });
-  const handlers = createHandlers(workspaceRoot);
+  const handlers = createHandlers(
+    createWorkspaceRootProvider(server.server, workspaceRoot),
+  );
   const definitions = buildToolDefinitions();
 
   registerAppTool(server, "open_dbml", definitions.open, handlers.openDbml);

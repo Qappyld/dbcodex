@@ -1,5 +1,9 @@
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { buildToolDefinitions } from "../src/create-server.js";
+import {
+  buildToolDefinitions,
+  createWorkspaceRootProvider,
+} from "../src/create-server.js";
 import { UI_RESOURCE_URI } from "../src/ui-resource.js";
 
 describe("MCP tool definitions", () => {
@@ -23,5 +27,17 @@ describe("MCP tool definitions", () => {
     expect(definitions.save._meta).toEqual({
       ui: { visibility: ["app"] },
     });
+  });
+
+  it("uses file roots advertised by the MCP client", async () => {
+    const projectRoot = process.cwd();
+    const provider = createWorkspaceRootProvider({
+      getClientCapabilities: () => ({ roots: {} }),
+      listRoots: async () => ({
+        roots: [{ uri: pathToFileURL(projectRoot).href, name: "project" }],
+      }),
+    }, "fallback");
+
+    await expect(provider()).resolves.toEqual([projectRoot]);
   });
 });

@@ -42,6 +42,20 @@ describe("MCP handlers", () => {
     expect(JSON.stringify(result)).not.toContain("Table users");
   });
 
+  it("opens DBML from the client workspace root that contains it", async () => {
+    const unrelatedRoot = await mkdtemp(join(tmpdir(), "dbcodex-unrelated-"));
+    roots.push(unrelatedRoot);
+    const projectRoot = await workspace();
+
+    const result = await createHandlers([unrelatedRoot, projectRoot])
+      .openDbml({ path: "schema.dbml" });
+
+    expect(result.structuredContent).toMatchObject({
+      sourcePath: "schema.dbml",
+      graph: { sourcePath: "schema.dbml" },
+    });
+  });
+
   it("saves and returns the authoritative position", async () => {
     const root = await workspace();
     const result = await createHandlers(root).saveLayout({
