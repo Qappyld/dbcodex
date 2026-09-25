@@ -5,7 +5,7 @@
 - **Phase :** découverte produit / design.
 - **Dernière mise à jour :** 25 septembre 2026.
 - **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
-- **Série active :** QCM 4, question 7 sur l'architecture Codex, en attente de réponse.
+- **Série active :** QCM final, questions 8 à 10.
 
 ## Décisions acquises
 
@@ -65,6 +65,14 @@
 - La restauration demande une confirmation explicite.
 - dbcodex ne crée jamais de commit automatiquement.
 
+### Architecture Codex validée — série 4
+
+- La base retenue est un plugin portable local-first avec skill, serveur MCP local `stdio` et interface locale intégrée à Codex.
+- Le fonctionnement interactif directement dans Codex est une condition de sortie de la V1, et non une amélioration facultative.
+- Un prototype de compatibilité Codex constitue le jalon technique initial, avant le choix définitif du moteur graphique et des autres composants d'interface.
+- Si l'interface MCP Apps locale n'est pas rendue dans Codex, l'architecture devra employer une autre surface officiellement prise en charge dans Codex ; une application ouverte seulement dans un navigateur externe ne satisferait pas la V1.
+- Les sorties SVG et structurées restent utiles comme mode dégradé et pour les tests, mais ne remplacent pas le diagramme interactif dans Codex.
+
 ## Nuances enregistrées
 
 - `View All` est une règle propre à dbcodex ; elle ne doit pas être confondue avec la vue `Default` de DBML/dbdiagram.
@@ -72,6 +80,7 @@
 - Le parser officiel `@dbml/core` est un candidat, pas encore un choix architectural.
 - « Local-first » n'interdit pas de futures fonctions réseau explicites ; il interdit tout envoi implicite.
 - Le passage de `1A` à `1B` ajoute l'édition textuelle et la sauvegarde, mais pas l'édition structurelle depuis le diagramme.
+- La documentation OpenAI décrit certaines capacités comme propres à une surface et documente explicitement l'UI MCP Apps pour ChatGPT ; le prototype Codex doit donc vérifier le comportement réel sans présumer d'une parité d'interface.
 
 ## Points ouverts par catégorie
 
@@ -80,15 +89,15 @@
 3. **Édition :** édition textuelle incluse en V1 ; édition structurelle visuelle hors V1, sauf disposition des tables.
 4. **Système de vues :** résolu par `4A`.
 5. **Import/export :** résolu par `5A`.
-6. **Architecture Codex :** question 7 de la série 4, avec trois architectures comparées.
-7. **Expérience utilisateur :** navigation, raccourcis, thèmes et accessibilité.
+6. **Architecture Codex :** résolue par `7A`, avec compatibilité interactive Codex obligatoire.
+7. **Expérience utilisateur :** socle accessible, navigation clavier et thème sombre/clair adaptatif retenus comme exigences de conception, sans QCM supplémentaire.
 8. **Persistance locale et Git :** versioning Git natif résolu par `6A` ; format des dispositions à préciser dans la conception.
-9. **Collaboration et partage :** Git, liens, hébergement et éventuel temps réel.
-10. **Intelligence artificielle :** cas d'usage, consentement et validation par diff.
-11. **Sécurité et confidentialité :** modèle de menace, sandbox et télémétrie.
-12. **Licence et gouvernance :** licence, contributions et conduite.
-13. **Stratégie de tests :** corpus, round-trip, rendu et performance.
-14. **Publication et distribution :** packaging, versioning et canaux.
+9. **Collaboration et partage :** Git couvre la V1 ; hébergement et temps réel sont reportés.
+10. **Intelligence artificielle :** Codex orchestre les outils locaux ; aucun second service d'IA ni envoi implicite de fichier dans la V1.
+11. **Sécurité et confidentialité :** traitement local, absence de télémétrie par défaut et consentement explicite pour tout futur accès réseau.
+12. **Licence et gouvernance :** question 8 du QCM final.
+13. **Stratégie de tests :** question 9 du QCM final.
+14. **Publication et distribution :** question 10 du QCM final.
 
 ## Série 1 — périmètre fonctionnel de la V1 — validée
 
@@ -150,7 +159,7 @@ Après cette question, il restera environ **6 à 10 décisions structurantes**.
 
 **Réponse validée :** `6A`.
 
-## Série 4 — architecture du plugin Codex
+## Série 4 — architecture du plugin Codex — validée
 
 Après cette question, il restera environ **5 à 8 décisions structurantes**.
 
@@ -164,10 +173,39 @@ Après cette question, il restera environ **5 à 8 décisions structurantes**.
 
 Sources officielles : [architecture des plugins](https://developers.openai.com/plugins/concepts/plugins), [packaging](https://developers.openai.com/plugins/build/plugins), [serveur MCP](https://developers.openai.com/plugins/build/mcp-server), [UI MCP Apps](https://developers.openai.com/plugins/build/chatgpt-ui).
 
+**Réponse validée :** `7A`, avec fonctionnement interactif dans Codex exigé pour la V1.
+
+## Série 5 — QCM final
+
+Après cette série, il ne restera aucun arbitrage produit bloquant. Les choix précis de bibliothèques seront proposés dans la conception technique et validés par le prototype Codex.
+
+### 8. Quelle licence open source adopter ?
+
+- **A — Apache-2.0.** Licence permissive avec concession explicite de brevets et obligations de notices ; recommandée pour un plugin et ses futures intégrations.
+- **B — MIT.** Licence permissive très courte et familière, mais sans concession explicite de brevets.
+- **C — MPL-2.0.** Copyleft limité aux fichiers modifiés ; protège davantage les améliorations du cœur, avec plus d'obligations pour les réutilisateurs.
+
+### 9. Quel niveau de tests imposer à la V1 ?
+
+- **A — Barrière qualité complète.** Corpus DBML, contrats du parser, préservation sans perte, tests Git et vues, rendus de référence PNG/SVG, parcours de bout en bout dans Codex, accessibilité et budgets de performance.
+- **B — Socle standard.** Tests unitaires et d'intégration, quelques parcours Codex et rendus de référence, sans corpus étendu ni budget de performance bloquant.
+- **C — Validation minimale.** Cas heureux et vérification manuelle dans Codex ; livraison plus rapide, mais risque élevé de régressions sur les fichiers complexes.
+
+### 10. Quel canal de distribution viser en premier ?
+
+- **A — Marketplace locale ou de dépôt, puis annuaire public.** Installer et tester le plugin directement dans Codex depuis le dépôt ; viser l'annuaire public après stabilisation et validation de l'interface Codex.
+- **B — Annuaire public dès la V1.** Optimise la visibilité, mais impose plus tôt les exigences de soumission et, pour un MCP public, un endpoint HTTPS stable.
+- **C — GitHub uniquement.** Distribuer le code et des instructions manuelles sans packaging de plugin ; simple, mais moins naturel à installer dans Codex.
+
+> Recommandation A : la documentation OpenAI prévoit les marketplaces locales ou liées à un dépôt pour le développement et la distribution privée, tandis que la soumission publique d'un MCP attend normalement un endpoint HTTPS stable. Cela préserve le fonctionnement local-first pendant la validation Codex.
+
+Sources officielles : [packager et tester un plugin](https://developers.openai.com/plugins/build/plugins), [soumettre un plugin](https://developers.openai.com/plugins/deploy/submission).
+
 ## Historique des séries
 
 - **Première version de la série 1 — questions 1 à 8 :** retirée sans réponse à la demande de l'utilisateur, car trop détaillée.
 - **Série 1 condensée — questions 1 à 3 :** validée le 25 septembre 2026 avec `1B`, `2A`, `3A`. Le choix initial `1A` a été explicitement remplacé par `1B`.
 - **Série 2 — questions 4 et 5 :** validée le 25 septembre 2026 avec `4A`, `5A`.
 - **Série 3 — question 6 :** validée le 25 septembre 2026 avec `6A`.
-- **Série 4 — question 7 :** proposée le 25 septembre 2026, réponse en attente.
+- **Série 4 — question 7 :** validée le 25 septembre 2026 avec `7A` et la contrainte supplémentaire d'un fonctionnement interactif directement dans Codex.
+- **Série 5 — questions 8 à 10 :** proposée le 25 septembre 2026 comme QCM final condensé.
