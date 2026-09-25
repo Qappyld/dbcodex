@@ -5,7 +5,7 @@
 - **Phase :** découverte produit / design.
 - **Dernière mise à jour :** 25 septembre 2026.
 - **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
-- **Série active :** QCM 1, questions 1 à 8, en attente de réponse.
+- **Série active :** QCM 1 condensé, questions 1 à 3, en attente de réponse.
 
 ## Décisions acquises
 
@@ -65,7 +65,7 @@
 
 ## Série 1 — périmètre fonctionnel de la V1
 
-Après cette série, il restera environ **48 à 64 décisions** à traiter dans les treize autres catégories ; cette fourchette sera recalculée selon les conséquences de vos réponses.
+Après cette série, il restera environ **12 à 18 décisions structurantes** pour l'ensemble des autres catégories. Les choix réversibles ou déjà couverts par une recommandation forte ne feront plus l'objet d'une question séparée.
 
 Répondre sous la forme `1A, 2C, 3B` ; les nuances en texte libre sont acceptées. L'option A est la recommandation pour chaque question.
 
@@ -75,48 +75,21 @@ Répondre sous la forme `1A, 2C, 3B` ; les nuances en texte libre sont acceptée
 - **B — Ajouter un éditeur texte intégré.** Autorise la modification du texte avec aperçu live, mais exige diagnostics incrémentaux, sauvegarde et gestion des conflits.
 - **C — Inclure aussi l'édition visuelle.** Ajoute création/modification depuis le diagramme ; porte immédiatement la V1 au niveau de risque maximal.
 
-### 2. Supporter les projets DBML multi-fichiers en V1
+### 2. Choisir le niveau de compatibilité DBML de la V1
 
-- **A — Oui, lecture de `use`/`reuse` dès la V1.** Couvre les schémas professionnels et l'API officielle incrémentale, avec résolution confinée au projet.
-- **B — Un fichier seulement avec erreur claire.** Accélère la livraison mais refuse des fichiers DBML valides et récents.
-- **C — Aplatir les imports dans une copie temporaire.** Évite un modèle multi-fichiers complet, mais dégrade la traçabilité et les diagnostics.
+- **A — Lecture complète du DBML actuel.** Supporter aussi les projets multi-fichiers, groupes, couleurs, notes, `TablePartial`, `Records`, `Dep`, vues et métadonnées ; les données sensibles restent masquées par défaut.
+- **B — Cœur relationnel complet dans un fichier unique.** Tables, contraintes et relations sont rendues ; les constructions récentes sont préservées mais pas toutes interprétées.
+- **C — Sous-ensemble minimal.** Tables, colonnes et relations simples seulement ; livraison plus rapide, mais de nombreux fichiers DBML valides seront partiellement représentés.
 
-### 3. Montrer les groupes, couleurs et notes en V1
+> L'option A concerne la lecture et la validation, pas l'édition de toutes ces constructions.
 
-- **A — Les trois, en lecture fidèle.** Conserve le sens documentaire du DBML et rend les grands diagrammes exploitables.
-- **B — Groupes seulement.** Priorise la structure visuelle, au prix d'une perte de contexte et de repères couleur.
-- **C — Aucun enrichissement.** Réduit le rendu initial aux tables/relations, mais produit une expérience trop appauvrie.
+### 3. Choisir l'expérience des grands diagrammes en V1
 
-### 4. Proposer les niveaux de détail en V1
-
-- **A — Trois niveaux : tables, clés, champs.** Répond directement aux schémas de tailles variées avec une complexité contenue.
-- **B — Deux niveaux : tables et champs.** Plus simple, mais perd le compromis très utile « clés seulement ».
-- **C — Champs complets uniquement.** Minimal à développer, mais peu utilisable sur les grands modèles.
-
-### 5. Inclure une minimap dans la V1
-
-- **A — Oui, avec possibilité de la masquer.** Améliore nettement l'orientation sur les grands modèles sans imposer l'espace écran.
-- **B — Non, mais fournir « adapter à l'écran » et recentrage.** Réduit la charge V1 tout en gardant une navigation acceptable.
-- **C — Reporter toute navigation globale avancée.** Ne garder que zoom/pan, avec un risque d'expérience insuffisante.
-
-### 6. Fournir un auto-layout initial en V1
-
-- **A — Oui, déterministe, relançable et respectant les positions épinglées.** Donne un résultat lisible dès l'ouverture sans empêcher l'arrangement manuel.
-- **B — Layout automatique au premier chargement seulement.** Plus simple, mais difficile à corriger après de gros changements du modèle.
-- **C — Aucun auto-layout.** Préserve uniquement les positions existantes/manuelles, mais les nouveaux fichiers peuvent être illisibles.
-
-### 7. Visualiser `Records` dans la V1
-
-- **A — Préserver et valider, sans afficher les valeurs par défaut.** Évite l'exposition accidentelle de données tout en restant fidèle au langage ; affichage explicite plus tard.
-- **B — Afficher dans un panneau sur action explicite.** Très utile pour la documentation, avec un effort et un risque confidentialité supplémentaires.
-- **C — Ignorer fonctionnellement tout en préservant le texte.** Réduit le scope, mais les diagnostics DBML restent incomplets.
-
-### 8. Visualiser le lignage `Dep` dans la V1
-
-- **A — Parser et valider, avec affichage désactivé par défaut mais activable.** Assure la compatibilité 2026 sans surcharger l'ERD classique.
-- **B — Afficher toujours `Ref` et `Dep`.** Rend tout le modèle visible, au risque d'un canvas rapidement illisible.
-- **C — Préserver seulement pour une version ultérieure.** Simplifie la V1, mais ne représente pas une construction DBML officielle importante.
+- **A — Socle équilibré.** Trois niveaux de détail, recherche/filtres, adapter/recentrer, auto-layout déterministe relançable et positions manuelles persistantes ; minimap reportée.
+- **B — Navigation complète.** Même socle avec minimap escamotable dès la V1 ; meilleure orientation, mais plus de travail de rendu et d'accessibilité.
+- **C — Navigation minimale.** Zoom, pan, recherche et déplacement seulement ; V1 plus courte, mais expérience limitée sur les grands modèles.
 
 ## Historique des séries
 
-- **Série 1 — questions 1 à 8 :** proposée le 25 septembre 2026, réponses en attente.
+- **Première version de la série 1 — questions 1 à 8 :** retirée sans réponse à la demande de l'utilisateur, car trop détaillée.
+- **Série 1 condensée — questions 1 à 3 :** proposée le 25 septembre 2026, réponses en attente.
