@@ -1,6 +1,6 @@
 {
   "name": "dbcodex",
-  "version": "0.1.0-dev.0",
+  "version": "0.1.0-dev.0+codex.20260925133941",
   "description": "Open and explore local DBML diagrams directly in Codex.",
   "author": {
     "name": "Qappyld"
@@ -14,8 +14,13 @@
     "longDescription": "Open, validate, and interact with local DBML diagrams without sending schema files to an external service.",
     "developerName": "Qappyld",
     "category": "Developer Tools",
-    "capabilities": ["Read", "Write"],
-    "defaultPrompt": ["Open fixtures/basic.dbml with dbcodex."],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Open fixtures/basic.dbml with dbcodex."
+    ],
     "brandColor": "#6D5EF5"
   }
 }

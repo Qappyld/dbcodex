@@ -16,15 +16,15 @@ describe("Codex plugin package", () => {
     expect(portable).toMatchObject({
       $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
       name: "dbcodex",
-      version: "0.1.0-dev.0",
     });
+    expect(portable.version).toMatch(/^0\.1\.0-dev\.0(?:\+codex\.[0-9]+)?$/);
     expect(portable).not.toHaveProperty("license");
     expect(compatible).toMatchObject({
       name: "dbcodex",
-      version: "0.1.0-dev.0",
       skills: "./skills/",
       mcpServers: "./.mcp.json",
     });
+    expect(compatible.version).toBe(portable.version);
   });
 
   it("declares the same local stdio server in both MCP formats", async () => {

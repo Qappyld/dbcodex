@@ -14,7 +14,7 @@ describe("DBCodex MCP App resource", () => {
   it("loads the built widget assets", async () => {
     const html = await loadUiHtml();
 
-    expect(UI_RESOURCE_URI).toBe("ui://dbcodex/diagram.html");
+    expect(UI_RESOURCE_URI).toBe("ui://dbcodex/diagram-v1.html");
     expect(html).toContain("dbcodex-diagram");
     expect(html).toContain("<style>");
     expect(html).toContain("<script>");

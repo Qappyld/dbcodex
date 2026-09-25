@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-export const UI_RESOURCE_URI = "ui://dbcodex/diagram.html";
+export const UI_RESOURCE_URI = "ui://dbcodex/diagram-v1.html";
 
 const widgetScriptUrl = new URL("../../ui/dist/widget.js", import.meta.url);
 const widgetStylesUrl = new URL("../../ui/dist/widget.css", import.meta.url);

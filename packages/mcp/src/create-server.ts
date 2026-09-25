@@ -63,6 +63,12 @@ export function createServer(workspaceRoot: string): McpServer {
         uri: UI_RESOURCE_URI,
         mimeType: RESOURCE_MIME_TYPE,
         text: await loadUiHtml(),
+        _meta: {
+          ui: {
+            prefersBorder: false,
+            csp: { connectDomains: [], resourceDomains: [] },
+          },
+        },
       }],
     }),
   );
