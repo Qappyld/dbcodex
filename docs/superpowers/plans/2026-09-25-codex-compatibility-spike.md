@@ -91,7 +91,8 @@ Use a private ESM workspace, pin exact dependency versions in `package-lock.json
     "exactOptionalPropertyTypes": true,
     "declaration": true,
     "sourceMap": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   }
 }
 ```
@@ -110,7 +111,7 @@ Use a private ESM workspace, pin exact dependency versions in `package-lock.json
   },
   "dependencies": {
     "@dbml/core": "10.2.0",
-    "write-file-atomic": "8.0.0",
+    "write-file-atomic": "7.0.1",
     "zod": "4.6.5"
   }
 }
