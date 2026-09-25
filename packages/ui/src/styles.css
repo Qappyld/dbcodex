@@ -1,0 +1,121 @@
+:root {
+  color-scheme: light dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --dbc-bg: #f7f7f5;
+  --dbc-surface: #ffffff;
+  --dbc-text: #20211f;
+  --dbc-muted: #62645f;
+  --dbc-border: #c9cbc5;
+  --dbc-accent: #176b87;
+  --dbc-relation: #66757b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dbc-bg: #171817;
+    --dbc-surface: #222422;
+    --dbc-text: #f0f1ed;
+    --dbc-muted: #b9bdb5;
+    --dbc-border: #545851;
+    --dbc-accent: #66c6df;
+    --dbc-relation: #9caaa9;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--dbc-bg);
+  color: var(--dbc-text);
+}
+
+.diagram-shell {
+  min-width: 320px;
+  min-height: 420px;
+}
+
+.diagram-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--dbc-border);
+  background: var(--dbc-surface);
+}
+
+.diagram-toolbar > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.diagram-toolbar strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.validation-status {
+  color: var(--dbc-muted);
+  font-size: 0.8125rem;
+}
+
+button {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--dbc-border);
+  border-radius: 4px;
+  background: var(--dbc-surface);
+  color: var(--dbc-text);
+}
+
+.diagram-canvas {
+  display: block;
+  width: 100%;
+  min-height: 370px;
+  background-image: radial-gradient(var(--dbc-border) 0.75px, transparent 0.75px);
+  background-size: 16px 16px;
+}
+
+.relations line {
+  stroke: var(--dbc-relation);
+  stroke-width: 1.5;
+}
+
+.table-node {
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+
+.table-node:active {
+  cursor: grabbing;
+}
+
+.table-node rect {
+  fill: var(--dbc-surface);
+  stroke: var(--dbc-border);
+  stroke-width: 1.5;
+}
+
+.table-node:focus-visible rect {
+  stroke: var(--dbc-accent);
+  stroke-width: 3;
+}
+
+.table-node text {
+  fill: var(--dbc-text);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.table-node .table-title {
+  fill: var(--dbc-accent);
+  font-size: 14px;
+  font-weight: 700;
+}

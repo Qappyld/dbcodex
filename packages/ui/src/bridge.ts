@@ -1,0 +1,109 @@
+type RpcResponse = {
+  jsonrpc: "2.0";
+  id: number;
+  result?: unknown;
+  error?: unknown;
+};
+
+type RpcNotification = {
+  jsonrpc: "2.0";
+  method: string;
+  params?: unknown;
+};
+
+interface PendingRequest {
+  resolve(value: unknown): void;
+  reject(reason: unknown): void;
+}
+
+export class McpAppsBridge {
+  private nextId = 0;
+  private readonly pending = new Map<number, PendingRequest>();
+  private readonly listeners = new Set<(result: unknown) => void>();
+  private ready: Promise<void> | null = null;
+
+  private readonly onMessage = (
+    event: MessageEvent<RpcResponse | RpcNotification>,
+  ): void => {
+    if (event.source !== window.parent || event.data?.jsonrpc !== "2.0") {
+      return;
+    }
+
+    const message = event.data;
+    if ("id" in message) {
+      const pending = this.pending.get(message.id);
+      if (!pending) {
+        return;
+      }
+      this.pending.delete(message.id);
+      if (message.error) {
+        pending.reject(message.error);
+      } else {
+        pending.resolve(message.result);
+      }
+      return;
+    }
+
+    if (message.method === "ui/notifications/tool-result") {
+      for (const listener of this.listeners) {
+        listener(message.params);
+      }
+    }
+  };
+
+  private request(method: string, params: unknown): Promise<unknown> {
+    const id = ++this.nextId;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+    });
+  }
+
+  start(): Promise<void> {
+    if (this.ready) {
+      return this.ready;
+    }
+
+    window.addEventListener("message", this.onMessage);
+    this.ready = this.request("ui/initialize", {
+      appInfo: {
+        name: "dbcodex-diagram",
+        version: "0.1.0-dev.0",
+      },
+      appCapabilities: {},
+      protocolVersion: "2026-01-26",
+    }).then(() => {
+      window.parent.postMessage(
+        {
+          jsonrpc: "2.0",
+          method: "ui/notifications/initialized",
+          params: {},
+        },
+        "*",
+      );
+    });
+    return this.ready;
+  }
+
+  subscribeToToolResults(listener: (result: unknown) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  async callTool(
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<unknown> {
+    await this.start();
+    return this.request("tools/call", { name, arguments: args });
+  }
+
+  dispose(): void {
+    window.removeEventListener("message", this.onMessage);
+    for (const { reject } of this.pending.values()) {
+      reject(new Error("MCP Apps bridge disposed."));
+    }
+    this.pending.clear();
+    this.listeners.clear();
+  }
+}

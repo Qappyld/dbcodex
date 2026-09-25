@@ -1,32 +1,44 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { createHandlers } from "./handlers.js";
+import { loadUiHtml, UI_RESOURCE_URI } from "./ui-resource.js";
 
 export const buildToolDefinitions = () => ({
   open: {
     title: "Open DBML diagram",
     description: "Open and parse a workspace-relative DBML file.",
-    inputSchema: { path: z.string().min(1) },
+    inputSchema: z.object({ path: z.string().min(1) }),
     annotations: {
       readOnlyHint: true,
       openWorldHint: false,
+    },
+    _meta: {
+      ui: { resourceUri: UI_RESOURCE_URI },
     },
   },
   save: {
     title: "Save DBML table position",
     description: "Persist one table position for a DBML diagram view.",
-    inputSchema: {
+    inputSchema: z.object({
       path: z.string().min(1),
       view: z.string().min(1),
       tableId: z.string().min(1),
       x: z.number().finite(),
       y: z.number().finite(),
-    },
+    }),
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: false,
+    },
+    _meta: {
+      ui: { visibility: ["app"] as ["app"] },
     },
   },
 });
@@ -39,8 +51,21 @@ export function createServer(workspaceRoot: string): McpServer {
   const handlers = createHandlers(workspaceRoot);
   const definitions = buildToolDefinitions();
 
-  server.registerTool("open_dbml", definitions.open, handlers.openDbml);
-  server.registerTool("save_layout", definitions.save, handlers.saveLayout);
+  registerAppTool(server, "open_dbml", definitions.open, handlers.openDbml);
+  registerAppTool(server, "save_layout", definitions.save, handlers.saveLayout);
+  registerAppResource(
+    server,
+    "DBCodex diagram",
+    UI_RESOURCE_URI,
+    {},
+    async () => ({
+      contents: [{
+        uri: UI_RESOURCE_URI,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: await loadUiHtml(),
+      }],
+    }),
+  );
 
   return server;
 }

@@ -74,6 +74,7 @@ Use a private ESM workspace, pin exact dependency versions in `package-lock.json
   },
   "devDependencies": {
     "@types/node": "24.13.6",
+    "jsdom": "29.1.1",
     "typescript": "7.0.2",
     "vitest": "5.0.2"
   }
@@ -724,7 +725,7 @@ git commit -m "feat: expose DBML tools over MCP"
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "esbuild": "0.28.2",
-    "jsdom": "30.1.1"
+    "jsdom": "29.1.1"
   }
 }
 ```

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildToolDefinitions } from "../src/create-server.js";
+import { UI_RESOURCE_URI } from "../src/ui-resource.js";
 
 describe("MCP tool definitions", () => {
   it("advertises closed-world open and save tools", () => {
@@ -16,6 +17,11 @@ describe("MCP tool definitions", () => {
       idempotentHint: true,
       openWorldHint: false,
     });
-    expect(JSON.stringify(definitions)).not.toContain("resourceUri");
+    expect(definitions.open._meta).toEqual({
+      ui: { resourceUri: UI_RESOURCE_URI },
+    });
+    expect(definitions.save._meta).toEqual({
+      ui: { visibility: ["app"] },
+    });
   });
 });
