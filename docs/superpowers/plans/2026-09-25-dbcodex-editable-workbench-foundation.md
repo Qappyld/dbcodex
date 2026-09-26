@@ -1,5 +1,9 @@
 # Editable DBML Workbench Foundation Implementation Plan
 
+> **Superseded on 26 September 2026:** persistence through `.dbml` plus
+> `.dbcodex/` sidecars was replaced by the single-file `.dbcd` design. Use
+> [`2026-09-26-dbcd-workbench.md`](./2026-09-26-dbcd-workbench.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Deliver the first vertical slice of the integrated dbcodex workbench: editable DBML, debounced validation, a React Flow diagram, explicit versioned saving, recoverable drafts, resizable panels, and fullscreen presentation.
