@@ -11,6 +11,32 @@ beforeEach(setupFlowDom);
 afterEach(async () => { cleanup(); await act(() => new Promise((resolve) => setTimeout(resolve, 0))); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("DiagramCanvas", () => {
+  it("restores the live viewport when the current view is restored without remounting", async () => {
+    const value = presentation(), change = vi.fn();
+    const { container, rerender } = render(<DiagramCanvas graph={graph} presentation={value} onPresentationChange={change} />);
+    await screen.findByRole("group", { name: "Table public.users" });
+    const canvas = container.querySelector(".react-flow");
+    const restored = structuredClone(value);
+    restored.views.all!.viewport = { x: 145, y: -85, zoom: 1.7 };
+    rerender(<DiagramCanvas graph={graph} presentation={restored} onPresentationChange={change} />);
+    await waitFor(() => expect(container.querySelector<HTMLElement>(".react-flow__viewport")!.style.transform).toBe("translate(145px,-85px) scale(1.7)"));
+    expect(container.querySelector(".react-flow")).toBe(canvas);
+    expect(change).not.toHaveBeenCalled();
+  });
+  it("moves a group and all its members together on pointer release", async () => {
+    const value = presentation(), change = vi.fn();
+    value.views.all!.groups.people = { name: "People", color: "#16a34a", tableIds: ["public.users", "public.teams"] };
+    render(<DiagramCanvas graph={graph} presentation={value} onPresentationChange={change} />);
+    const node = await screen.findByRole("group", { name: "Groupe People" });
+    const down = createEvent.mouseDown(node, { button: 0, clientX: 0, clientY: 0 });
+    Object.defineProperty(down, "view", { value: window }); fireEvent(node, down);
+    fireEvent.mouseMove(window, { buttons: 1, clientX: 2, clientY: 2 });
+    fireEvent.mouseMove(window, { buttons: 1, clientX: 52, clientY: 42 });
+    expect(change).not.toHaveBeenCalled();
+    const up = createEvent.mouseUp(window, { button: 0, clientX: 52, clientY: 42 });
+    Object.defineProperty(up, "view", { value: window }); fireEvent(window, up);
+    expect(change.mock.calls.at(-1)?.[0].views.all.nodes).toMatchObject({ "public.users": { x: 70, y: 90 }, "public.teams": { x: 370, y: 100 } });
+  });
   it("uses measured table bounds for automatic self loops and restores them after route reset", async () => {
     const parsed = parseDbml("Table users {\n id int [pk]\n manager_id int\n}\nRef: users.manager_id > users.id", "self.dbml");
     expect(parsed.diagnostics).toEqual([]);

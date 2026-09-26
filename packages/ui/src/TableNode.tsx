@@ -5,6 +5,8 @@ export type TableFlowNode = Node<{
   table: GraphTable;
   detail: DetailLevel;
   foreignKeys: string[];
+  selectedColumnId?: string | undefined;
+  onSelectColumn?(id: string): void;
 }, "table">;
 
 export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
@@ -16,7 +18,8 @@ export function TableNode({ data, selected }: NodeProps<TableFlowNode>) {
     <header>{data.table.id}</header>
     {columns.length > 0 && <ul>{columns.map((column) => <li key={column.id}>
       <span className="column-key">{column.primaryKey ? "PK" : data.foreignKeys.includes(column.name) ? "FK" : ""}</span>
-      <span>{column.name}</span><span className="column-type">{column.type}</span>
+      <button type="button" className="nodrag nopan column-select" aria-label={`Champ ${column.id}`} aria-pressed={data.selectedColumnId === column.id}
+        onClick={(event) => { event.stopPropagation(); data.onSelectColumn?.(column.id); }}>{column.name}</button><span className="column-type">{column.type}</span>
     </li>)}</ul>}
     {data.detail === "keys" && hidden > 0 && <footer>+{hidden} champs masqués</footer>}
     <Handle type="source" position={Position.Right} isConnectable={false} />

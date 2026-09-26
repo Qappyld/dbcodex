@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { DetailLevel, GraphTable, PresentationDocument, SchemaGraph } from "@dbcodex/core";
-import { createView, duplicateView, renameView, deleteView, setActiveView, setViewDetail, setNodeDetail,
+import { createView, duplicateView, renameView, deleteView, setActiveView, setViewDetail, setNodeDetail, dbmlViewIds,
   groupTables, updateGroup, setNodeHidden, setNodePosition, defaultPosition, searchTables } from "./presentation-commands.js";
-import { applyDbmlPatch, assertTablesUngrouped, dbmlTableReference, previewDbmlBlock, type DbmlPatch } from "./dbml-patches.js";
+import { applyDbmlPatch, assertTablesUngrouped, dbmlTableReference, previewDbmlBlock, removeDbmlBlock, renameDbmlView, setDbmlGroupColor, type DbmlPatch } from "./dbml-patches.js";
 import { allocateDbmlIdentifier as nextId } from "./dbml-identifiers.js";
 
 export interface ViewInspectorProps {
@@ -23,6 +23,25 @@ export function ViewInspector({ graph, presentation, source, selectedIds, query,
   const matches = new Set(searchTables(graph, current, query));
   const visible = graph.tables.filter((table) => current.system || Object.hasOwn(current.nodes, table.id));
   const selected = visible.filter((table) => selectedIds.includes(table.id));
+  const changeView = (operation: "create" | "duplicate" | "rename" | "delete"): void => run(() => {
+    let next: PresentationDocument, nextSource: string;
+    const sourceId = [...dbmlViewIds(graph)].find(([, id]) => id === viewId)?.[0] ?? viewId;
+    if (operation === "delete") {
+      nextSource = removeDbmlBlock(source, "DiagramView", sourceId); next = deleteView(presentation, viewId);
+    } else if (operation === "rename") {
+      const id = nextId(name, Object.fromEntries(Object.entries(presentation.views).filter(([id]) => id !== viewId)));
+      nextSource = renameDbmlView(source, sourceId, id); next = renameView(presentation, viewId, name.trim());
+      if (id !== viewId) { next.views[id] = next.views[viewId]!; delete next.views[viewId]; next.activeViewId = id; }
+    } else {
+      const label = name.trim() || `${current.name} — copie`, id = nextId(label, presentation.views);
+      const tables = operation === "duplicate" ? visible : selected.length ? selected : visible;
+      next = operation === "duplicate" ? duplicateView(materialized(), viewId, id, label)
+        : createView(materialized(), { id, name: label, tableIds: tables.map((table) => table.id) });
+      const block = `DiagramView ${id} {\n  Tables {\n${tables.map((table) => `    ${dbmlTableReference(table)}`).join("\n")}\n  }\n}`;
+      nextSource = applyDbmlPatch(source, previewDbmlBlock(source, "DiagramView", id, block));
+    }
+    onSourceChange(nextSource); onPresentationChange(next);
+  });
   const previewGroup = (): void => run(() => {
     if (!groupName.trim()) throw new Error("Saisissez un nom de groupe.");
     const functionalGroups = assertTablesUngrouped(source, selected);
@@ -38,11 +57,12 @@ export function ViewInspector({ graph, presentation, source, selectedIds, query,
     </select></label>
     <label>Nom de la vue<input aria-label="Nom de la vue" value={name} disabled={readOnly} onChange={(event) => setName(event.target.value)} /></label>
     <div className="inspector-actions">
-      <button type="button" disabled={readOnly || !name.trim()} onClick={() => change(() => createView(materialized(), { id: nextId(name, presentation.views), name: name.trim(), tableIds: selected.length ? selected.map((table) => table.id) : visible.map((table) => table.id) }))}>Nouvelle vue</button>
-      <button type="button" disabled={readOnly} onClick={() => change(() => duplicateView(materialized(), viewId, nextId(name || `${current.name}_copie`, presentation.views), name.trim() || `${current.name} — copie`))}>Dupliquer</button>
-      <button type="button" disabled={readOnly || current.system || !name.trim()} onClick={() => change(() => renameView(presentation, viewId, name.trim()))}>Renommer</button>
-      <button type="button" disabled={readOnly || current.system} onClick={() => change(() => deleteView(presentation, viewId))}>Supprimer</button>
+      <button type="button" disabled={readOnly || !name.trim()} onClick={() => changeView("create")}>Nouvelle vue</button>
+      <button type="button" disabled={readOnly} onClick={() => changeView("duplicate")}>Dupliquer</button>
+      <button type="button" disabled={readOnly || current.system || !name.trim()} onClick={() => changeView("rename")}>Renommer</button>
+      <button type="button" disabled={readOnly || current.system} onClick={() => changeView("delete")}>Supprimer</button>
     </div>
+    <p>Les nouvelles vues contiennent une liste explicite des tables sélectionnées (ou des tables de la vue courante).</p>
     <label>Rechercher<input type="search" aria-label="Rechercher tables, colonnes, groupes et schémas" value={query} onChange={(event) => onQueryChange(event.target.value)} /></label>
     <label>Détail de la vue<select aria-label="Détail de la vue" value={current.defaultDetail} disabled={readOnly} onChange={(event) => change(() => setViewDetail(presentation, viewId, event.target.value as DetailLevel))}>{levels}</select></label>
     {selected.map((table) => <label key={table.id}>Détail de {table.id}<select aria-label={`Détail de ${table.id}`} disabled={readOnly} value={current.nodes[table.id]?.detail ?? "inherit"}
@@ -57,7 +77,12 @@ export function ViewInspector({ graph, presentation, source, selectedIds, query,
       <button type="button" disabled={readOnly || !selected.length || !groupName.trim()} onClick={previewGroup}>Grouper</button>
       {Object.entries(current.groups).map(([id, group]) => <div key={id} className="group-control"><span>{group.name}</span>
         <button type="button" aria-expanded={!group.collapsed} onClick={() => change(() => updateGroup(presentation, viewId, id, { collapsed: !group.collapsed }))}>{group.collapsed ? "Développer" : "Réduire"} {group.name}</button>
-        <input type="color" aria-label={`Couleur de ${group.name}`} value={group.color} onChange={(event) => change(() => updateGroup(presentation, viewId, id, { color: event.target.value }))} />
+        <input type="color" aria-label={`Couleur de ${group.name}`} value={group.color} onChange={(event) => run(() => {
+          const nextSource = setDbmlGroupColor(source, id, event.target.value);
+          let next = presentation;
+          for (const [targetId, target] of Object.entries(presentation.views)) if (Object.hasOwn(target.groups, id)) next = updateGroup(next, targetId, id, { color: event.target.value });
+          onSourceChange(nextSource); onPresentationChange(next);
+        })} />
       </div>)}
     </fieldset>
     {pending && <section aria-label="Modification DBML proposée"><p>{pending.patch.ambiguous ? "Plage ambiguë : ajout proposé. Vérifiez le diff avant application." : "Vérifiez le groupe proposé dans le DBML."}</p>

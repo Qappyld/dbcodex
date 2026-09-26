@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import { fileURLToPath } from "node:url";
-import { presentationSchema } from "@dbcodex/core";
+import { presentationSchema, assertJsonByteLimit, boundedUtf8Length, DBCD_MAX_PRESENTATION_BYTES, DBCD_MAX_SOURCE_BYTES } from "@dbcodex/core";
 import { createHandlers } from "./handlers.js";
 import { loadUiHtml, UI_RESOURCE_URI } from "./ui-resource.js";
 
@@ -45,7 +45,13 @@ const appUi = { ui: { resourceUri: UI_RESOURCE_URI, visibility: ["app"] as ["app
 const readOnly = { readOnlyHint: true, openWorldHint: false };
 const writeOnce = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 const pathInput = z.object({ path: z.string().min(1) });
-const projectDraftInput = pathInput.extend({ sourceText: z.string() });
+const boundedSource = z.string().refine((value) => { try { boundedUtf8Length(value, DBCD_MAX_SOURCE_BYTES); return true; } catch { return false; } }, "The project payload exceeds its size limit.");
+const boundedPresentation = z.preprocess((value, context) => {
+  try { assertJsonByteLimit(value, DBCD_MAX_PRESENTATION_BYTES); return value; }
+  catch { context.addIssue({ code: "custom", message: "The project payload exceeds its size limit." }); return z.NEVER; }
+}, presentationSchema);
+const projectDraftInput = pathInput.extend({ sourceText: boundedSource });
+const expectedState = { expectedProjectId: z.string().min(1), expectedRevisionId: z.string().min(1), expectedGeneration: z.number().int().positive() };
 
 export const buildToolDefinitions = () => ({
   openDbcd: {
@@ -86,21 +92,21 @@ export const buildToolDefinitions = () => ({
   saveDraft: {
     title: "Save DBCodex draft",
     description: "Persist a draft source and presentation.",
-    inputSchema: projectDraftInput.extend({ baseGeneration: z.number().int().positive(), presentation: presentationSchema }),
+    inputSchema: projectDraftInput.extend({ ...expectedState, baseGeneration: z.number().int().positive(), presentation: boundedPresentation }),
     annotations: writeOnce,
     _meta: appUi,
   },
   discardDraft: {
     title: "Discard DBCodex draft",
     description: "Clear the stored draft when the editor returns to the saved revision.",
-    inputSchema: pathInput.extend({ expectedGeneration: z.number().int().positive() }),
+    inputSchema: pathInput.extend(expectedState),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: appUi,
   },
   saveDbcd: {
     title: "Save DBCodex revision",
     description: "Commit a new project revision.",
-    inputSchema: projectDraftInput.extend({ expectedGeneration: z.number().int().positive(), presentation: presentationSchema, label: z.string().optional() }),
+    inputSchema: projectDraftInput.extend({ ...expectedState, presentation: boundedPresentation, label: z.string().optional() }),
     annotations: writeOnce,
     _meta: appUi,
   },
@@ -121,14 +127,14 @@ export const buildToolDefinitions = () => ({
   restoreRevision: {
     title: "Restore DBCodex revision",
     description: "Create a new revision from an earlier revision.",
-    inputSchema: pathInput.extend({ expectedGeneration: z.number().int().positive(), revisionId: z.string().min(1) }),
+    inputSchema: pathInput.extend({ ...expectedState, revisionId: z.string().min(1) }),
     annotations: writeOnce,
     _meta: appUi,
   },
   pinRevision: {
     title: "Pin DBCodex revision",
     description: "Set the retention pin on a revision.",
-    inputSchema: pathInput.extend({ revisionId: z.string().min(1), pinned: z.boolean() }),
+    inputSchema: pathInput.extend({ ...expectedState, revisionId: z.string().min(1), pinned: z.boolean() }),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: appUi,
   },

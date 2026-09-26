@@ -39,10 +39,15 @@ export interface DbcdProjectSnapshot {
   readOnly: boolean;
 }
 
-export interface SaveDbcdInput {
+export interface DbcdExpectedState {
+  expectedProjectId: string;
+  expectedRevisionId: string;
+  expectedGeneration: number;
+}
+
+export interface SaveDbcdInput extends DbcdExpectedState {
   workspaceRoot: string;
   projectPath: string;
-  expectedGeneration: number;
   sourceText: string;
   presentation: PresentationDocument;
   label?: string;

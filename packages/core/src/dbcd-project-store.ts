@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, fstatSync, lstatSync, openSync, realpathSync, unlinkSync, type BigIntStats } from "node:fs";
+import { closeSync, constants, copyFileSync, fstatSync, lstatSync, mkdtempSync, openSync, readSync, realpathSync, rmdirSync, unlinkSync, type BigIntStats } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { gunzipSync, gzipSync } from "node:zlib";
@@ -7,7 +7,8 @@ import { z } from "zod";
 import { parseDbml } from "./dbml-adapter.js";
 import { DbcdPathPolicyError, resolveExistingDbcd, resolveNewDbcd, type ResolvedDbcdPath } from "./dbcd-path-policy.js";
 import { DBCD_FORMAT_VERSION, DBCD_SCHEMA_SQL } from "./dbcd-schema.js";
-import type { DbcdProjectSnapshot, DbcdRevisionSnapshot, DbcdRevisionSummary, SaveDbcdInput } from "./document-contract.js";
+import { assertByteLength, boundedUtf8Length, DbcdResourceLimitError, DBCD_MAX_COMPRESSED_BYTES, DBCD_MAX_PRESENTATION_BYTES, DBCD_MAX_SOURCE_BYTES } from "./dbcd-resource-limits.js";
+import type { DbcdExpectedState, DbcdProjectSnapshot, DbcdRevisionSnapshot, DbcdRevisionSummary, SaveDbcdInput } from "./document-contract.js";
 import { hashDocument } from "./document-hash.js";
 import { decodePresentation, emptyPresentation, encodePresentation, type PresentationDocument } from "./presentation.js";
 
@@ -33,27 +34,24 @@ export interface CreateDbcdProjectInput extends OpenDbcdProjectInput {
   projectId?: () => string;
 }
 
-export interface SaveDbcdDraftInput extends OpenDbcdProjectInput {
+export interface SaveDbcdDraftInput extends OpenDbcdProjectInput, DbcdExpectedState {
   baseGeneration: number;
   sourceText: string;
   presentation: PresentationDocument;
   now?: () => string;
 }
 
-export interface DiscardDbcdDraftInput extends OpenDbcdProjectInput {
-  expectedGeneration: number;
-}
+export interface DiscardDbcdDraftInput extends OpenDbcdProjectInput, DbcdExpectedState {}
 
 export interface ReadDbcdRevisionInput extends OpenDbcdProjectInput {
   revisionId: string;
 }
 
-export interface RestoreDbcdRevisionInput extends ReadDbcdRevisionInput {
-  expectedGeneration: number;
+export interface RestoreDbcdRevisionInput extends ReadDbcdRevisionInput, DbcdExpectedState {
   now?: () => string;
 }
 
-export interface SetDbcdRevisionPinnedInput extends ReadDbcdRevisionInput {
+export interface SetDbcdRevisionPinnedInput extends ReadDbcdRevisionInput, DbcdExpectedState {
   pinned: boolean;
 }
 
@@ -116,6 +114,30 @@ const draftSchema = z.object({
   presentation_json: z.string(), updated_at: timestamp,
 });
 
+function readBoundedState(db: DatabaseSync, table: "document_state" | "draft_state") {
+  const lengths = db.prepare(`SELECT length(CAST(dbml_text AS BLOB)) AS source_bytes,
+    length(CAST(presentation_json AS BLOB)) AS presentation_bytes FROM ${table} LIMIT 2`).all();
+  if (lengths.length > 1) throw new Error("Invalid state rows.");
+  for (const row of lengths) {
+    assertByteLength(row.source_bytes as number, DBCD_MAX_SOURCE_BYTES);
+    assertByteLength(row.presentation_bytes as number, DBCD_MAX_PRESENTATION_BYTES);
+  }
+  // Repeat bounds in the payload query so an external writer cannot grow a value between queries.
+  const rows = db.prepare(`SELECT * FROM ${table} WHERE length(CAST(dbml_text AS BLOB))<=?
+    AND length(CAST(presentation_json AS BLOB))<=? LIMIT 2`).all(DBCD_MAX_SOURCE_BYTES, DBCD_MAX_PRESENTATION_BYTES);
+  if (rows.length !== lengths.length) throw new Error("State changed during read.");
+  return rows;
+}
+
+function compressPayload(text: string, limit: number): Buffer {
+  boundedUtf8Length(text, limit);
+  try { return gzipSync(text, { maxOutputLength: DBCD_MAX_COMPRESSED_BYTES }); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ERR_BUFFER_TOO_LARGE") throw new DbcdResourceLimitError();
+    throw error;
+  }
+}
+
 function readSnapshot(db: DatabaseSync, projectPath: string): DbcdProjectSnapshot {
   const version = db.prepare("PRAGMA user_version").get()?.user_version;
   const tables = new Set(db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all().map((row) => row.name));
@@ -131,7 +153,7 @@ function readSnapshot(db: DatabaseSync, projectPath: string): DbcdProjectSnapsho
   } catch {
     throw new DbcdProjectStoreError("NOT_DBCD", "The file is not a supported .dbcd project.");
   }
-  const document = z.array(documentSchema).length(1).parse(db.prepare("SELECT * FROM document_state").all())[0]!;
+  const document = z.array(documentSchema).length(1).parse(readBoundedState(db, "document_state"))[0]!;
   const presentation = decodePresentation(document.presentation_json);
   if (hashDocument(document.dbml_text) !== document.source_hash
     || hashDocument(encodePresentation(presentation)) !== document.presentation_hash) {
@@ -152,7 +174,7 @@ function readSnapshot(db: DatabaseSync, projectPath: string): DbcdProjectSnapsho
     || db.prepare("PRAGMA foreign_key_check").all().length > 0) {
     throw new Error("Invalid revision references.");
   }
-  const drafts = z.array(draftSchema).max(1).parse(db.prepare("SELECT * FROM draft_state").all());
+  const drafts = z.array(draftSchema).max(1).parse(readBoundedState(db, "draft_state"));
   const draft = drafts[0];
   return {
     projectPath, projectId, generation: document.generation,
@@ -209,15 +231,19 @@ function assertReservedFile(path: ResolvedDbcdPath, reserved: BigIntStats): void
 }
 
 export async function createDbcdProject(input: CreateDbcdProjectInput): Promise<DbcdProjectSnapshot> {
+  boundedUtf8Length(input.sourceText, DBCD_MAX_SOURCE_BYTES);
   if (!parseDbml(input.sourceText, input.projectPath).graph) {
     throw new DbcdProjectStoreError("INVALID_DBML", "Unable to parse DBML.");
   }
   let presentationJson: string;
   try {
     presentationJson = encodePresentation(input.presentation ?? emptyPresentation());
-  } catch {
+  } catch (error) {
+    if (error instanceof DbcdResourceLimitError) throw error;
     throw new DbcdProjectStoreError("INVALID_PRESENTATION", "Unable to read the presentation document.");
   }
+  const sourceGzip = compressPayload(input.sourceText, DBCD_MAX_SOURCE_BYTES);
+  const presentationGzip = compressPayload(presentationJson, DBCD_MAX_PRESENTATION_BYTES);
   const path = await resolveNewDbcd(input.workspaceRoot, input.projectPath);
   assertConfinedParent(path);
   let fd: number;
@@ -255,7 +281,7 @@ export async function createDbcdProject(input: CreateDbcdProjectInput): Promise<
     db.prepare(`INSERT INTO revisions
       (id, parent_id, created_at, dbml_gzip, presentation_gzip, source_hash, presentation_hash, summary, label, pinned)
       VALUES (?, NULL, ?, ?, ?, ?, ?, ?, NULL, 0)`)
-      .run(id, createdAt, gzipSync(input.sourceText), gzipSync(presentationJson), sourceHash, presentationHash, "Initial revision");
+      .run(id, createdAt, sourceGzip, presentationGzip, sourceHash, presentationHash, "Initial revision");
     db.prepare("INSERT INTO document_state VALUES (1, ?, ?, ?, ?, 1, ?)")
       .run(input.sourceText, sourceHash, presentationJson, presentationHash, id);
     const snapshot = readSnapshot(db, path.relativePath);
@@ -291,27 +317,31 @@ export async function createDbcdProject(input: CreateDbcdProjectInput): Promise<
 }
 
 export async function openDbcdProject(input: OpenDbcdProjectInput): Promise<DbcdProjectSnapshot> {
-  const path = await resolveExistingDbcd(input.workspaceRoot, input.projectPath);
-  let db: DatabaseSync | undefined;
-  try {
-    // Inspection is read-only even for current versions; future formats are never migrated.
-    db = openConnection(path.absolutePath, true);
-    return readSnapshot(db, path.relativePath);
-  } catch (error) {
-    if (error instanceof DbcdProjectStoreError) throw error;
-    throw new DbcdProjectStoreError("CORRUPT_PROJECT", "Unable to read the .dbcd project.");
-  } finally {
-    db?.close();
-  }
+  return withProjectReservation(input, (reservation) => withProjectWrite(reservation.queueKey, () => {
+    let db: DatabaseSync | undefined;
+    try {
+      db = openInspectedConnection(reservation);
+      const snapshot = readSnapshot(db, reservation.path.relativePath);
+      assertReservedFile(reservation.path, reservation.identity);
+      return snapshot;
+    } catch (error) {
+      if (error instanceof DbcdProjectStoreError) throw error;
+      throw new DbcdProjectStoreError("CORRUPT_PROJECT", "Unable to read the .dbcd project.");
+    } finally { db?.close(); }
+  }));
 }
 
 function validatedPresentation(presentation: PresentationDocument): string {
   try { return encodePresentation(presentation); }
-  catch { throw new DbcdProjectStoreError("INVALID_PRESENTATION", "Unable to read the presentation document."); }
+  catch (error) {
+    if (error instanceof DbcdResourceLimitError) throw error;
+    throw new DbcdProjectStoreError("INVALID_PRESENTATION", "Unable to read the presentation document.");
+  }
 }
 
-function assertGeneration(actual: number, expected: number): void {
-  if (actual !== expected) {
+function assertExpectedState(actual: DbcdProjectSnapshot, expected: DbcdExpectedState): void {
+  if (actual.generation !== expected.expectedGeneration || actual.projectId !== expected.expectedProjectId
+    || actual.currentRevisionId !== expected.expectedRevisionId) {
     throw new DbcdProjectStoreError("CONFLICT", "The project has changed. Reload it before saving.");
   }
 }
@@ -327,6 +357,102 @@ interface ProjectReservation {
   path: ResolvedDbcdPath;
   identity: BigIntStats;
   queueKey: string;
+}
+
+function journalIdentity(path: ResolvedDbcdPath): BigIntStats | undefined {
+  assertConfinedParent(path);
+  try {
+    const journal = `${path.absolutePath}-journal`;
+    const link = lstatSync(journal);
+    if (!link.isFile() || link.isSymbolicLink()) throw new Error("Invalid journal path.");
+    const fd = openSync(journal, "r");
+    try {
+      const stats = fstatSync(fd, { bigint: true });
+      if (stats.nlink !== 1n) throw new Error("Shared journal.");
+      // DBCD never ATTACHes databases. Refuse super-journal trailers that could name another path.
+      if (stats.size >= 16n) {
+        const trailer = Buffer.alloc(8);
+        readSync(fd, trailer, 0, 8, Number(stats.size - 8n));
+        if (trailer.toString("hex") === "d9d505f920a163d7") throw new Error("Unsupported super-journal.");
+      }
+      return stats;
+    } finally { closeSync(fd); }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw new DbcdProjectStoreError("PATH_CHANGED", "The project journal cannot be safely accessed.");
+  }
+}
+
+function unchangedFile(left: BigIntStats, right: BigIntStats | undefined): boolean {
+  return right !== undefined && left.dev === right.dev && left.ino === right.ino && left.birthtimeNs === right.birthtimeNs
+    && left.size === right.size && left.mtimeNs === right.mtimeNs;
+}
+
+/** Validate recovery on a disposable confined copy before SQLite can write the user's file. */
+function recoverHotJournal(reservation: ProjectReservation): void {
+  const { path, identity } = reservation;
+  assertReservedFile(path, identity);
+  const journal = journalIdentity(path);
+  if (!journal) throw new Error("Missing recovery journal.");
+  const fd = openSync(path.absolutePath, "r");
+  let before: BigIntStats;
+  try {
+    before = fstatSync(fd, { bigint: true });
+    const header = Buffer.alloc(100);
+    if (readSync(fd, header, 0, 100, 0) !== 100 || header.subarray(0, 16).toString() !== "SQLite format 3\0") {
+      throw new Error("Invalid SQLite header.");
+    }
+    if (header.readUInt32BE(60) > DBCD_FORMAT_VERSION) {
+      throw new DbcdProjectStoreError("READ_ONLY", "This project requires a newer version of DBCodex.");
+    }
+  } finally { closeSync(fd); }
+  const directory = mkdtempSync(join(path.workspaceRoot, ".dbcd-recovery-"));
+  const previewPath = join(directory, "recovery.dbcd");
+  let preview: DatabaseSync | undefined;
+  try {
+    copyFileSync(path.absolutePath, previewPath, constants.COPYFILE_EXCL);
+    copyFileSync(`${path.absolutePath}-journal`, `${previewPath}-journal`, constants.COPYFILE_EXCL);
+    assertReservedFile(path, identity);
+    if (!unchangedFile(journal, journalIdentity(path))) throw new Error("Journal changed during recovery.");
+    preview = openConnection(previewPath, false);
+    assertWritable(preview);
+    if (preview.prepare("PRAGMA quick_check").get()?.quick_check !== "ok") throw new Error("Invalid recovery.");
+    readSnapshot(preview, path.relativePath);
+    preview.close();
+    preview = undefined;
+    assertReservedFile(path, identity);
+    const checkFd = openSync(path.absolutePath, "r");
+    try {
+      if (!unchangedFile(before, fstatSync(checkFd, { bigint: true })) || !unchangedFile(journal, journalIdentity(path))) {
+        throw new DbcdProjectStoreError("PATH_CHANGED", "The project changed during recovery.");
+      }
+    } finally { closeSync(checkFd); }
+    // Only a validated, supported project reaches the writable recovery connection.
+    const recovered = openConnection(path.absolutePath, false);
+    try {
+      assertReservedFile(path, identity);
+      if (recovered.prepare("PRAGMA quick_check").get()?.quick_check !== "ok") throw new Error("Invalid recovery.");
+    } finally { recovered.close(); }
+  } finally {
+    preview?.close();
+    for (const file of [`${previewPath}-journal`, previewPath]) {
+      try { unlinkSync(file); } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    }
+    rmdirSync(directory);
+  }
+}
+
+function openInspectedConnection(reservation: ProjectReservation): DatabaseSync {
+  assertReservedFile(reservation.path, reservation.identity);
+  journalIdentity(reservation.path);
+  try { return openConnection(reservation.path.absolutePath, true); }
+  catch (error) {
+    // SQLITE_READONLY_ROLLBACK: the next read needs SQLite's hot-journal rollback.
+    if ((error as { errcode?: number }).errcode !== 776) throw error;
+    recoverHotJournal(reservation);
+    assertReservedFile(reservation.path, reservation.identity);
+    return openConnection(reservation.path.absolutePath, true);
+  }
 }
 
 /** Holds the same file identity throughout compound read/write operations. */
@@ -370,7 +496,7 @@ async function writeReservedProject(
     try {
       assertReservedFile(path, identity);
       // Future formats must be rejected before opening any writable connection.
-      db = openConnection(path.absolutePath, true);
+      db = openInspectedConnection({ path, identity, queueKey });
       assertReservedFile(path, identity);
       assertWritable(db);
       db.close();
@@ -403,9 +529,13 @@ async function writeReservedProject(
 }
 
 export async function saveDbcdDraft(input: SaveDbcdDraftInput): Promise<DbcdProjectSnapshot> {
+  boundedUtf8Length(input.sourceText, DBCD_MAX_SOURCE_BYTES);
   const presentationJson = validatedPresentation(input.presentation);
   return writeProject(input, (db, snapshot) => {
-    assertGeneration(snapshot.generation, input.baseGeneration);
+    assertExpectedState(snapshot, input);
+    if (input.baseGeneration !== input.expectedGeneration) {
+      throw new DbcdProjectStoreError("CONFLICT", "The project has changed. Reload it before saving.");
+    }
     db.prepare(`INSERT INTO draft_state(id, base_generation, dbml_text, presentation_json, updated_at)
       VALUES(1, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET base_generation=excluded.base_generation,
@@ -416,7 +546,7 @@ export async function saveDbcdDraft(input: SaveDbcdDraftInput): Promise<DbcdProj
 
 export async function discardDbcdDraft(input: DiscardDbcdDraftInput): Promise<DbcdProjectSnapshot> {
   return writeProject(input, (db, snapshot) => {
-    assertGeneration(snapshot.generation, input.expectedGeneration);
+    assertExpectedState(snapshot, input);
     db.prepare("DELETE FROM draft_state WHERE id=1").run();
   });
 }
@@ -442,16 +572,17 @@ async function saveProject(
   reservation?: ProjectReservation,
 ): Promise<DbcdProjectSnapshot> {
   // DBML validation and compression happen before acquiring the write transaction.
+  boundedUtf8Length(input.sourceText, DBCD_MAX_SOURCE_BYTES);
   if (!parseDbml(input.sourceText, input.projectPath).graph) {
     throw new DbcdProjectStoreError("INVALID_DBML", "Unable to parse DBML.");
   }
   const presentationJson = validatedPresentation(input.presentation);
   const sourceHash = hashDocument(input.sourceText);
   const presentationHash = hashDocument(presentationJson);
-  const sourceGzip = gzipSync(input.sourceText);
-  const presentationGzip = gzipSync(presentationJson);
+  const sourceGzip = compressPayload(input.sourceText, DBCD_MAX_SOURCE_BYTES);
+  const presentationGzip = compressPayload(presentationJson, DBCD_MAX_PRESENTATION_BYTES);
   const save = (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => {
-    assertGeneration(snapshot.generation, input.expectedGeneration);
+    assertExpectedState(snapshot, input);
     const createdAt = timestamp.parse(input.now?.() ?? new Date().toISOString());
     const id = revisionId(createdAt, sourceHash, presentationHash, snapshot.currentRevisionId);
     db.prepare(`INSERT INTO revisions
@@ -478,21 +609,26 @@ export async function listDbcdRevisions(input: OpenDbcdProjectInput): Promise<Db
 }
 
 export async function readDbcdRevision(input: ReadDbcdRevisionInput): Promise<DbcdRevisionSnapshot> {
-  return withProjectReservation(input, (reservation) => readReservedRevision(reservation, input.revisionId));
+  return withProjectReservation(input, (reservation) => withProjectWrite(reservation.queueKey, () => readReservedRevision(reservation, input.revisionId)));
 }
 
-function readReservedRevision({ path, identity }: ProjectReservation, revisionId: string): DbcdRevisionSnapshot {
+function readReservedRevision(reservation: ProjectReservation, revisionId: string): DbcdRevisionSnapshot {
+  const { path, identity } = reservation;
   let db: DatabaseSync | undefined;
   try {
     assertReservedFile(path, identity);
-    db = openConnection(path.absolutePath, true);
+    db = openInspectedConnection(reservation);
     assertReservedFile(path, identity);
     const snapshot = readSnapshot(db, path.relativePath);
     const summary = snapshot.revisions.find((revision) => revision.id === revisionId);
     if (!summary) throw new DbcdProjectStoreError("REVISION_NOT_FOUND", "The revision does not exist.");
-    const row = db.prepare("SELECT dbml_gzip, presentation_gzip FROM revisions WHERE id=?").get(revisionId)!;
-    const sourceText = gunzipSync(z.instanceof(Uint8Array).parse(row.dbml_gzip)).toString("utf8");
-    const presentationJson = gunzipSync(z.instanceof(Uint8Array).parse(row.presentation_gzip)).toString("utf8");
+    const sizes = db.prepare("SELECT length(dbml_gzip) AS source_bytes, length(presentation_gzip) AS presentation_bytes FROM revisions WHERE id=?").get(revisionId)!;
+    assertByteLength(sizes.source_bytes as number, DBCD_MAX_COMPRESSED_BYTES);
+    assertByteLength(sizes.presentation_bytes as number, DBCD_MAX_COMPRESSED_BYTES);
+    const row = db.prepare(`SELECT dbml_gzip, presentation_gzip FROM revisions WHERE id=?
+      AND length(dbml_gzip)<=? AND length(presentation_gzip)<=?`).get(revisionId, DBCD_MAX_COMPRESSED_BYTES, DBCD_MAX_COMPRESSED_BYTES)!;
+    const sourceText = gunzipSync(z.instanceof(Uint8Array).parse(row.dbml_gzip), { maxOutputLength: DBCD_MAX_SOURCE_BYTES }).toString("utf8");
+    const presentationJson = gunzipSync(z.instanceof(Uint8Array).parse(row.presentation_gzip), { maxOutputLength: DBCD_MAX_PRESENTATION_BYTES }).toString("utf8");
     if (hashDocument(sourceText) !== summary.sourceHash || hashDocument(presentationJson) !== summary.presentationHash) {
       throw new Error("Invalid revision hashes.");
     }
@@ -509,7 +645,8 @@ function readReservedRevision({ path, identity }: ProjectReservation, revisionId
 }
 
 export async function setDbcdRevisionPinned(input: SetDbcdRevisionPinnedInput): Promise<DbcdProjectSnapshot> {
-  return writeProject(input, (db) => {
+  return writeProject(input, (db, snapshot) => {
+    assertExpectedState(snapshot, input);
     const result = db.prepare("UPDATE revisions SET pinned=? WHERE id=?").run(input.pinned ? 1 : 0, input.revisionId);
     if (result.changes !== 1) throw new DbcdProjectStoreError("REVISION_NOT_FOUND", "The revision does not exist.");
   });

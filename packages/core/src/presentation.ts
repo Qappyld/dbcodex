@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertJsonByteLimit, boundedUtf8Length, DBCD_MAX_PRESENTATION_BYTES } from "./dbcd-resource-limits.js";
 
 const nonEmpty = z.string().min(1).refine((value) => value.trim().length > 0);
 const detailLevelSchema = z.enum(["names", "keys", "all"]);
@@ -39,7 +40,9 @@ export const presentationSchema = z.strictObject({
     editorCollapsed: z.boolean(),
     inspectorCollapsed: z.boolean(),
   }),
-});
+}).refine((value) => Object.keys(value.views).length > 0, "A presentation needs at least one view")
+  .refine((value) => Object.hasOwn(value.views, value.activeViewId), "The active view must exist")
+  .refine((value) => Object.hasOwn(value.views, "all") && value.views.all?.system === true, "The all-tables system view must exist");
 
 export type DetailLevel = "names" | "keys" | "all";
 export type PresentationDocument = z.infer<typeof presentationSchema>;
@@ -76,9 +79,11 @@ function sortObject(value: unknown): unknown {
 }
 
 export function encodePresentation(value: PresentationDocument): string {
+  assertJsonByteLimit(value, DBCD_MAX_PRESENTATION_BYTES);
   return JSON.stringify(sortObject(presentationSchema.parse(value)));
 }
 
 export function decodePresentation(value: string): PresentationDocument {
+  boundedUtf8Length(value, DBCD_MAX_PRESENTATION_BYTES);
   return presentationSchema.parse(JSON.parse(value) as unknown);
 }

@@ -119,8 +119,11 @@ export function previewDbmlBlock(source: string, kind: "TableGroup" | "DiagramVi
   let depth = 0; let incomplete = parsed.incomplete;
   for (let i = 0; i < all.length; i++) {
     const token = all[i]!;
-    if (depth === 0 && token.text === kind && all[i + 1]?.text.replace(/^"|"$/g, "") === name) {
-      let open = i + 2;
+    let endName = i + 1;
+    const nameParts = [identifier(all[endName])];
+    while (all[endName + 1]?.text === "." && identifier(all[endName + 2]) !== null) { endName += 2; nameParts.push(identifier(all[endName])); }
+    if (depth === 0 && token.text.toLowerCase() === kind.toLowerCase() && nameParts.join(".") === name) {
+      let open = endName + 1;
       if (all[open]?.text === "[") {
         open++; while (open < all.length && !["[", "]", "{", "}"].includes(all[open]!.text)) open++;
         if (all[open]?.text === "]") open++;
@@ -143,4 +146,40 @@ export function applyDbmlPatch(source: string, patch: DbmlPatch, explicitApply =
   if (source !== patch.source) throw new Error("Le DBML a été modifié. Recréez l’aperçu.");
   if (patch.ambiguous && !explicitApply) throw new Error("Une application explicite du patch est nécessaire.");
   return source.slice(0, patch.from) + patch.insert + source.slice(patch.to);
+}
+
+function existingBlock(source: string, kind: "TableGroup" | "DiagramView", name: string): DbmlPatch {
+  const patch = previewDbmlBlock(source, kind, name, "");
+  if (patch.ambiguous || patch.from === source.length) throw new Error("Déclaration DBML introuvable ou ambiguë. Corrigez la source avant cette modification.");
+  return patch;
+}
+export function removeDbmlBlock(source: string, kind: "TableGroup" | "DiagramView", name: string): string {
+  return applyDbmlPatch(source, { ...existingBlock(source, kind, name), insert: "" });
+}
+export function renameDbmlView(source: string, name: string, nextName: string): string {
+  const patch = existingBlock(source, "DiagramView", name);
+  const block = source.slice(patch.from, patch.to), all = tokens(block).tokens;
+  const token = all[1]!;
+  let end = 1; while (all[end + 1]?.text === ".") end += 2;
+  return applyDbmlPatch(source, { ...patch, insert: block.slice(0, token.from) + nextName + block.slice(all[end]!.to) });
+}
+export function setDbmlGroupColor(source: string, name: string, color: string): string {
+  if (!/^#[0-9a-f]{6}$/i.test(color)) throw new Error("Couleur invalide.");
+  const patch = existingBlock(source, "TableGroup", name);
+  const block = source.slice(patch.from, patch.to), all = tokens(block).tokens;
+  const open = all.findIndex((token) => token.text === "{");
+  const bracket = all.findIndex((token, index) => index < open && token.text === "[");
+  let from: number, to: number, insert: string;
+  if (bracket < 0) { from = all[open]!.from; to = from; insert = `[color: ${color}] `; }
+  else {
+    const end = closingToken(all, bracket);
+    const setting = all.findIndex((token, index) => index > bracket && index < end && token.text.toLowerCase() === "color" && all[index + 1]?.text === ":");
+    if (setting < 0) { from = all[end]!.from; to = from; insert = `${end > bracket + 1 ? ", " : ""}color: ${color}`; }
+    else {
+      from = all[setting + 2]!.from; let last = setting + 2;
+      while (last + 1 < end && all[last + 1]!.text !== ",") last++;
+      to = all[last]!.to; insert = color;
+    }
+  }
+  return applyDbmlPatch(source, { ...patch, insert: block.slice(0, from) + insert + block.slice(to) });
 }

@@ -39,7 +39,7 @@ export function Root({ bridge }: { bridge: RootBridge }) {
     return () => { active = false; unsubscribe(); };
   }, [bridge]);
   const project = readDbcdProjectResult(result);
-  if (project) return <ProjectWorkbench key={`${project.projectId}:${project.projectPath}`} result={result} bridge={bridge} />;
+  if (project) return <ProjectWorkbench key={project.projectPath} result={result} bridge={bridge} />;
   const legacy = readLegacyResult(result);
   if (!legacy) return <p role="status">{connectionError ? "Unable to connect to the document host." : "Waiting for a DBML document…"}</p>;
   if (!legacy.graph) {

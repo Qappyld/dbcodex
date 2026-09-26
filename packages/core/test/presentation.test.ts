@@ -36,8 +36,8 @@ describe("presentation codec", () => {
   });
 
   it("serializes equivalent objects in the same key order", () => {
-    const first = { ...presentation, views: { z: presentation.views.all, a: presentation.views.all } };
-    const second = { ...presentation, views: { a: presentation.views.all, z: presentation.views.all } };
+    const first = { ...presentation, views: { ...presentation.views, z: presentation.views.all, a: presentation.views.all } };
+    const second = { ...presentation, views: { ...presentation.views, a: presentation.views.all, z: presentation.views.all } };
     expect(encodePresentation(first)).toBe(encodePresentation(second));
     expect(encodePresentation(first).indexOf('"a"')).toBeLessThan(encodePresentation(first).indexOf('"z"'));
   });

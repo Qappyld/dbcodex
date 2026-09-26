@@ -5,8 +5,25 @@ import {
   createWorkspaceRootProvider,
 } from "../src/create-server.js";
 import { UI_RESOURCE_URI } from "../src/ui-resource.js";
+import { emptyPresentation, DBCD_MAX_SOURCE_BYTES, DBCD_MAX_PRESENTATION_BYTES } from "@dbcodex/core";
 
 describe("MCP tool definitions", () => {
+  it("rejects oversized UTF-8 and presentation inputs at the tool schema boundary", () => {
+    const definitions = buildToolDefinitions();
+    expect(definitions.validateDraft.inputSchema.safeParse({ path: "project.dbcd", sourceText: "é".repeat(DBCD_MAX_SOURCE_BYTES / 2 + 1) }).success).toBe(false);
+    const presentation = emptyPresentation();
+    presentation.views.all!.name = "x".repeat(DBCD_MAX_PRESENTATION_BYTES);
+    expect(definitions.saveDbcd.inputSchema.safeParse({ path: "project.dbcd", sourceText: "", presentation,
+      expectedProjectId: "p", expectedRevisionId: "r", expectedGeneration: 1 }).success).toBe(false);
+  });
+  it("requires full expected identity on every project mutation", () => {
+    const definitions = buildToolDefinitions();
+    const input = { path: "project.dbcd", sourceText: "", presentation: emptyPresentation(), baseGeneration: 1, expectedGeneration: 1, revisionId: "r1", pinned: true };
+    for (const key of ["saveDraft", "discardDraft", "saveDbcd", "restoreRevision", "pinRevision"] as const) {
+      expect(definitions[key].inputSchema.safeParse(input).success, key).toBe(false);
+      expect(definitions[key].inputSchema.safeParse({ ...input, expectedProjectId: "project-a", expectedRevisionId: "r1" }).success, key).toBe(true);
+    }
+  });
   it("advertises exact closed-world public and app-only tools", () => {
     const definitions = buildToolDefinitions();
 

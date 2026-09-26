@@ -8,7 +8,13 @@ export interface Diagnostic {
   };
 }
 
+export interface SourceRange {
+  start: { line: number; column: number; offset: number };
+  end: { line: number; column: number; offset: number };
+}
+
 export interface GraphColumn {
+  sourceRange?: SourceRange | undefined;
   id: string;
   name: string;
   type: string;
@@ -17,6 +23,7 @@ export interface GraphColumn {
 }
 
 export interface GraphTable {
+  sourceRange?: SourceRange | undefined;
   id: string;
   schema: string;
   name: string;
@@ -30,6 +37,7 @@ export interface GraphRelationEnd {
 }
 
 export interface GraphRelation {
+  sourceRange?: SourceRange | undefined;
   id: string;
   source: GraphRelationEnd;
   target: GraphRelationEnd;
@@ -39,6 +47,8 @@ export interface SchemaGraph {
   sourcePath: string;
   tables: GraphTable[];
   relations: GraphRelation[];
+  tableGroups?: Array<{ id: string; name: string; tableIds: string[]; color?: string; sourceRange?: SourceRange | undefined }>;
+  views?: Array<{ id: string; name: string; tableIds: string[]; sourceRange?: SourceRange | undefined }>;
 }
 
 export interface ParseResult {

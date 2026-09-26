@@ -2,10 +2,40 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseDbml } from "../src/dbml-adapter.js";
+import { DBCD_MAX_SOURCE_BYTES } from "../src/dbcd-resource-limits.js";
 
 const fixtureUrl = new URL("../../../fixtures/basic.dbml", import.meta.url);
 
 describe("parseDbml", () => {
+  it("rejects oversized UTF-8 input before invoking the DBML parser", () => {
+    expect(() => parseDbml("é".repeat(DBCD_MAX_SOURCE_BYTES / 2 + 1), "large.dbml")).toThrow(/size limit/);
+  });
+  it("keeps semantic relation identities across insertion, deletion and reordering", () => {
+    const tables = "Table a { id int [pk] }\nTable b { a int }\nTable c { a int }\n";
+    const first = parseDbml(tables + "Ref retained: b.a > a.id", "stable.dbml").graph!;
+    const inserted = parseDbml(tables + "Ref inserted: c.a > a.id\nRef retained: b.a > a.id", "stable.dbml").graph!;
+    const reordered = parseDbml(tables + "Ref retained: b.a > a.id\nRef inserted: c.a > a.id", "stable.dbml").graph!;
+    const retained = first.relations[0]!;
+    expect(inserted.relations.find((relation) => relation.source.tableId === "public.b")?.id).toBe(retained.id);
+    expect(reordered.relations.find((relation) => relation.source.tableId === "public.b")?.id).toBe(retained.id);
+    expect(new Set(inserted.relations.map((relation) => relation.id)).size).toBe(2);
+    const savedRoutes = { [retained.id]: { points: [{ x: 40, y: 90 }] } };
+    const selection = retained.id;
+    expect(inserted.relations.find((relation) => relation.id === selection)).toBeDefined();
+    expect(savedRoutes[inserted.relations.find((relation) => relation.source.tableId === "public.b")!.id]).toEqual(savedRoutes[selection]);
+  });
+
+  it("exposes source ranges and imported functional groups and views without parser internals", () => {
+    const source = "// keep\r\nTable a { id int [pk] }\r\nTable b { a int }\r\nRef kept: b.a > a.id\r\nTableGroup team [color: #123456] {\r\n a\r\n b\r\n}\r\nDiagramView subset {\r\n Tables {\r\n  a\r\n }\r\n}\r\n";
+    const graph = parseDbml(source, "ranges.dbml").graph!;
+    const table = graph.tables.find((item) => item.name === "a")!;
+    expect(table.sourceRange?.start).toEqual({ line: 2, column: 1, offset: source.indexOf("Table a") });
+    expect(source.slice(table.columns[0]!.sourceRange!.start.offset, table.columns[0]!.sourceRange!.end.offset)).toContain("id int [pk]");
+    expect(source.slice(graph.relations[0]!.sourceRange!.start.offset, graph.relations[0]!.sourceRange!.end.offset)).toContain("Ref kept");
+    expect(graph.tableGroups).toEqual([expect.objectContaining({ id: "team", name: "team", color: "#123456", tableIds: ["public.a", "public.b"] })]);
+    expect(graph.views).toEqual([expect.objectContaining({ id: "subset", name: "subset", tableIds: ["public.a"] })]);
+    expect(JSON.stringify(graph)).not.toContain("filepath");
+  });
   it.each([
     ["Ref: a.fk > b.code", ["public.a", "*"], ["public.b", "1"]],
     ["Ref: b.code < a.fk", ["public.b", "1"], ["public.a", "*"]],
@@ -40,6 +70,7 @@ describe("parseDbml", () => {
       type: "int",
       primaryKey: true,
       nullable: false,
+      sourceRange: { start: { line: 2, column: 3, offset: source.indexOf("id int") }, end: { line: 2, column: 24, offset: source.indexOf("id int") + 21 } },
     });
     expect(result.graph?.relations).toHaveLength(2);
     expect(result.graph?.relations.map((relation) => [

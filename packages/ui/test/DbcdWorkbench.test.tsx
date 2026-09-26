@@ -112,7 +112,7 @@ describe("DbcdWorkbench", () => {
     expect(host.callTool.mock.calls.map(([name]) => name)).toEqual(["validate_dbcd_draft", "save_dbcd"]);
   });
 
-  it("loads recovered source and panel state from private draft metadata", () => {
+  it("offers the saved document before explicitly resuming recovered source and panel state", () => {
     const opened = openResult();
     const recoveredPresentation = structuredClone(opened.structuredContent.presentation);
     recoveredPresentation.panels.editorCollapsed = true;
@@ -120,6 +120,10 @@ describe("DbcdWorkbench", () => {
       baseGeneration: 3, sourceText: "Table recovered {}", presentation: recoveredPresentation, updatedAt: "2026-09-26T00:00:00Z",
     } } } };
     const { container } = render(<ProjectWorkbench result={result} bridge={bridge()} />);
+    expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("320px");
+    expect(container.querySelector(".cm-editor")?.textContent).toContain("Table users");
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveProperty("disabled", true);
+    fireEvent.click(screen.getByRole("button", { name: "Reprendre le brouillon" }));
     expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("40px");
     expect(container.querySelector(".cm-editor")?.textContent).toContain("Table recovered {}");
     expect(screen.getByText("Modifications non enregistrées")).toBeTruthy();

@@ -1,10 +1,10 @@
-import { readFile } from "node:fs/promises";
 import {
   DbcdPathPolicyError, DbcdProjectStoreError, LayoutStoreError, PathPolicyError,
   discardDbcdDraft, exportDbmlProject, importDbmlProject, listDbcdRevisions, loadLayout, openDbcdProject,
   parseDbml, readDbcdRevision, resolveExistingDbcd, resolveNewDbcd, resolveWorkspaceDbml,
   restoreDbcdRevision, saveDbcdDraft, saveDbcdProject, saveNodePosition, setDbcdRevisionPinned,
   type DbcdProjectSnapshot, type DbcdRevisionSnapshot, type DbcdRevisionSummary, type PresentationDocument,
+  DbcdResourceLimitError, readBoundedDbmlFile,
 } from "@dbcodex/core";
 
 export interface OpenDbmlInput { path: string }
@@ -12,11 +12,12 @@ export interface ProjectPathInput { path: string }
 export interface OpenDbcdInput extends ProjectPathInput {}
 export interface ReadDbcdRevisionInput extends ProjectPathInput { revisionId: string }
 export interface ValidateDbcdDraftInput extends ProjectPathInput { sourceText: string }
-export interface SaveDbcdDraftInput extends ValidateDbcdDraftInput { baseGeneration: number; presentation: PresentationDocument }
-export interface DiscardDbcdDraftInput extends ProjectPathInput { expectedGeneration: number }
-export interface SaveDbcdInput extends ValidateDbcdDraftInput { expectedGeneration: number; presentation: PresentationDocument; label?: string }
-export interface RestoreDbcdInput extends ProjectPathInput { expectedGeneration: number; revisionId: string }
-export interface PinDbcdRevisionInput extends ProjectPathInput { revisionId: string; pinned: boolean }
+interface ExpectedState { expectedProjectId: string; expectedRevisionId: string; expectedGeneration: number }
+export interface SaveDbcdDraftInput extends ValidateDbcdDraftInput, ExpectedState { baseGeneration: number; presentation: PresentationDocument }
+export interface DiscardDbcdDraftInput extends ProjectPathInput, ExpectedState {}
+export interface SaveDbcdInput extends ValidateDbcdDraftInput, ExpectedState { presentation: PresentationDocument; label?: string }
+export interface RestoreDbcdInput extends ProjectPathInput, ExpectedState { revisionId: string }
+export interface PinDbcdRevisionInput extends ProjectPathInput, ExpectedState { revisionId: string; pinned: boolean }
 export interface ImportDbmlInput { sourcePath: string; projectPath: string }
 export interface ExportDbmlInput { projectPath: string; targetPath: string; revisionId?: string }
 export interface SaveLayoutInput { path: string; view: string; tableId: string; x: number; y: number }
@@ -56,6 +57,7 @@ function toolError(message: string) {
   return { isError: true as const, content: [{ type: "text" as const, text: message }] };
 }
 function sanitizedError(error: unknown) {
+  if (error instanceof DbcdProjectStoreError || error instanceof DbcdResourceLimitError) return { ...toolError(error.message), structuredContent: { errorCode: error.code } };
   if (error instanceof PathPolicyError || error instanceof LayoutStoreError
     || error instanceof DbcdPathPolicyError || error instanceof DbcdProjectStoreError) return toolError(error.message);
   return toolError("dbcodex failed without exposing file contents.");
@@ -100,7 +102,7 @@ export function createHandlers(roots: WorkspaceRoots, projects: ProjectOperation
     openDbml: async ({ path }: OpenDbmlInput) => {
       try {
         const { workspaceRoot, resolved } = await resolveDbmlRoot(roots, path);
-        const parsed = parseDbml(await readFile(resolved.absolutePath, "utf8"), resolved.relativePath);
+        const parsed = parseDbml(await readBoundedDbmlFile(resolved.absolutePath), resolved.relativePath);
         const layout = await loadLayout(workspaceRoot, resolved.relativePath);
         return {
           structuredContent: { sourcePath: resolved.relativePath, graph: parsed.graph, diagnostics: parsed.diagnostics,
@@ -114,7 +116,7 @@ export function createHandlers(roots: WorkspaceRoots, projects: ProjectOperation
     saveLayout: async (input: SaveLayoutInput) => {
       try {
         const { workspaceRoot, resolved } = await resolveDbmlRoot(roots, input.path);
-        const parsed = parseDbml(await readFile(resolved.absolutePath, "utf8"), resolved.relativePath);
+        const parsed = parseDbml(await readBoundedDbmlFile(resolved.absolutePath), resolved.relativePath);
         if (!parsed.graph) return toolError("Cannot save a layout for invalid DBML.");
         if (!parsed.graph.tables.some((table) => table.id === input.tableId)) return toolError("The table does not exist in the DBML graph.");
         const layout = await saveNodePosition(workspaceRoot, resolved.relativePath, input.view,

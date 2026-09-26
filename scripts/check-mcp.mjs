@@ -111,13 +111,14 @@ try {
   const revisionCount = demo.structuredContent.revisions.length;
   const sourceText = `${demo._meta.dbcodex.sourceText}\n// MCP acceptance edit\n`;
   const presentation = demo.structuredContent.presentation;
-  const draft = await client.callTool({ name: "save_dbcd_draft", arguments: { path: demoPath, baseGeneration: generation, sourceText, presentation } });
+  const expected = { expectedGeneration: generation, expectedProjectId: demo._meta.dbcodex.projectId, expectedRevisionId: demo.structuredContent.currentRevisionId };
+  const draft = await client.callTool({ name: "save_dbcd_draft", arguments: { path: demoPath, ...expected, baseGeneration: generation, sourceText, presentation } });
   assert.equal(draft.isError, undefined);
   const drafted = await client.callTool({ name: "open_dbcd", arguments: { path: demoPath } });
   assert.equal(drafted.structuredContent.generation, generation);
   assert.equal(drafted.structuredContent.revisions.length, revisionCount);
   assert.equal(drafted._meta.dbcodex.draft.sourceText, sourceText);
-  const savedDemo = await client.callTool({ name: "save_dbcd", arguments: { path: demoPath, expectedGeneration: generation, sourceText, presentation } });
+  const savedDemo = await client.callTool({ name: "save_dbcd", arguments: { path: demoPath, ...expected, sourceText, presentation } });
   assert.equal(savedDemo.isError, undefined);
   const reopenedDemo = await client.callTool({ name: "open_dbcd", arguments: { path: demoPath } });
   assert.equal(reopenedDemo.structuredContent.generation, generation + 1);

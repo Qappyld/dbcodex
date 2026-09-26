@@ -61,6 +61,7 @@ describe("lossless DBML transfer", () => {
     await writeFile(join(workspaceRoot, "shop.dbml"), original);
     const initial = await importDbmlProject({ workspaceRoot, sourcePath: "shop.dbml", projectPath: "shop.dbcd" });
     await saveDbcdProject({ workspaceRoot, projectPath: "shop.dbcd", expectedGeneration: 1,
+      expectedProjectId: initial.projectId, expectedRevisionId: initial.currentRevisionId,
       sourceText: "Table posts { id int [pk] }\n", presentation: emptyPresentation() });
     const exported = await exportDbmlProject({ workspaceRoot, projectPath: "shop.dbcd",
       targetPath: "old.dbml", revisionId: initial.currentRevisionId });

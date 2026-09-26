@@ -1,10 +1,33 @@
 import { describe, expect, it } from "vitest";
 import { presentation, graph } from "./workbench-fixture.js";
 import { createView, duplicateView, renameView, deleteView, setActiveView, setViewDetail, setNodeDetail,
-  groupTables, updateGroup, setRelationRoute, resetRelationRoute, setNodeHidden, setNodePosition, setPanels, searchTables } from "../src/presentation-commands.js";
+  groupTables, updateGroup, setRelationRoute, resetRelationRoute, setNodeHidden, setNodePosition, setPanels, searchTables, reconcileDbmlPresentation } from "../src/presentation-commands.js";
 import { previewDbmlBlock, applyDbmlPatch } from "../src/dbml-patches.js";
 
 describe("presentation commands", () => {
+  it("imports a DBML view named all without overwriting or hiding the system view", () => {
+    const next = reconcileDbmlPresentation(presentation(), { ...graph, views: [
+      { id: "all", name: "all", tableIds: ["public.users"] }, { id: "_dbml_all", name: "_dbml_all", tableIds: ["public.teams"] },
+    ] });
+    expect(next.views.all!.system).toBe(true);
+    const custom = Object.entries(next.views).filter(([, view]) => !view.system);
+    expect(custom).toHaveLength(2);
+    expect(custom.find(([, view]) => view.name === "all")?.[1].nodes).toHaveProperty("public.users");
+  });
+  it("imports functional views/groups and keeps source membership authoritative while preserving layout", () => {
+    const before = createView(presentation(), { id: "obsolete", name: "Obsolete", tableIds: ["public.users"] });
+    const imported = reconcileDbmlPresentation(before, { ...graph,
+      views: [{ id: "crm", name: "crm", tableIds: ["public.users"] }],
+      tableGroups: [{ id: "people", name: "people", tableIds: ["public.users"], color: "#123456" }] });
+    expect(imported.activeViewId).toBe("all"); expect(imported.views.obsolete).toBeUndefined();
+    expect(imported.views.crm!.nodes).toEqual({ "public.users": { x: 20, y: 50 } });
+    expect(imported.views.all!.groups.people).toMatchObject({ tableIds: ["public.users"], color: "#123456" });
+    imported.views.crm!.nodes["public.users"]!.x = 234;
+    const changed = reconcileDbmlPresentation(imported, { ...graph, views: [{ id: "crm", name: "crm", tableIds: ["public.users", "public.teams"] }], tableGroups: [] });
+    expect(changed.views.crm!.nodes["public.users"]!.x).toBe(234); expect(changed.views.crm!.nodes["public.teams"]).toBeTruthy();
+    expect(changed.views.all!.groups).toEqual({});
+    expect(reconcileDbmlPresentation(before, graph)).toEqual(before);
+  });
   it("validates immutable panel updates", () => {
     const initial = presentation();
     expect(setPanels(initial, { editor: 450 }).panels.editor).toBe(450);

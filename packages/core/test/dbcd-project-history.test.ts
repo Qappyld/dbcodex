@@ -52,7 +52,7 @@ describe("dbcd drafts and history", () => {
   it("gives successive identical saves distinct IDs even at the same timestamp", async () => {
     const { input } = await makeDbcdFixture(roots);
     const second = await saveDbcdProject({ ...input, expectedGeneration: 1, presentation: emptyPresentation() });
-    const third = await saveDbcdProject({ ...input, expectedGeneration: 2, presentation: emptyPresentation() });
+    const third = await saveDbcdProject({ ...input, expectedGeneration: 2, expectedRevisionId: second.currentRevisionId, presentation: emptyPresentation() });
     expect(new Set(third.revisions.map((revision) => revision.id)).size).toBe(3);
     expect(third.revisions[0]?.id).toBe(third.currentRevisionId);
     expect(third.revisions[1]?.id).toBe(second.currentRevisionId);
@@ -60,8 +60,9 @@ describe("dbcd drafts and history", () => {
 
   it("refuses stale saves, drafts and discards without changing the current document or draft", async () => {
     const { input } = await makeDbcdFixture(roots);
-    await saveDbcdProject({ ...input, expectedGeneration: 1, presentation: emptyPresentation() });
-    await saveDbcdDraft({ ...input, baseGeneration: 2, sourceText: "latest draft", presentation: emptyPresentation() });
+    const saved = await saveDbcdProject({ ...input, expectedGeneration: 1, presentation: emptyPresentation() });
+    await saveDbcdDraft({ ...input, expectedGeneration: 2, expectedRevisionId: saved.currentRevisionId,
+      baseGeneration: 2, sourceText: "latest draft", presentation: emptyPresentation() });
     const before = await openDbcdProject(input);
     await expect(saveDbcdProject({ ...input, expectedGeneration: 1, presentation: emptyPresentation() })).rejects.toMatchObject({ code: "CONFLICT" });
     await expect(saveDbcdDraft({ ...input, baseGeneration: 1, presentation: emptyPresentation() })).rejects.toMatchObject({ code: "CONFLICT" });
@@ -125,7 +126,7 @@ describe("dbcd drafts and history", () => {
     presentation.panels.editor = 555;
     const saved = await saveDbcdProject({ ...input, sourceText: `// change\n${fixtureSource}`, presentation, expectedGeneration: 1 });
     const before = inspectDbcd(path, (db) => db.prepare("SELECT * FROM revisions ORDER BY rowid").all());
-    const restored = await restoreDbcdRevision({ ...input, revisionId: snapshot.currentRevisionId, expectedGeneration: 2 });
+    const restored = await restoreDbcdRevision({ ...input, revisionId: snapshot.currentRevisionId, expectedGeneration: 2, expectedRevisionId: saved.currentRevisionId });
     expect(restored).toMatchObject({ generation: 3, sourceText: fixtureSource, presentation: emptyPresentation() });
     expect(restored.revisions).toHaveLength(3);
     expect(restored.revisions[0]).toMatchObject({ parentId: saved.currentRevisionId, summary: `Restauration de ${snapshot.currentRevisionId.slice(0, 8)}` });
@@ -154,7 +155,7 @@ describe("dbcd drafts and history", () => {
     const { input, path, snapshot } = await makeDbcdFixture(roots);
     await setDbcdRevisionPinned({ ...input, revisionId: snapshot.currentRevisionId, pinned: true });
     const old = await saveDbcdProject({ ...input, presentation: emptyPresentation(), expectedGeneration: 1 });
-    const current = await saveDbcdProject({ ...input, presentation: emptyPresentation(), expectedGeneration: 2,
+    const current = await saveDbcdProject({ ...input, presentation: emptyPresentation(), expectedGeneration: 2, expectedRevisionId: old.currentRevisionId,
       now: () => "2027-01-01T10:00:00.000Z" });
     expect(current.revisions.map((revision) => revision.id)).toEqual([current.currentRevisionId, snapshot.currentRevisionId]);
     expect(current.revisions.find((revision) => revision.id === old.currentRevisionId)).toBeUndefined();
@@ -190,11 +191,11 @@ describe("dbcd drafts and history", () => {
     const { input, path } = await makeDbcdFixture(roots);
     const first = await saveDbcdProject({ ...input, expectedGeneration: 1, presentation: emptyPresentation(),
       now: () => "2026-12-01T10:00:00.000Z" });
-    const second = await saveDbcdProject({ ...input, expectedGeneration: 2, presentation: emptyPresentation(),
+    const second = await saveDbcdProject({ ...input, expectedGeneration: 2, expectedRevisionId: first.currentRevisionId, presentation: emptyPresentation(),
       now: () => "2026-12-02T10:00:00.000Z" });
     const before = inspectDbcd(path, (db) => db.prepare("SELECT * FROM revisions WHERE id IN (?, ?) ORDER BY rowid")
       .all(first.currentRevisionId, second.currentRevisionId));
-    await saveDbcdProject({ ...input, expectedGeneration: 3, presentation: emptyPresentation(),
+    await saveDbcdProject({ ...input, expectedGeneration: 3, expectedRevisionId: second.currentRevisionId, presentation: emptyPresentation(),
       now: () => "2027-01-01T10:00:00.000Z" });
     const after = inspectDbcd(path, (db) => db.prepare("SELECT * FROM revisions WHERE id IN (?, ?) ORDER BY rowid")
       .all(first.currentRevisionId, second.currentRevisionId));

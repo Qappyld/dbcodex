@@ -3,10 +3,14 @@ import { defaultPosition } from "./presentation-commands.js";
 
 type Revision = { sourceText: string; presentation: PresentationDocument };
 export interface RevisionDiffSummary {
+  /** Only source-line counts are estimated; presentation counts remain exact. */
+  approximate?: true;
   addedLines: number; removedLines: number; changedLines: number;
   movedNodes: number; changedDetailLevels: number; changedRoutes: number;
   addedViews: number; removedViews: number;
 }
+
+const MAX_EXACT_LINE_CELLS = 4_000_000;
 
 // Hirschberg LCS: exact line alignment with linear working memory.
 function lengths(a: string[], b: string[]): Uint32Array {
@@ -43,23 +47,37 @@ function align(a: string[], b: string[], ai = 0, bi = 0): Array<[number, number]
  * the sorted union of explicit node IDs across both documents, after known tables.
  * Thus materializing or removing an explicit default does not count as a move.
  * Routes include added/removed control-point overrides; added/removed views count separately.
+ * Common source boundaries are excluded from the alignment workload. Above four
+ * million remaining line cells, estimate one replacement hunk without running LCS.
  */
 export function summarizeRevisionDiff(previous: Revision, next: Revision, graph?: Pick<SchemaGraph, "tables"> | null): RevisionDiffSummary {
   const result: RevisionDiffSummary = { addedLines: 0, removedLines: 0, changedLines: 0,
     movedNodes: 0, changedDetailLevels: 0, changedRoutes: 0, addedViews: 0, removedViews: 0 };
-  const a = previous.sourceText ? previous.sourceText.split(/\r?\n/) : [];
-  const b = next.sourceText ? next.sourceText.split(/\r?\n/) : [];
+  let a = previous.sourceText ? previous.sourceText.split(/\r?\n/) : [];
+  let b = next.sourceText ? next.sourceText.split(/\r?\n/) : [];
+  let start = 0, aEnd = a.length, bEnd = b.length;
+  while (start < aEnd && start < bEnd && a[start] === b[start]) start++;
+  while (aEnd > start && bEnd > start && a[aEnd - 1] === b[bEnd - 1]) { aEnd--; bEnd--; }
+  a = a.slice(start, aEnd);
+  b = b.slice(start, bEnd);
   const tableIndices = new Map(graph?.tables.map((table, index) => [table.id, index]));
   const explicitIds = new Set([previous.presentation, next.presentation]
     .flatMap((document) => Object.values(document.views).flatMap((view) => Object.keys(view.nodes))));
   for (const id of [...explicitIds].sort()) if (!tableIndices.has(id)) tableIndices.set(id, tableIndices.size);
-  let ai = 0, bi = 0;
-  for (const [i, j] of [...align(a, b), [a.length, b.length]]) {
-    const changed = Math.min(i! - ai, j! - bi);
-    result.changedLines += changed;
-    result.removedLines += i! - ai - changed;
-    result.addedLines += j! - bi - changed;
-    ai = i! + 1; bi = j! + 1;
+  if (a.length * b.length > MAX_EXACT_LINE_CELLS) {
+    result.approximate = true;
+    result.changedLines = Math.min(a.length, b.length);
+    result.removedLines = a.length - result.changedLines;
+    result.addedLines = b.length - result.changedLines;
+  } else {
+    let ai = 0, bi = 0;
+    for (const [i, j] of [...align(a, b), [a.length, b.length]]) {
+      const changed = Math.min(i! - ai, j! - bi);
+      result.changedLines += changed;
+      result.removedLines += i! - ai - changed;
+      result.addedLines += j! - bi - changed;
+      ai = i! + 1; bi = j! + 1;
+    }
   }
   for (const [id, view] of Object.entries(previous.presentation.views)) {
     const other = next.presentation.views[id];

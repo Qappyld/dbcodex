@@ -10,6 +10,39 @@ afterEach(cleanup);
 const props = () => ({ graph, presentation: presentation(), source: "Table users { id int }", selectedIds: ["public.users"], query: "",
   onQueryChange: vi.fn(), onSelectTable: vi.fn(), onPresentationChange: vi.fn(), onSourceChange: vi.fn() });
 describe("ViewInspector", () => {
+  it("creates, duplicates, renames and deletes functional DiagramView blocks without touching other DBML", () => {
+    const original = "// keep exactly\r\nTable users { id int }\r\nTable teams { id int }\r\n";
+    let source = original, value = presentation();
+    const p = props();
+    const { rerender } = render(<ViewInspector {...p} source={source} />);
+    const next = () => {
+      source = p.onSourceChange.mock.calls.at(-1)![0]; value = p.onPresentationChange.mock.calls.at(-1)![0];
+      expect(source.startsWith(original)).toBe(true);
+      const parsed = parseDbml(source, "views.dbml"); expect(parsed.diagnostics).toEqual([]);
+      rerender(<ViewInspector {...p} source={source} presentation={value} graph={parsed.graph!} />);
+    };
+    fireEvent.change(screen.getByLabelText("Nom de la vue"), { target: { value: "CRM" } });
+    fireEvent.click(screen.getByRole("button", { name: "Nouvelle vue" }));
+    expect(p.onSourceChange).toHaveBeenCalledWith(expect.stringContaining("DiagramView crm")); next();
+    expect(parseDbml(source, "views.dbml").graph!.views?.[0]?.tableIds).toEqual(["public.users"]);
+    fireEvent.change(screen.getByLabelText("Nom de la vue"), { target: { value: "Copy" } });
+    fireEvent.click(screen.getByRole("button", { name: "Dupliquer" })); next();
+    expect(source).toContain("DiagramView copy");
+    fireEvent.change(screen.getByLabelText("Nom de la vue"), { target: { value: "Clients" } });
+    fireEvent.click(screen.getByRole("button", { name: "Renommer" })); next();
+    expect(source).toContain("DiagramView clients"); expect(source).not.toContain("DiagramView copy");
+    fireEvent.click(screen.getByRole("button", { name: "Supprimer" })); next();
+    expect(source).not.toContain("DiagramView clients"); expect(source).toContain("DiagramView crm");
+    expect(value.activeViewId).toBe("all");
+  });
+  it("patches a functional group color without changing its notes or membership", () => {
+    const source = "Table users { id int }\nTableGroup people [color: #16a34a] {\n users\n Note: 'Preserve me'\n}\n// tail";
+    const p = props(); p.presentation.views.all!.groups.people = { name: "People", color: "#16a34a", tableIds: ["public.users"] };
+    render(<ViewInspector {...p} source={source} graph={parseDbml(source, "groups.dbml").graph!} />);
+    fireEvent.change(screen.getByLabelText("Couleur de People"), { target: { value: "#123456" } });
+    expect(p.onSourceChange).toHaveBeenCalledExactlyOnceWith(source.replace("#16a34a", "#123456"));
+    expect(parseDbml(p.onSourceChange.mock.calls[0]![0], "groups.dbml").diagnostics).toEqual([]);
+  });
   it("keeps numeric-name collision IDs scanner-readable across three successive groups", () => {
     let source = "Table users { id int }\nTable teams { id int }\nTable jobs { id int }";
     let value = presentation();

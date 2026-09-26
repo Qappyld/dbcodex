@@ -1,9 +1,43 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { emptyPresentation } from "../../core/src/presentation.js";
 import { graph, presentation } from "./workbench-fixture.js";
 import { summarizeRevisionDiff } from "../src/revision-diff.js";
 
 describe("revision diff", () => {
+  it("uses an explicit estimate above four million cells without allocating LCS rows", () => {
+    const previous = emptyPresentation(), next = emptyPresentation();
+    next.views.all!.nodes["public.users"] = { x: 400, y: 300 };
+    next.views.all!.edges.ref = { points: [{ x: 10, y: 20 }] };
+    const before = Array.from({ length: 2001 }, (_, i) => `before ${i}`).join("\n");
+    const after = Array.from({ length: 2002 }, (_, i) => `after ${i}`).join("\n");
+    const rows = vi.spyOn(globalThis, "Uint32Array");
+    try {
+      const result = summarizeRevisionDiff({ sourceText: before, presentation: previous }, { sourceText: after, presentation: next }, graph);
+      expect(rows).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ approximate: true, addedLines: 1, removedLines: 0, changedLines: 2001,
+        movedNodes: 1, changedRoutes: 1 });
+    } finally { rows.mockRestore(); }
+  });
+  it("keeps exact alignment at four million cells", () => {
+    const p = emptyPresentation();
+    const before = Array.from({ length: 2000 }, (_, i) => `before ${i}`).join("\n");
+    const after = Array.from({ length: 2000 }, (_, i) => `after ${i}`).join("\n");
+    const rows = vi.spyOn(globalThis, "Uint32Array");
+    try {
+      const result = summarizeRevisionDiff({ sourceText: before, presentation: p }, { sourceText: after, presentation: p });
+      expect(rows).toHaveBeenCalled();
+      expect(result).toMatchObject({ changedLines: 2000, addedLines: 0, removedLines: 0 });
+      expect(result).not.toHaveProperty("approximate");
+    } finally { rows.mockRestore(); }
+  });
+  it("removes shared boundaries before deciding whether exact alignment exceeds the budget", () => {
+    const p = emptyPresentation();
+    const prefix = "shared prefix\n".repeat(10000), suffix = "\nshared suffix".repeat(10000);
+    const result = summarizeRevisionDiff({ sourceText: `${prefix}before${suffix}`, presentation: p },
+      { sourceText: `${prefix}after${suffix}`, presentation: p });
+    expect(result.changedLines).toBe(1);
+    expect(result).not.toHaveProperty("approximate");
+  });
   it("counts the first saved move from the implicit canvas position", () => {
     const previous = emptyPresentation(), next = emptyPresentation();
     next.views.all!.nodes["public.users"] = { x: 50, y: 60 };

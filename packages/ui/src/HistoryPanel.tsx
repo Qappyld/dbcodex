@@ -52,6 +52,7 @@ export function HistoryPanel({ session, bridge, projectPath, readOnly, onClose }
         {error && <p role="alert">{error}</p>}
         {revision && diff && <>
           <h3>{revision.id.slice(0, 8)} → travail courant</h3>
+          {diff.approximate && <p>Estimation des lignes pour cette comparaison volumineuse.</p>}
           <ul>
             <li>{diff.addedLines} ligne(s) ajoutée(s), {diff.removedLines} supprimée(s), {diff.changedLines} ligne(s) modifiée(s)</li>
             <li>{diff.movedNodes} table(s) déplacée(s)</li>

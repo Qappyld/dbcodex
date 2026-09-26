@@ -1,10 +1,10 @@
 import { closeSync, fstatSync, lstatSync, openSync, realpathSync, unlinkSync, writeSync, type BigIntStats } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { extname, isAbsolute, join, relative, sep, win32 } from "node:path";
 import { DbcdPathPolicyError, resolveNewDbcd } from "./dbcd-path-policy.js";
 import { DbcdProjectStoreError, createDbcdProject, openDbcdProject, readDbcdRevision } from "./dbcd-project-store.js";
 import type { DbcdProjectSnapshot } from "./document-contract.js";
 import { PathPolicyError, resolveWorkspaceDbml } from "./path-policy.js";
+import { readBoundedDbmlFile } from "./dbml-file.js";
 
 export interface ImportDbmlProjectInput {
   workspaceRoot: string;
@@ -105,7 +105,7 @@ function resolveNewDbml(workspaceRoot: string, inputPath: string): ResolvedNewDb
 export async function importDbmlProject(input: ImportDbmlProjectInput): Promise<DbcdProjectSnapshot> {
   const source = await resolveWorkspaceDbml(input.workspaceRoot, input.sourcePath);
   await resolveNewDbcd(input.workspaceRoot, input.projectPath);
-  const sourceText = await readFile(source.absolutePath, "utf8");
+  const sourceText = await readBoundedDbmlFile(source.absolutePath);
   return createDbcdProject({ workspaceRoot: input.workspaceRoot, projectPath: input.projectPath, sourceText });
 }
 

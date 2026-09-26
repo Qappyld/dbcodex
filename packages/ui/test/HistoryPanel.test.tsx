@@ -25,6 +25,22 @@ function setup(readOnly = false) {
   return { host, ...rendered };
 }
 describe("history workflow", () => {
+  it("labels estimated line counts for a large comparison", async () => {
+    const opened = openResult();
+    opened._meta.dbcodex.sourceText = Array.from({ length: 2001 }, (_, i) => `// current ${i}`).join("\n");
+    const result = { ...opened, structuredContent: { ...opened.structuredContent, revisions: [older] } };
+    const host = { requestDisplayMode: vi.fn(), callTool: vi.fn().mockResolvedValue({
+      _meta: { dbcodex: { revision: { ...older,
+        sourceText: Array.from({ length: 2001 }, (_, i) => `// previous ${i}`).join("\n"),
+        presentation: opened.structuredContent.presentation } } },
+    }) };
+    render(<ProjectWorkbench result={result} bridge={host} />);
+    fireEvent.click(screen.getByRole("button", { name: "Historique" }));
+    fireEvent.click(screen.getByRole("button", { name: "Voir la révision a1b2c3" }));
+    expect(await screen.findByText("Estimation des lignes pour cette comparaison volumineuse.")).toBeTruthy();
+    expect(screen.getByText("0 ligne(s) ajoutée(s), 0 supprimée(s), 2001 ligne(s) modifiée(s)")).toBeTruthy();
+    expect(screen.getByText("0 table(s) déplacée(s)")).toBeTruthy();
+  });
   it("uses the canvas graph order when comparing the first explicit position to history", async () => {
     const opened = openResult();
     opened.structuredContent.presentation = emptyPresentation();
@@ -48,6 +64,7 @@ describe("history workflow", () => {
     expect(host.callTool).not.toHaveBeenCalled();
     fireEvent.click(entries[1]!);
     expect(await screen.findByText(/1 ligne.*modifiée/)).toBeTruthy();
+    expect(screen.queryByText("Estimation des lignes pour cette comparaison volumineuse.")).toBeNull();
     expect(host.callTool).toHaveBeenCalledWith("read_dbcd_revision", { path: "demo.dbcd", revisionId: "a1b2c3" });
     expect(within(panel).getByText("Baseline")).toBeTruthy();
   });
@@ -56,7 +73,7 @@ describe("history workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Historique" }));
     fireEvent.click(screen.getByRole("button", { name: "Épingler a1b2c3" }));
     fireEvent.click(await screen.findByRole("button", { name: "Désépingler a1b2c3" }));
-    await waitFor(() => expect(host.callTool).toHaveBeenCalledWith("pin_dbcd_revision", { path: "demo.dbcd", revisionId: "a1b2c3", pinned: false }));
+    await waitFor(() => expect(host.callTool).toHaveBeenCalledWith("pin_dbcd_revision", { path: "demo.dbcd", expectedProjectId: "project-id", expectedRevisionId: "r3", expectedGeneration: 3, revisionId: "a1b2c3", pinned: false }));
     fireEvent.click(screen.getByRole("button", { name: "Voir la révision a1b2c3" }));
     await screen.findByText(/1 ligne.*modifiée/);
     fireEvent.click(screen.getByRole("button", { name: "Plein écran" }));
@@ -71,7 +88,7 @@ describe("history workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Historique" }));
     fireEvent.click(screen.getByRole("button", { name: "Voir la révision a1b2c3" }));
     fireEvent.click(await screen.findByRole("button", { name: "Restaurer a1b2c3" }));
-    await waitFor(() => expect(host.callTool).toHaveBeenCalledWith("restore_dbcd_revision", { path: "demo.dbcd", expectedGeneration: 3, revisionId: "a1b2c3" }));
+    await waitFor(() => expect(host.callTool).toHaveBeenCalledWith("restore_dbcd_revision", { path: "demo.dbcd", expectedProjectId: "project-id", expectedRevisionId: "r3", expectedGeneration: 3, revisionId: "a1b2c3" }));
     expect(await screen.findByText("Restauration de a1b2c3")).toBeTruthy();
     expect(screen.getByText("Enregistré")).toBeTruthy();
     expect(container.querySelector(".cm-editor")?.textContent).toContain("Table before");

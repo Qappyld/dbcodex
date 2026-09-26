@@ -8,4 +8,6 @@ export * from "./presentation.js";
 export * from "./dbcd-path-policy.js";
 export * from "./dbcd-schema.js";
 export * from "./dbcd-project-store.js";
+export * from "./dbcd-resource-limits.js";
+export * from "./dbml-file.js";
 export * from "./dbcd-transfer.js";

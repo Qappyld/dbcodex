@@ -1,10 +1,10 @@
-import { useId, type CSSProperties } from "react";
+import { useId, useRef, useState, type CSSProperties } from "react";
 import { BaseEdge, Position, type Edge, type EdgeProps } from "@xyflow/react";
 import type { Point } from "./presentation-commands.js";
 
 type NodeBounds = Point & { width: number; height: number };
 export type RelationEdge = Edge<{ sourceCardinality: string; targetCardinality: string; points: Point[]; sourceBounds?: NodeBounds;
-  onRoute(points: Point[]): void; onReset(): void; readOnly?: boolean }, "directed">;
+  onRoute(points: Point[]): void; onReset(): void; screenToFlowPosition?(point: Point): Point; readOnly?: boolean }, "directed">;
 export function orthogonalPath(source: Point, target: Point, points: Point[]): string {
   let path = `M ${source.x} ${source.y}`, previous = source;
   for (const point of [...points, target]) { path += ` L ${point.x} ${previous.y} L ${point.x} ${point.y}`; previous = point; }
@@ -29,12 +29,19 @@ function selfRelationPoints(source: Point, target: Point, sourceSide: Position, 
   return points;
 }
 export function DirectedRelationEdge({ id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, selected, data }: EdgeProps<RelationEdge>) {
+  const drag = useRef<{ pointerId: number; index: number; start: Point; points: Point[] } | null>(null);
+  const [dragPoints, setDragPoints] = useState<Point[] | null>(null);
   const markerId = `direction-${useId().replaceAll(":", "")}`;
   const selfRelation = source === target;
   const automaticPoints = selfRelation && data?.sourceBounds
     ? selfRelationPoints({ x: sourceX, y: sourceY }, { x: targetX, y: targetY }, sourcePosition, targetPosition, data.sourceBounds)
     : [{ x: (sourceX + targetX) / 2, y: (sourceY + targetY) / 2 }];
-  const points = data?.points.length ? data.points : automaticPoints;
+  const points = dragPoints ?? (data?.points.length ? data.points : automaticPoints);
+  const pointerPoints = (clientX: number, clientY: number): Point[] => {
+    const current = drag.current!;
+    const position = data?.screenToFlowPosition?.({ x: clientX, y: clientY }) ?? { x: clientX, y: clientY };
+    return current.points.map((value, i) => i === current.index ? { x: value.x + position.x - current.start.x, y: value.y + position.y - current.start.y } : value);
+  };
   const resetAnchor = automaticPoints[Math.floor(automaticPoints.length / 2)]!;
   const path = orthogonalPath({ x: sourceX, y: sourceY }, { x: targetX, y: targetY }, points);
   return <g className={`directed-relation${selected ? " is-selected" : ""}`}>
@@ -46,6 +53,18 @@ export function DirectedRelationEdge({ id, source, target, sourceX, sourceY, tar
     <text className="relation-cardinality" x={targetX - 16} y={targetY - 9}>{data?.targetCardinality}</text>
     {selected && !data?.readOnly && <>
       {points.map((point, index) => <circle key={index} className="relation-control nodrag nopan" cx={point.x} cy={point.y} r="7" role="button" tabIndex={0} aria-label={`Point de routage ${index + 1}`}
+        onPointerDown={(event) => {
+          event.preventDefault(); event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId);
+          const start = data?.screenToFlowPosition?.({ x: event.clientX, y: event.clientY }) ?? { x: event.clientX, y: event.clientY };
+          drag.current = { pointerId: event.pointerId, index, start, points }; setDragPoints(points);
+        }}
+        onPointerMove={(event) => { if (drag.current?.pointerId === event.pointerId) { event.stopPropagation(); setDragPoints(pointerPoints(event.clientX, event.clientY)); } }}
+        onPointerUp={(event) => {
+          if (drag.current?.pointerId !== event.pointerId) return;
+          event.stopPropagation(); const next = pointerPoints(event.clientX, event.clientY);
+          drag.current = null; setDragPoints(null); event.currentTarget.releasePointerCapture(event.pointerId); data?.onRoute(next);
+        }}
+        onPointerCancel={() => { drag.current = null; setDragPoints(null); }}
         onKeyDown={(event) => {
           const step = event.shiftKey ? 1 : 10;
           const offsets: Record<string, Point> = { ArrowLeft: { x: -step, y: 0 }, ArrowRight: { x: step, y: 0 }, ArrowUp: { x: 0, y: -step }, ArrowDown: { x: 0, y: step } };

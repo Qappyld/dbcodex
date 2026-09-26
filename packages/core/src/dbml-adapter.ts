@@ -1,10 +1,12 @@
 import { Parser } from "@dbml/core";
+import { boundedUtf8Length, DBCD_MAX_SOURCE_BYTES } from "./dbcd-resource-limits.js";
 import type {
   Diagnostic,
   GraphColumn,
   GraphRelationEnd,
   ParseResult,
   SchemaGraph,
+  SourceRange,
 } from "./schema-graph.js";
 
 function compareText(left: string, right: string): number {
@@ -62,8 +64,22 @@ function canonicalTableId(schemaName: string | null, tableName: string): string 
 }
 
 export function parseDbml(source: string, sourcePath: string): ParseResult {
+  boundedUtf8Length(source, DBCD_MAX_SOURCE_BYTES);
   try {
-    const model = new Parser().parse(source, "dbmlv2").normalize();
+    const parsed = new Parser().parse(source, "dbmlv2");
+    const model = parsed.normalize();
+    const lineStarts = [0];
+    for (let offset = 0; offset < source.length; offset++) if (source[offset] === "\n") lineStarts.push(offset + 1);
+    const range = (token: unknown): SourceRange | undefined => {
+      const raw = token as { start?: { line: number; column: number }; end?: { line: number; column: number } } | undefined;
+      if (!raw?.start || !raw.end) return undefined;
+      const point = ({ line, column }: { line: number; column: number }) => ({ line, column,
+        offset: Math.min(source.length, (lineStarts[line - 1] ?? source.length) + column - 1) });
+      return { start: point(raw.start), end: point(raw.end) };
+    };
+    const tableTokens = new Map(parsed.schemas.flatMap((schema) => schema.tables.map((table) => [table.id, table] as const)));
+    const referenceTokens = new Map(parsed.schemas.flatMap((schema) => schema.refs.map((ref) => [ref.id, ref.token] as const)));
+    const groupTokens = new Map(parsed.schemas.flatMap((schema) => schema.tableGroups.map((group) => [group.id, group.token] as const)));
     const schemas = new Map(
       Object.values(model.schemas).map((schema) => [schema.id, schema] as const),
     );
@@ -89,6 +105,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
               type: field.type.type_name,
               primaryKey: field.pk,
               nullable: !field.not_null,
+              sourceRange: range(tableTokens.get(table.id)?.fields.find((item) => item.id === fieldId)?.token),
             };
           })
           .sort((left: GraphColumn, right: GraphColumn) => compareText(left.id, right.id));
@@ -98,6 +115,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
           schema: schema.name,
           name: table.name,
           columns,
+          sourceRange: range(tableTokens.get(table.id)?.token),
         };
       })
       .sort((left, right) => compareText(left.id, right.id));
@@ -122,17 +140,40 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
         }
 
         return {
-          id: `ref:${reference.id}`,
+          // A length-preserving tuple encoding has no hash or concatenation collisions.
+          // Parser ordinals change whenever an unrelated declaration is inserted.
+          id: `ref:${encodeURIComponent(JSON.stringify([schemas.get(reference.schemaId)?.name ?? "public", reference.name ?? null,
+            reference.endpointIds.map((id: number) => { const end = model.endpoints[id]!; return [end.schemaName ?? "public", end.tableName, end.fieldNames, end.relation]; })]))}`,
           source: ends[0],
           target: ends[1],
+          sourceRange: range(referenceTokens.get(reference.id)),
         };
-      })
-      .sort((left, right) => compareText(left.id, right.id));
+      });
+
+    const tableGroups: NonNullable<SchemaGraph["tableGroups"]> = Object.values(model.tableGroups).map((group) => {
+      const schema = schemas.get(group.schemaId)?.name ?? "public";
+      return { id: schema === "public" ? group.name : `${schema}.${group.name}`, name: group.name,
+        tableIds: group.tableIds.map((id: number) => { const table = model.tables[id]!; return canonicalTableId(schemas.get(table.schemaId)?.name ?? null, table.name); }).sort(compareText),
+        ...(group.color ? { color: group.color } : {}), sourceRange: range(groupTokens.get(group.id)) };
+    });
+    const views: NonNullable<SchemaGraph["views"]> = parsed.diagramViews.map((view) => {
+      const entities = view.visibleEntities;
+      const members = new Set<string>((entities.tables ?? []).map((table) => canonicalTableId(table.schemaName, table.name)));
+      for (const item of entities.tableGroups ?? []) {
+        const id = item.name;
+        for (const table of tableGroups.find((group) => group.id === id)?.tableIds ?? []) members.add(table);
+      }
+      for (const schema of entities.schemas ?? []) for (const table of tables) if (table.schema === schema.name) members.add(table.id);
+      return { id: !view.schemaName || view.schemaName === "public" ? view.name : `${view.schemaName}.${view.name}`,
+        name: view.name, tableIds: [...members].sort(compareText), sourceRange: range(view.token) };
+    });
 
     const graph: SchemaGraph = {
       sourcePath,
       tables,
       relations,
+      tableGroups,
+      views,
     };
 
     return { graph, diagnostics: [] };

@@ -16,7 +16,9 @@ export async function makeDbcdFixture(roots: string[]) {
     projectId: () => "project-1",
   };
   const snapshot = await createDbcdProject(input);
-  return { root, input, snapshot, path: join(root, input.projectPath) };
+  return { root, input: { ...input, expectedProjectId: snapshot.projectId,
+    expectedRevisionId: snapshot.currentRevisionId, expectedGeneration: snapshot.generation },
+    snapshot, path: join(root, input.projectPath) };
 }
 
 export function inspectDbcd<T>(path: string, inspect: (db: DatabaseSync) => T): T {

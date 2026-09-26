@@ -21,6 +21,41 @@ function unique(document: PresentationDocument, id: string): void {
   if (["__proto__", "constructor", "prototype"].includes(id) || Object.hasOwn(document.views, id)) throw new Error("Cette vue existe déjà.");
 }
 export function defaultPosition(index: number): Point { return { x: 40 + (index % 3) * 280, y: 60 + Math.floor(index / 3) * 220 }; }
+export function dbmlViewIds(graph: SchemaGraph): Map<string, string> {
+  const reserved = new Set(["all", "__proto__", "constructor", "prototype"]);
+  const used = new Set([...reserved, ...(graph.views ?? []).map((view) => view.id)]);
+  return new Map((graph.views ?? []).map((view) => {
+    let id = view.id;
+    if (reserved.has(id)) { id = `_dbml_${view.id}`; let suffix = 2; while (used.has(id)) id = `_dbml_${view.id}_${suffix++}`; used.add(id); }
+    return [view.id, id];
+  }));
+}
+/** DBML owns functional membership; presentation owns the surviving entities' layout. */
+export function reconcileDbmlPresentation(document: PresentationDocument, graph: SchemaGraph): PresentationDocument {
+  if (!graph.views && !graph.tableGroups) return document;
+  return command(document, (draft) => {
+    if (graph.views) {
+      const ids = dbmlViewIds(graph), definitions = new Set(ids.values());
+      for (const id of Object.keys(draft.views)) if (id !== "all" && !definitions.has(id)) delete draft.views[id];
+      for (const definition of graph.views) {
+        const id = ids.get(definition.id)!;
+        const saved = draft.views[id];
+        draft.views[id] = { name: saved?.name ?? definition.name, system: false,
+          defaultDetail: saved?.defaultDetail ?? draft.views.all!.defaultDetail,
+          viewport: saved?.viewport ?? { x: 0, y: 0, zoom: 1 }, edges: saved?.edges ?? {}, groups: saved?.groups ?? {},
+          nodes: Object.fromEntries(definition.tableIds.map((id, index) => [id, saved?.nodes[id] ?? draft.views.all!.nodes[id] ?? defaultPosition(index)])) };
+      }
+      if (!Object.hasOwn(draft.views, draft.activeViewId)) draft.activeViewId = "all";
+    }
+    if (graph.tableGroups) for (const current of Object.values(draft.views)) {
+      current.groups = Object.fromEntries(graph.tableGroups.map((group) => [group.id, {
+        name: current.groups[group.id]?.name ?? group.name,
+        color: group.color ?? "#16a34a", tableIds: group.tableIds,
+        ...(current.groups[group.id]?.collapsed === undefined ? {} : { collapsed: current.groups[group.id]!.collapsed }),
+      }]));
+    }
+  });
+}
 export function createView(document: PresentationDocument, input: { id: string; name: string; tableIds: string[] }): PresentationDocument {
   return command(document, (draft) => {
     unique(draft, input.id);

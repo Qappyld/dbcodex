@@ -1,12 +1,25 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, symlink, rename } from "node:fs/promises";
 import { renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fork } from "node:child_process";
+import { once } from "node:events";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDbcdProject, openDbcdProject, restoreDbcdRevision, saveDbcdDraft, saveDbcdProject, type SaveCheckpoint } from "../src/dbcd-project-store.js";
 import { emptyPresentation } from "../src/presentation.js";
 import { fixtureSource, inspectDbcd, makeDbcdFixture } from "./support/dbcd-fixture.js";
-import { removeTempWorkspace } from "./support/temp-workspace.js";
+import { makeTempWorkspace, removeTempWorkspace } from "./support/temp-workspace.js";
+
+async function leaveHotJournal(path: string): Promise<void> {
+  const child = fork(fileURLToPath(new URL("./support/leave-hot-journal.mjs", import.meta.url)), [path], { stdio: ["ignore", "ignore", "ignore", "ipc"] });
+  try {
+    await once(child, "message");
+    const exited = once(child, "exit");
+    child.kill("SIGKILL");
+    await exited;
+  } finally { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }
+}
 
 describe("dbcd transactional recovery", () => {
   const roots: string[] = [];
@@ -16,6 +29,46 @@ describe("dbcd transactional recovery", () => {
   });
 
   const checkpoints: SaveCheckpoint[] = ["after-begin", "after-revision", "after-document", "before-commit"];
+  it("recovers a real hot journal after a writer process is killed", async () => {
+    const { input, root, path, snapshot } = await makeDbcdFixture(roots);
+    await leaveHotJournal(path);
+    expect((await readdir(root))).toContain("shop.dbcd-journal");
+    const journal = await readFile(`${path}-journal`);
+    expect(journal.subarray(0, 8).toString("hex")).toBe("d9d505f920a163d7");
+    const raw = new DatabaseSync(path, { readOnly: true });
+    try { expect(() => raw.prepare("SELECT generation FROM document_state").get()).toThrow(); }
+    finally { raw.close(); }
+    expect(await openDbcdProject(input)).toEqual(snapshot);
+    expect(await readdir(root)).toEqual(["shop.dbcd"]);
+    expect(inspectDbcd(path, (db) => db.prepare("PRAGMA quick_check").get()?.quick_check)).toBe("ok");
+  });
+
+  it.each(["future", "corrupt"])("preserves a %s project and its hot journal without writable recovery", async (kind) => {
+    const { input, root, path } = await makeDbcdFixture(roots);
+    inspectDbcd(path, (db) => db.exec(kind === "future" ? "PRAGMA user_version=99" : "UPDATE document_state SET source_hash='corrupt'"));
+    await leaveHotJournal(path);
+    const before = await readFile(path);
+    const journal = await readFile(`${path}-journal`);
+    await expect(openDbcdProject(input)).rejects.toMatchObject({ code: kind === "future" ? "READ_ONLY" : "CORRUPT_PROJECT" });
+    expect((await readFile(path)).equals(before)).toBe(true);
+    expect((await readFile(`${path}-journal`)).equals(journal)).toBe(true);
+    expect((await readdir(root)).sort()).toEqual(["shop.dbcd", "shop.dbcd-journal"]);
+  });
+
+  it("rejects a journal link outside the workspace without modifying its target", async () => {
+    const { input, root, path } = await makeDbcdFixture(roots);
+    const outside = await makeTempWorkspace(roots);
+    await leaveHotJournal(path);
+    const target = join(outside, "private-journal");
+    await rename(`${path}-journal`, target);
+    await symlink(process.platform === "win32" ? outside : target, `${path}-journal`, process.platform === "win32" ? "junction" : "file");
+    const before = await readFile(path);
+    const journal = await readFile(target);
+    await expect(openDbcdProject(input)).rejects.toMatchObject({ code: "PATH_CHANGED" });
+    expect((await readFile(path)).equals(before)).toBe(true);
+    expect((await readFile(target)).equals(journal)).toBe(true);
+    expect((await readdir(root)).sort()).toEqual(["shop.dbcd", "shop.dbcd-journal"]);
+  });
   it.each(checkpoints)("rolls back %s including revision, document, metadata and draft", async (checkpoint) => {
     const { input, root, path } = await makeDbcdFixture(roots);
     await saveDbcdDraft({ ...input, baseGeneration: 1, sourceText: "Table broken {", presentation: emptyPresentation() });

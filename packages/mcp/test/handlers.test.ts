@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createHandlers } from "../src/handlers.js";
-import { createDbcdProject, emptyPresentation } from "../../core/src/index.js";
+import { createDbcdProject, emptyPresentation, DBCD_MAX_SOURCE_BYTES } from "../../core/src/index.js";
 
 describe("MCP handlers", () => {
   const roots: string[] = [];
@@ -118,6 +118,18 @@ describe("MCP handlers", () => {
     expect(JSON.stringify(result)).not.toContain(root);
   });
 
+  it("returns a safe explicit resource limit for oversized DBML files and draft validation", async () => {
+    const root = await workspace();
+    await writeFile(join(root, "large.dbml"), "x".repeat(DBCD_MAX_SOURCE_BYTES + 1));
+    await createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: "" });
+    const handlers = createHandlers(root);
+    for (const result of [await handlers.openDbml({ path: "large.dbml" }),
+      await handlers.validateDbcdDraft({ path: "shop.dbcd", sourceText: "é".repeat(DBCD_MAX_SOURCE_BYTES / 2 + 1) })]) {
+      expect(result).toMatchObject({ isError: true, structuredContent: { errorCode: "RESOURCE_LIMIT" } });
+      expect(JSON.stringify(result)).not.toContain(root);
+    }
+  });
+
   it("opens a project with source and identity only in app metadata", async () => {
     const root = await workspace();
     const sourceText = "Table users { id int [pk] }\n";
@@ -138,10 +150,11 @@ describe("MCP handlers", () => {
 
   it("keeps invalid draft source in app metadata and returns safe validation", async () => {
     const root = await workspace();
-    await createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: "Table users { id int [pk] }\n" });
+    const initial = await createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: "Table users { id int [pk] }\n" });
     const handlers = createHandlers(root);
     const draftSource = "Table secret {";
     const draft = await handlers.saveDbcdDraft({ path: "shop.dbcd", baseGeneration: 1,
+      expectedProjectId: initial.projectId, expectedRevisionId: initial.currentRevisionId, expectedGeneration: 1,
       sourceText: draftSource, presentation: emptyPresentation() });
     expect(JSON.stringify(draft.content)).not.toContain(draftSource);
     expect(JSON.stringify(draft.structuredContent)).not.toContain(draftSource);
@@ -157,11 +170,13 @@ describe("MCP handlers", () => {
 
   it("discards a draft without changing the revision generation", async () => {
     const root = await workspace();
-    await createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: "Table users { id int [pk] }\n" });
+    const initial = await createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: "Table users { id int [pk] }\n" });
     const handlers = createHandlers(root);
+    const expected = { expectedProjectId: initial.projectId, expectedRevisionId: initial.currentRevisionId, expectedGeneration: 1 };
     await handlers.saveDbcdDraft({ path: "shop.dbcd", baseGeneration: 1,
+      ...expected,
       sourceText: "Table secret {", presentation: emptyPresentation() });
-    const discarded = await handlers.discardDbcdDraft({ path: "shop.dbcd", expectedGeneration: 1 });
+    const discarded = await handlers.discardDbcdDraft({ path: "shop.dbcd", ...expected });
     expect(discarded.structuredContent).toMatchObject({ projectPath: "shop.dbcd", discarded: true });
     const reopened = await handlers.openDbcd({ path: "shop.dbcd" });
     expect(reopened.structuredContent).toMatchObject({ generation: 1, hasDraft: false });
@@ -178,6 +193,7 @@ describe("MCP handlers", () => {
     const initialRevision = imported.structuredContent.currentRevisionId;
     expect(imported._meta.dbcodex.sourceText).toBe(sourceText);
     const saved = await handlers.saveDbcd({ path: "shop.dbcd", expectedGeneration: 1,
+      expectedProjectId: imported._meta.dbcodex.projectId, expectedRevisionId: initialRevision,
       sourceText: "Table posts { id int [pk] }\n", presentation: emptyPresentation(), label: "next" });
     expect(saved.structuredContent).toMatchObject({ generation: 2 });
     const listed = await handlers.listDbcdRevisions({ path: "shop.dbcd" });
@@ -189,8 +205,9 @@ describe("MCP handlers", () => {
     expect(JSON.stringify(revision.structuredContent)).not.toContain('"presentation":');
     expect(JSON.stringify(revision.content)).not.toContain(sourceText);
     expect(JSON.stringify(revision)).not.toContain(root);
-    await handlers.pinDbcdRevision({ path: "shop.dbcd", revisionId: initialRevision, pinned: true });
-    const restored = await handlers.restoreDbcdRevision({ path: "shop.dbcd", expectedGeneration: 2, revisionId: initialRevision });
+    const expected = { expectedProjectId: saved._meta.dbcodex.projectId, expectedRevisionId: saved.structuredContent.currentRevisionId, expectedGeneration: 2 };
+    await handlers.pinDbcdRevision({ path: "shop.dbcd", ...expected, revisionId: initialRevision, pinned: true });
+    const restored = await handlers.restoreDbcdRevision({ path: "shop.dbcd", ...expected, revisionId: initialRevision });
     expect(restored.structuredContent).toMatchObject({ generation: 3 });
     const exported = await handlers.exportDbml({ projectPath: "shop.dbcd", targetPath: "copy.dbml" });
     expect(exported.structuredContent).toMatchObject({ targetPath: "copy.dbml" });

@@ -25,7 +25,9 @@ it("routes private project results to a persistent session and legacy results to
   const another = openResult();
   another._meta.dbcodex.projectId = "second-project";
   act(() => notify(another));
-  expect(container.querySelector(".cm-editor")).not.toBe(editor);
+  expect(container.querySelector(".cm-editor")).toBe(editor);
+  expect(screen.getByRole("region", { name: "Résolution du conflit" })).toBeTruthy();
+  expect(screen.getByText("Modifications non enregistrées")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveProperty("disabled", true);
   act(() => notify({ structuredContent: { sourcePath: "legacy.dbml", graph: { ...graph, sourcePath: "legacy.dbml" },
     layout: { version: 1, views: { "View All": { nodes: {} } } }, diagnostics: [], layoutWarnings: [] } }));

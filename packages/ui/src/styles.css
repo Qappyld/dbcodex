@@ -155,6 +155,11 @@ button {
 .workbench button:not(:disabled) { cursor: pointer; }
 .workbench :focus-visible { outline: 2px solid var(--dbc-accent); outline-offset: 2px; }
 .workbench-message { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--dbc-border); }
+.session-recovery { max-height: 55%; overflow: auto; flex: 0 1 auto; background: var(--dbc-surface); }
+.session-recovery h2 { font-size: 1rem; margin: 4px 0 8px; }
+.session-recovery pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto; }
+.session-recovery textarea { display: block; width: 100%; min-height: 8rem; background: var(--dbc-bg); color: var(--dbc-text); }
+.session-recovery button { margin: 4px; }
 .workbench-body { display: flex; position: relative; flex: 1; min-height: 0; min-width: 0; }
 .editor-panel, .inspector-panel { flex-shrink: 1; min-width: 240px; background: var(--dbc-surface); overflow: auto; }
 .editor-panel { display: flex; flex-direction: column; }
@@ -181,6 +186,8 @@ button {
 .flow-table ul { list-style: none; margin: 0; padding: 4px 0; }
 .flow-table li { display: flex; gap: 6px; padding: 5px 10px; }
 .flow-table .column-key { width: 20px; color: var(--dbc-accent); font-size: 10px; }
+.flow-table .column-select { min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+.flow-table .column-select[aria-pressed="true"] { background: var(--dbc-accent); color: var(--dbc-surface); }
 .flow-table .column-type { margin-left: auto; color: var(--dbc-muted); }
 .flow-table footer { padding: 8px 12px; color: var(--dbc-muted); border-top: 1px solid var(--dbc-border); }
 .inspector-panel { padding: 14px; overflow-wrap: anywhere; }
