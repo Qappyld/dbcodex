@@ -5,11 +5,33 @@ import { DiagramCanvas } from "../src/DiagramCanvas.js";
 import { graph, presentation } from "./workbench-fixture.js";
 import { setupFlowDom } from "./flow-dom.js";
 import { parseDbml } from "../../core/src/dbml-adapter.js";
+import { useState } from "react";
 
 beforeEach(setupFlowDom);
 afterEach(async () => { cleanup(); await act(() => new Promise((resolve) => setTimeout(resolve, 0))); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("DiagramCanvas", () => {
+  it("uses measured table bounds for automatic self loops and restores them after route reset", async () => {
+    const parsed = parseDbml("Table users {\n id int [pk]\n manager_id int\n}\nRef: users.manager_id > users.id", "self.dbml");
+    expect(parsed.diagnostics).toEqual([]);
+    const change = vi.fn();
+    function Canvas() {
+      const [value, setValue] = useState(presentation());
+      return <DiagramCanvas graph={parsed.graph!} presentation={value} onPresentationChange={(next) => { change(next); setValue(next); }} />;
+    }
+    const { container } = render(<Canvas />);
+    fireEvent.keyDown(await screen.findByRole("group", { name: /Edge from public.users to public.users/ }), { key: "Enter" });
+    const automatic = container.querySelector(".react-flow__edge-path")!.getAttribute("d");
+    for (const point of screen.getAllByRole("button", { name: /Point de routage/ })) {
+      const x = Number(point.getAttribute("cx")), y = Number(point.getAttribute("cy"));
+      expect(x < 20 || x > 240 || y < 50 || y > 190).toBe(true);
+    }
+    fireEvent.keyDown(screen.getByRole("button", { name: "Point de routage 1" }), { key: "ArrowRight" });
+    expect(change.mock.calls.at(-1)?.[0].views.all.edges[parsed.graph!.relations[0]!.id].points.length).toBeGreaterThan(1);
+    fireEvent.click(await screen.findByRole("button", { name: "Routage automatique" }));
+    expect(change.mock.calls.at(-1)?.[0].views.all.edges).toEqual({});
+    await waitFor(() => expect(container.querySelector(".react-flow__edge-path")?.getAttribute("d")).toBe(automatic));
+  });
   it("persists viewport changes made by zoom controls", async () => {
     const change = vi.fn();
     render(<DiagramCanvas graph={graph} presentation={presentation()} onPresentationChange={change} />);

@@ -78,14 +78,17 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange, onSel
   }, [graph, view, query, readOnly, presentation, onPresentationChange]);
   const [nodes, setNodes] = useState(mappedNodes);
   useEffect(() => { setNodes(mappedNodes); }, [mappedNodes]);
-  const mappedEdges = useMemo<RelationEdge[]>(() => graph.relations.map((relation) => ({
+  const mappedEdges = useMemo<RelationEdge[]>(() => graph.relations.map((relation) => {
+    const sourceNode = nodes.find((node) => node.id === relation.source.tableId);
+    return {
     id: relation.id, source: relation.source.tableId, target: relation.target.tableId,
     type: "directed", reconnectable: false, selected: selectedEdge.current === relation.id,
     hidden: mappedNodes.some((node) => (node.id === relation.source.tableId || node.id === relation.target.tableId) && node.hidden),
     data: { sourceCardinality: relation.source.cardinality, targetCardinality: relation.target.cardinality, points: view.edges[relation.id]?.points ?? [], readOnly,
+      ...(sourceNode ? { sourceBounds: { ...sourceNode.position, width: sourceNode.measured?.width ?? 220, height: sourceNode.measured?.height ?? 140 } } : {}),
       onRoute: (points) => { if (!readOnly) onPresentationChange(setRelationRoute(presentation, presentation.activeViewId, relation.id, points)); },
       onReset: () => { if (!readOnly) onPresentationChange(resetRelationRoute(presentation, presentation.activeViewId, relation.id)); } },
-  })), [graph, view, presentation, readOnly, onPresentationChange, mappedNodes]);
+  }; }), [graph, view, presentation, readOnly, onPresentationChange, mappedNodes, nodes]);
   const [edges, setEdges] = useState(mappedEdges);
   useEffect(() => { setEdges(mappedEdges); }, [mappedEdges]);
 

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { DetailLevel, PresentationDocument, SchemaGraph } from "@dbcodex/core";
+import type { DetailLevel, GraphTable, PresentationDocument, SchemaGraph } from "@dbcodex/core";
 import { createView, duplicateView, renameView, deleteView, setActiveView, setViewDetail, setNodeDetail,
   groupTables, updateGroup, setNodeHidden, setNodePosition, defaultPosition, searchTables } from "./presentation-commands.js";
-import { applyDbmlPatch, previewDbmlBlock, type DbmlPatch } from "./dbml-patches.js";
+import { applyDbmlPatch, assertTablesUngrouped, dbmlTableReference, previewDbmlBlock, type DbmlPatch } from "./dbml-patches.js";
 
 export interface ViewInspectorProps {
   graph: SchemaGraph; presentation: PresentationDocument; source: string; selectedIds: string[]; query: string;
@@ -16,13 +16,12 @@ function nextId(name: string, existing: Record<string, unknown>): string {
   while (Object.hasOwn(existing, id) || ["__proto__", "constructor", "prototype"].includes(id)) id = `${base}_${index++}`;
   return id;
 }
-const identifier = (id: string): string => id.split(".").map((part) => `"${part.replaceAll('"', '\\"')}"`).join(".");
 
 export function ViewInspector({ graph, presentation, source, selectedIds, query, onQueryChange, onSelectTable, onPresentationChange, onSourceChange, readOnly = false }: ViewInspectorProps) {
   const viewId = presentation.activeViewId, current = presentation.views[viewId]!;
   const [name, setName] = useState(""); const [groupName, setGroupName] = useState(""); const [color, setColor] = useState("#16a34a");
   const [error, setError] = useState("");
-  const [pending, setPending] = useState<{ patch: DbmlPatch; presentation: PresentationDocument; before: string } | null>(null);
+  const [pending, setPending] = useState<{ patch: DbmlPatch; presentation: PresentationDocument; before: string; tables: GraphTable[] } | null>(null);
   const run = (operation: () => void): void => { if (readOnly) return; try { operation(); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Modification impossible."); } };
   const change = (operation: () => PresentationDocument): void => run(() => onPresentationChange(operation()));
   // Materialize default positions before a control changes a previously unsaved table.
@@ -32,11 +31,12 @@ export function ViewInspector({ graph, presentation, source, selectedIds, query,
   const selected = visible.filter((table) => selectedIds.includes(table.id));
   const previewGroup = (): void => run(() => {
     if (!groupName.trim()) throw new Error("Saisissez un nom de groupe.");
-    const id = nextId(groupName, current.groups);
+    const functionalGroups = assertTablesUngrouped(source, selected);
+    const id = nextId(groupName, { ...Object.fromEntries(functionalGroups.map((group) => [group.name, true])), ...current.groups });
     const tableIds = selected.map((table) => table.id);
     const next = groupTables(materialized(), viewId, { id, name: groupName.trim(), color, tableIds });
-    const block = `TableGroup ${id} [color: ${color}] {\n${tableIds.map((tableId) => `  ${identifier(tableId)}`).join("\n")}\n}`;
-    setPending({ patch: previewDbmlBlock(source, "TableGroup", id, block), presentation: next, before: JSON.stringify(presentation) });
+    const block = `TableGroup ${id} [color: ${color}] {\n${selected.map((table) => `  ${dbmlTableReference(table)}`).join("\n")}\n}`;
+    setPending({ patch: previewDbmlBlock(source, "TableGroup", id, block), presentation: next, before: JSON.stringify(presentation), tables: selected });
   });
   return <div className="view-inspector">
     <label>Vue<select aria-label="Vue" value={viewId} disabled={readOnly} onChange={(event) => change(() => setActiveView(presentation, event.target.value))}>
@@ -71,6 +71,7 @@ export function ViewInspector({ graph, presentation, source, selectedIds, query,
       <button type="button" disabled={readOnly} onClick={() => run(() => {
         if (JSON.stringify(presentation) !== pending.before) throw new Error("La présentation a été modifiée. Recréez l’aperçu.");
         const nextSource = applyDbmlPatch(source, pending.patch, true);
+        assertTablesUngrouped(source, pending.tables);
         onSourceChange(nextSource); onPresentationChange(pending.presentation); setPending(null);
       })}>Appliquer</button><button type="button" onClick={() => setPending(null)}>Annuler</button>
     </section>}
