@@ -1,8 +1,9 @@
 import { readFile, readdir } from "node:fs/promises";
 import { renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { openDbcdProject, restoreDbcdRevision, saveDbcdDraft, saveDbcdProject, type SaveCheckpoint } from "../src/dbcd-project-store.js";
+import { createDbcdProject, openDbcdProject, restoreDbcdRevision, saveDbcdDraft, saveDbcdProject, type SaveCheckpoint } from "../src/dbcd-project-store.js";
 import { emptyPresentation } from "../src/presentation.js";
 import { fixtureSource, inspectDbcd, makeDbcdFixture } from "./support/dbcd-fixture.js";
 import { removeTempWorkspace } from "./support/temp-workspace.js";
@@ -108,5 +109,31 @@ describe("dbcd transactional recovery", () => {
       .rejects.toMatchObject({ code: "PATH_CHANGED" });
     expect(await readFile(path, "utf8")).toBe("replacement owned by someone else");
     expect(await readFile(`${path}.original`)).toEqual(before);
+  });
+
+  it("rejects replacement by another valid project after the restore revision-read connection closes", async () => {
+    const { input, path, root, snapshot } = await makeDbcdFixture(roots);
+    const replacementPath = join(root, "replacement.dbcd");
+    const replacement = await createDbcdProject({ ...input, projectPath: "replacement.dbcd",
+      sourceText: "Table invoices { invoice_id int [pk] }\n", projectId: () => "project-b" });
+    expect(replacement.generation).toBe(snapshot.generation);
+    const originalBytes = await readFile(path);
+    const replacementBytes = await readFile(replacementPath);
+    const close = DatabaseSync.prototype.close;
+    let replaced = false;
+    vi.spyOn(DatabaseSync.prototype, "close").mockImplementationOnce(function (this: DatabaseSync) {
+      close.call(this);
+      renameSync(path, `${path}.original`);
+      renameSync(replacementPath, path);
+      replaced = true;
+    });
+    await expect(restoreDbcdRevision({ ...input, revisionId: snapshot.currentRevisionId, expectedGeneration: 1 }))
+      .rejects.toMatchObject({ code: "PATH_CHANGED" });
+    expect(replaced).toBe(true);
+    expect(await readFile(`${path}.original`)).toEqual(originalBytes);
+    expect(await readFile(path)).toEqual(replacementBytes);
+    expect(await openDbcdProject(input)).toEqual({ ...replacement, projectPath: input.projectPath,
+      graph: { ...replacement.graph, sourcePath: input.projectPath } });
+    expect((await openDbcdProject(input)).revisions).toHaveLength(1);
   });
 });

@@ -323,12 +323,17 @@ function assertWritable(db: DatabaseSync): void {
   }
 }
 
-/** Keeps file identity reserved across queue waits and SQLite connection changes. */
-async function writeProject(
+interface ProjectReservation {
+  path: ResolvedDbcdPath;
+  identity: BigIntStats;
+  queueKey: string;
+}
+
+/** Holds the same file identity throughout compound read/write operations. */
+async function withProjectReservation<T>(
   input: OpenDbcdProjectInput,
-  action: (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => void,
-  hooks?: DbcdStoreTestHooks,
-): Promise<DbcdProjectSnapshot> {
+  action: (reservation: ProjectReservation) => T | Promise<T>,
+): Promise<T> {
   const path = await resolveExistingDbcd(input.workspaceRoot, input.projectPath);
   assertConfinedParent(path);
   if (!lstatSync(path.absolutePath).isFile()) {
@@ -336,49 +341,65 @@ async function writeProject(
   }
   const fd = openSync(path.absolutePath, "r");
   try {
-    const reserved = fstatSync(fd, { bigint: true });
-    assertReservedFile(path, reserved);
+    const identity = fstatSync(fd, { bigint: true });
+    assertReservedFile(path, identity);
     // realpath also canonicalizes path casing on Windows, so aliases share one queue.
-    const key = realpathSync(path.absolutePath);
-    return await withProjectWrite(key, () => {
-      let db: DatabaseSync | undefined;
-      let transactionStarted = false;
-      try {
-        assertReservedFile(path, reserved);
-        // Future formats must be rejected before opening any writable connection.
-        db = openConnection(path.absolutePath, true);
-        assertReservedFile(path, reserved);
-        assertWritable(db);
-        db.close();
-        db = undefined;
-        assertReservedFile(path, reserved);
-        db = openConnection(path.absolutePath, false);
-        assertReservedFile(path, reserved);
-        db.exec("BEGIN IMMEDIATE");
-        transactionStarted = true;
-        hooks?.checkpoint?.("after-begin");
-        assertWritable(db);
-        const snapshot = readSnapshot(db, path.relativePath);
-        action(db, snapshot);
-        const saved = readSnapshot(db, path.relativePath);
-        hooks?.checkpoint?.("before-commit");
-        assertReservedFile(path, reserved);
-        db.exec("COMMIT");
-        transactionStarted = false;
-        return saved;
-      } catch (error) {
-        if (db && transactionStarted) {
-          try { db.exec("ROLLBACK"); } catch { /* Closing rolls back if explicit rollback failed. */ }
-        }
-        if (error instanceof DbcdProjectStoreError || error instanceof DbcdPathPolicyError) throw error;
-        throw new DbcdProjectStoreError("WRITE_FAILED", "Unable to update the .dbcd project.");
-      } finally {
-        db?.close();
-      }
-    });
+    return await action({ path, identity, queueKey: realpathSync(path.absolutePath) });
   } finally {
     closeSync(fd);
   }
+}
+
+async function writeProject(
+  input: OpenDbcdProjectInput,
+  action: (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => void,
+  hooks?: DbcdStoreTestHooks,
+): Promise<DbcdProjectSnapshot> {
+  return withProjectReservation(input, (reservation) => writeReservedProject(reservation, action, hooks));
+}
+
+/** Acquires the writer queue exactly once, without replacing an existing reservation. */
+async function writeReservedProject(
+  { path, identity, queueKey }: ProjectReservation,
+  action: (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => void,
+  hooks?: DbcdStoreTestHooks,
+): Promise<DbcdProjectSnapshot> {
+  return withProjectWrite(queueKey, () => {
+    let db: DatabaseSync | undefined;
+    let transactionStarted = false;
+    try {
+      assertReservedFile(path, identity);
+      // Future formats must be rejected before opening any writable connection.
+      db = openConnection(path.absolutePath, true);
+      assertReservedFile(path, identity);
+      assertWritable(db);
+      db.close();
+      db = undefined;
+      assertReservedFile(path, identity);
+      db = openConnection(path.absolutePath, false);
+      assertReservedFile(path, identity);
+      db.exec("BEGIN IMMEDIATE");
+      transactionStarted = true;
+      hooks?.checkpoint?.("after-begin");
+      assertWritable(db);
+      const snapshot = readSnapshot(db, path.relativePath);
+      action(db, snapshot);
+      const saved = readSnapshot(db, path.relativePath);
+      hooks?.checkpoint?.("before-commit");
+      assertReservedFile(path, identity);
+      db.exec("COMMIT");
+      transactionStarted = false;
+      return saved;
+    } catch (error) {
+      if (db && transactionStarted) {
+        try { db.exec("ROLLBACK"); } catch { /* Closing rolls back if explicit rollback failed. */ }
+      }
+      if (error instanceof DbcdProjectStoreError || error instanceof DbcdPathPolicyError) throw error;
+      throw new DbcdProjectStoreError("WRITE_FAILED", "Unable to update the .dbcd project.");
+    } finally {
+      db?.close();
+    }
+  });
 }
 
 export async function saveDbcdDraft(input: SaveDbcdDraftInput): Promise<DbcdProjectSnapshot> {
@@ -414,7 +435,12 @@ export async function saveDbcdProject(input: SaveDbcdInput, hooks?: DbcdStoreTes
   return saveProject(input, "Saved revision", hooks);
 }
 
-async function saveProject(input: SaveDbcdInput, summary: string, hooks?: DbcdStoreTestHooks): Promise<DbcdProjectSnapshot> {
+async function saveProject(
+  input: SaveDbcdInput,
+  summary: string,
+  hooks?: DbcdStoreTestHooks,
+  reservation?: ProjectReservation,
+): Promise<DbcdProjectSnapshot> {
   // DBML validation and compression happen before acquiring the write transaction.
   if (!parseDbml(input.sourceText, input.projectPath).graph) {
     throw new DbcdProjectStoreError("INVALID_DBML", "Unable to parse DBML.");
@@ -424,7 +450,7 @@ async function saveProject(input: SaveDbcdInput, summary: string, hooks?: DbcdSt
   const presentationHash = hashDocument(presentationJson);
   const sourceGzip = gzipSync(input.sourceText);
   const presentationGzip = gzipSync(presentationJson);
-  return writeProject(input, (db, snapshot) => {
+  const save = (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => {
     assertGeneration(snapshot.generation, input.expectedGeneration);
     const createdAt = timestamp.parse(input.now?.() ?? new Date().toISOString());
     const id = revisionId(createdAt, sourceHash, presentationHash, snapshot.currentRevisionId);
@@ -443,7 +469,8 @@ async function saveProject(input: SaveDbcdInput, summary: string, hooks?: DbcdSt
     db.prepare("DELETE FROM draft_state WHERE id=1").run();
     db.prepare("UPDATE project_meta SET updated_at=? WHERE id=1").run(createdAt);
     pruneRevisions(db, id, createdAt);
-  }, hooks);
+  };
+  return reservation ? writeReservedProject(reservation, save, hooks) : writeProject(input, save, hooks);
 }
 
 export async function listDbcdRevisions(input: OpenDbcdProjectInput): Promise<DbcdRevisionSummary[]> {
@@ -451,14 +478,19 @@ export async function listDbcdRevisions(input: OpenDbcdProjectInput): Promise<Db
 }
 
 export async function readDbcdRevision(input: ReadDbcdRevisionInput): Promise<DbcdRevisionSnapshot> {
-  const path = await resolveExistingDbcd(input.workspaceRoot, input.projectPath);
+  return withProjectReservation(input, (reservation) => readReservedRevision(reservation, input.revisionId));
+}
+
+function readReservedRevision({ path, identity }: ProjectReservation, revisionId: string): DbcdRevisionSnapshot {
   let db: DatabaseSync | undefined;
   try {
+    assertReservedFile(path, identity);
     db = openConnection(path.absolutePath, true);
+    assertReservedFile(path, identity);
     const snapshot = readSnapshot(db, path.relativePath);
-    const summary = snapshot.revisions.find((revision) => revision.id === input.revisionId);
+    const summary = snapshot.revisions.find((revision) => revision.id === revisionId);
     if (!summary) throw new DbcdProjectStoreError("REVISION_NOT_FOUND", "The revision does not exist.");
-    const row = db.prepare("SELECT dbml_gzip, presentation_gzip FROM revisions WHERE id=?").get(input.revisionId)!;
+    const row = db.prepare("SELECT dbml_gzip, presentation_gzip FROM revisions WHERE id=?").get(revisionId)!;
     const sourceText = gunzipSync(z.instanceof(Uint8Array).parse(row.dbml_gzip)).toString("utf8");
     const presentationJson = gunzipSync(z.instanceof(Uint8Array).parse(row.presentation_gzip)).toString("utf8");
     if (hashDocument(sourceText) !== summary.sourceHash || hashDocument(presentationJson) !== summary.presentationHash) {
@@ -466,6 +498,7 @@ export async function readDbcdRevision(input: ReadDbcdRevisionInput): Promise<Db
     }
     const presentation = decodePresentation(presentationJson);
     if (!parseDbml(sourceText, path.relativePath).graph) throw new Error("Invalid revision source.");
+    assertReservedFile(path, identity);
     return { ...summary, sourceText, presentation };
   } catch (error) {
     if (error instanceof DbcdProjectStoreError) throw error;
@@ -483,7 +516,9 @@ export async function setDbcdRevisionPinned(input: SetDbcdRevisionPinnedInput): 
 }
 
 export async function restoreDbcdRevision(input: RestoreDbcdRevisionInput, hooks?: DbcdStoreTestHooks): Promise<DbcdProjectSnapshot> {
-  const revision = await readDbcdRevision(input);
-  return saveProject({ ...input, sourceText: revision.sourceText, presentation: revision.presentation },
-    `Restauration de ${revision.id.slice(0, 8)}`, hooks);
+  return withProjectReservation(input, (reservation) => {
+    const revision = readReservedRevision(reservation, input.revisionId);
+    return saveProject({ ...input, sourceText: revision.sourceText, presentation: revision.presentation },
+      `Restauration de ${revision.id.slice(0, 8)}`, hooks, reservation);
+  });
 }
