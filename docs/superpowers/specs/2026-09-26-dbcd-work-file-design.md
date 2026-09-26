@@ -128,6 +128,13 @@ immuables ; les seules métadonnées modifiables d’une révision sont son libe
 son état épinglé. La politique initiale conserve au plus 500 révisions ou 90
 jours, sans supprimer les révisions épinglées.
 
+Lorsqu’une révision parente est effectivement purgée par cette politique, le lien
+structurel `parent_id` du premier enfant conservé devient nul par contrainte de
+clé étrangère. Cette révision devient une nouvelle racine d’historique ; son
+identité, ses snapshots compressés, ses empreintes, sa date et son résumé restent
+strictement inchangés. Ce détachement technique n’est pas une modification
+utilisateur de la révision.
+
 La restauration affiche les différences DBML et graphiques, puis crée une
 nouvelle révision courante. Elle ne supprime ni ne modifie les révisions qui la
 suivent dans l’historique.
