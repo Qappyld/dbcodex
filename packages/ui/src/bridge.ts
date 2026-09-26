@@ -1,5 +1,12 @@
 import type { DbcdProjectSnapshot } from "@dbcodex/core";
 
+export type DisplayMode = "inline" | "fullscreen";
+export interface WorkbenchBridge {
+  callTool(name: string, input: Record<string, unknown>): Promise<unknown>;
+  requestDisplayMode(mode: DisplayMode): Promise<void>;
+  subscribeToDisplayMode?(listener: (mode: DisplayMode) => void): () => void;
+}
+
 /** Reads the private app payload without copying it into structuredContent. */
 export function readDbcdProjectResult(value: unknown): DbcdProjectSnapshot | null {
   if (!value || typeof value !== "object") return null;
@@ -45,6 +52,8 @@ export class McpAppsBridge {
   private nextId = 0;
   private readonly pending = new Map<number, PendingRequest>();
   private readonly listeners = new Set<(result: unknown) => void>();
+  private readonly displayListeners = new Set<(mode: DisplayMode) => void>();
+  private displayMode: DisplayMode = "inline";
   private ready: Promise<void> | null = null;
 
   private readonly onMessage = (
@@ -74,6 +83,9 @@ export class McpAppsBridge {
         listener(message.params);
       }
     }
+    if (message.method === "ui/notifications/host-context-changed") {
+      this.updateDisplayMode((message.params as { displayMode?: unknown } | undefined)?.displayMode);
+    }
   };
 
   private request(method: string, params: unknown): Promise<unknown> {
@@ -97,7 +109,8 @@ export class McpAppsBridge {
       },
       appCapabilities: {},
       protocolVersion: "2026-01-26",
-    }).then(() => {
+    }).then((result) => {
+      this.updateDisplayMode((result as { hostContext?: { displayMode?: unknown } } | undefined)?.hostContext?.displayMode);
       window.parent.postMessage(
         {
           jsonrpc: "2.0",
@@ -115,6 +128,26 @@ export class McpAppsBridge {
     return () => this.listeners.delete(listener);
   }
 
+  private updateDisplayMode(mode: unknown): void {
+    if (mode !== "inline" && mode !== "fullscreen") return;
+    this.displayMode = mode;
+    for (const listener of this.displayListeners) listener(mode);
+  }
+
+  subscribeToDisplayMode(listener: (mode: DisplayMode) => void): () => void {
+    this.displayListeners.add(listener);
+    listener(this.displayMode);
+    return () => this.displayListeners.delete(listener);
+  }
+
+  async requestDisplayMode(mode: DisplayMode): Promise<void> {
+    await this.start();
+    const result = await this.request("ui/request-display-mode", { mode });
+    const actual = (result as { mode?: unknown } | undefined)?.mode;
+    this.updateDisplayMode(actual);
+    if (actual !== mode) throw new Error("The host declined the requested display mode.");
+  }
+
   async callTool(
     name: string,
     args: Record<string, unknown>,
@@ -130,5 +163,6 @@ export class McpAppsBridge {
     }
     this.pending.clear();
     this.listeners.clear();
+    this.displayListeners.clear();
   }
 }

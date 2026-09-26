@@ -24,6 +24,8 @@ describe("DiagramApp", () => {
     render(<DiagramApp graph={graph} saved={{ "public.posts": { x: 120, y: 80 } }} save={vi.fn()} />);
 
     expect(screen.getByText("fixtures/basic.dbml")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Enregistrer" })).toBeNull();
     expect(screen.getByRole("status").textContent).toBe("Valid DBML");
     expect(screen.getByRole("button", { name: "Recenter" })).not.toHaveProperty("disabled", true);
     expect(screen.getByRole("group", { name: "Table public.posts" }).getAttribute("transform")).toBe("translate(120 80)");

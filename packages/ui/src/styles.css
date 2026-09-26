@@ -135,3 +135,48 @@ button {
   font-size: 14px;
   font-weight: 700;
 }
+
+.workbench { display: flex; flex-direction: column; height: min(800px, 100dvh); min-height: 420px; min-width: 320px; overflow: hidden; }
+.workbench[data-mode="fullscreen"] { height: 100dvh; }
+.workbench-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; border-bottom: 1px solid var(--dbc-border); background: var(--dbc-surface); }
+.workbench-toolbar strong { margin-right: auto; overflow: hidden; text-overflow: ellipsis; max-width: 30%; white-space: nowrap; }
+.workbench-toolbar span { color: var(--dbc-muted); font-size: 12px; }
+.workbench button:disabled { opacity: 0.5; cursor: default; }
+.workbench button:not(:disabled) { cursor: pointer; }
+.workbench :focus-visible { outline: 2px solid var(--dbc-accent); outline-offset: 2px; }
+.workbench-message { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--dbc-border); }
+.workbench-body { display: flex; position: relative; flex: 1; min-height: 0; min-width: 0; }
+.editor-panel, .inspector-panel { flex-shrink: 1; min-width: 240px; background: var(--dbc-surface); overflow: auto; }
+.editor-panel { display: flex; flex-direction: column; }
+.editor-panel:has(.editor-toggle[aria-expanded="false"]) { min-width: 40px; flex-shrink: 0; }
+.editor-toggle { border-width: 0 0 1px; border-radius: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.editor-toggle[aria-expanded="false"] { flex-direction: column; gap: 12px; padding: 8px 0; }
+.editor-toggle[aria-expanded="false"] span { writing-mode: vertical-rl; }
+.editor-content { flex: 1; min-height: 0; overflow: auto; }
+.editor-content[hidden] { display: none; }
+.dbml-editor { height: 100%; min-height: 180px; }
+.dbml-editor .cm-editor { height: 100%; background: var(--dbc-surface); color: var(--dbc-text); }
+.dbml-editor .cm-scroller { overflow: auto; font-size: 12px; }
+.dbml-editor .cm-gutters { background: var(--dbc-bg); color: var(--dbc-muted); border-color: var(--dbc-border); }
+.dbml-editor .cm-cursor { border-left-color: var(--dbc-text); }
+.diagnostics { padding: 8px 12px 8px 28px; font-size: 12px; }
+.panel-separator { width: 6px; flex: 0 0 6px; background: var(--dbc-bg); border-inline: 1px solid var(--dbc-border); cursor: col-resize; touch-action: none; }
+.panel-separator:hover, .panel-separator:focus-visible { background: var(--dbc-accent); }
+.flow-canvas { flex: 1; min-width: 100px; min-height: 0; position: relative; }
+.empty-canvas { display: grid; place-items: center; padding: 24px; color: var(--dbc-muted); }
+.flow-canvas .react-flow { --xy-background-color-default: var(--dbc-bg); --xy-edge-stroke-default: var(--dbc-relation); --xy-controls-button-background-color-default: var(--dbc-surface); --xy-controls-button-color-default: var(--dbc-text); }
+.flow-table { width: 220px; background: var(--dbc-surface); border: 1px solid var(--dbc-border); border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px #0000000d; font-size: 12px; }
+.flow-table.is-selected, .react-flow__node:focus-visible .flow-table { border-color: var(--dbc-accent); box-shadow: 0 0 0 2px var(--dbc-accent); }
+.flow-table header { color: var(--dbc-accent); padding: 12px; font-weight: 650; border-bottom: 1px solid var(--dbc-border); overflow-wrap: anywhere; }
+.flow-table ul { list-style: none; margin: 0; padding: 4px 0; }
+.flow-table li { display: flex; gap: 6px; padding: 5px 10px; }
+.flow-table .column-key { width: 20px; color: var(--dbc-accent); font-size: 10px; }
+.flow-table .column-type { margin-left: auto; color: var(--dbc-muted); }
+.flow-table footer { padding: 8px 12px; color: var(--dbc-muted); border-top: 1px solid var(--dbc-border); }
+.inspector-panel { padding: 14px; overflow-wrap: anywhere; }
+.inspector-panel h2 { font-size: 14px; margin: 0 0 16px; }
+.inspector-panel h3 { font-size: 13px; }
+.inspector-panel p { color: var(--dbc-muted); font-size: 13px; }
+.inspector-drawer { position: absolute; inset: 0 0 0 auto; z-index: 10; max-width: 90%; border-left: 1px solid var(--dbc-border); box-shadow: -8px 0 32px #00000026; }
+.workbench[data-narrow="true"] .workbench-toolbar strong { max-width: 100%; flex-basis: 100%; }
+.workbench[data-narrow="true"] .editor-panel { min-width: 0; max-width: calc(100% - 140px); }
