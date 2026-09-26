@@ -55,6 +55,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   const stateRef = useRef(state);
   const loaded = useRef({ source: opened.sourceText, presentation: JSON.stringify(opened.presentation) });
   const validationId = useRef(0);
+  const validatedSource = useRef<string | null>(recovered ? null : opened.sourceText);
   const editId = useRef(0);
   const draftEpoch = useRef(0);
   const draftQueue = useRef<Promise<void>>(Promise.resolve());
@@ -92,6 +93,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
       if (id !== validationId.current || !mounted.current) return null;
       const diagnostics = Array.isArray(content.diagnostics) ? content.diagnostics as Diagnostic[] : [];
       const nextGraph = content.graph as SchemaGraph | null | undefined;
+      validatedSource.current = source;
       update({ diagnostics, validating: false,
         ...(nextGraph && !diagnostics.some((item) => item.severity === "error") ? { graph: nextGraph } : {}),
       });
@@ -148,6 +150,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   const setSource = (value: string): void => {
     if (value === stateRef.current.source || initial.current.readOnly) return;
     editId.current += 1;
+    validatedSource.current = null;
     const id = ++validationId.current;
     if (validationTimer.current) clearTimeout(validationTimer.current);
     update({ source: value, dirty: value !== loaded.current.source
@@ -169,13 +172,15 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   };
 
   const applySnapshot = (snapshot: DbcdProjectSnapshot, preserveEdits: boolean,
-    graph = preserveEdits ? stateRef.current.graph : snapshot.graph): void => {
+    graph = preserveEdits ? stateRef.current.graph : snapshot.graph,
+    diagnostics = preserveEdits ? stateRef.current.diagnostics : snapshot.diagnostics): void => {
     loaded.current = { source: snapshot.sourceText, presentation: JSON.stringify(snapshot.presentation) };
+    if (!preserveEdits) validatedSource.current = snapshot.sourceText;
     update({
       source: preserveEdits ? stateRef.current.source : snapshot.sourceText,
       presentation: preserveEdits ? stateRef.current.presentation : snapshot.presentation,
       graph,
-      diagnostics: preserveEdits ? stateRef.current.diagnostics : snapshot.diagnostics,
+      diagnostics,
       generation: snapshot.generation, revisions: snapshot.revisions,
       dirty: preserveEdits && (stateRef.current.source !== snapshot.sourceText
         || JSON.stringify(stateRef.current.presentation) !== JSON.stringify(snapshot.presentation)), error: null,
@@ -232,13 +237,16 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
       if (!snapshot) { toolContent(response); throw new Error("The restore returned no project snapshot."); }
       ++draftEpoch.current;
       const concurrentEdit = edit !== editId.current;
-      applySnapshot(snapshot, concurrentEdit, snapshot.graph);
+      const currentSourceValidated = concurrentEdit && validatedSource.current === stateRef.current.source;
+      applySnapshot(snapshot, concurrentEdit,
+        currentSourceValidated ? stateRef.current.graph : snapshot.graph,
+        currentSourceValidated ? stateRef.current.diagnostics : snapshot.diagnostics);
       if (!concurrentEdit) editId.current += 1;
     } catch (error) { update({ error: message(error) }); }
     finally {
       savingRef.current = false;
       update({ saving: false, ...(edit === editId.current ? { validating: false } : {}) });
-      if (edit !== editId.current && stateRef.current.dirty) scheduleDraft();
+      if (stateRef.current.dirty) scheduleDraft();
     }
   };
 

@@ -264,6 +264,53 @@ describe("useDocumentSession", () => {
     }));
   });
 
+  it("retains a concurrent source's validated graph when restore responds later", async () => {
+    const bridge = makeBridge();
+    let resolveRestore!: (value: unknown) => void;
+    bridge.callTool.mockImplementation((name: string) => {
+      if (name === "restore_dbcd_revision") return new Promise((resolve) => { resolveRestore = resolve; });
+      if (name === "validate_dbcd_draft") return Promise.resolve({ structuredContent: { graph: nextGraph, diagnostics: [] } });
+      return Promise.resolve({ structuredContent: { saved: true } });
+    });
+    const restoredGraph: SchemaGraph = { sourcePath: "demo.dbcd", tables: [
+      { id: "restored", schema: "public", name: "restored", columns: [] },
+    ], relations: [] };
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    let restorePromise!: Promise<void>;
+    act(() => { restorePromise = result.current.restore("r1"); });
+    act(() => result.current.setSource("Table orders { id int }"));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(result.current.graph).toEqual(nextGraph);
+    expect(result.current.validating).toBe(false);
+    await act(async () => resolveRestore({ ...openResult,
+      structuredContent: { ...openResult.structuredContent, generation: 4, graph: restoredGraph },
+      _meta: { dbcodex: { ...openResult._meta.dbcodex, sourceText: "restored text" } },
+    }));
+    await act(async () => restorePromise);
+    expect(result.current.source).toBe("Table orders { id int }");
+    expect(result.current.graph).toEqual(nextGraph);
+    expect(result.current.diagnostics).toEqual([]);
+    expect(result.current.generation).toBe(4);
+  });
+
+  it("reschedules dirty draft persistence after restore fails without another edit", async () => {
+    const bridge = makeBridge();
+    bridge.callTool.mockImplementation((name: string) => name === "restore_dbcd_revision"
+      ? Promise.reject(new Error("Restore unavailable"))
+      : Promise.resolve({ structuredContent: { graph: nextGraph, diagnostics: [], saved: true } }));
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    act(() => result.current.setSource("unsaved edit"));
+    await act(async () => result.current.restore("r1"));
+    expect(result.current.source).toBe("unsaved edit");
+    expect(result.current.generation).toBe(3);
+    expect(result.current.error).toBe("Restore unavailable");
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+    expect(bridge.callTool).toHaveBeenCalledWith("save_dbcd_draft", {
+      path: "demo.dbcd", baseGeneration: 3,
+      sourceText: "unsaved edit", presentation: snapshot.presentation,
+    });
+  });
+
   it("preserves edits made during save and uses the advanced generation for their draft", async () => {
     const bridge = makeBridge();
     let resolveSave!: (value: unknown) => void;
