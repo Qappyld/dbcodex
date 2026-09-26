@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, Controls, applyNodeChanges, type Edge } from "@xyflow/react";
-import type { PresentationDocument, SchemaGraph } from "@dbcodex/core";
+import type { GraphRelation, GraphRelationEnd, PresentationDocument, SchemaGraph } from "@dbcodex/core";
 import { TableNode, type TableFlowNode } from "./TableNode.js";
 import "@xyflow/react/dist/style.css";
 
 const nodeTypes = { table: TableNode };
+
+function foreignKeyEndpoint(relation: GraphRelation): GraphRelationEnd | null {
+  const one = (cardinality: string): boolean => cardinality === "1" || cardinality === "0..1";
+  const many = (cardinality: string): boolean => cardinality === "*" || cardinality.endsWith("..*");
+  if (many(relation.source.cardinality) && one(relation.target.cardinality)) return relation.source;
+  if (one(relation.source.cardinality) && many(relation.target.cardinality)) return relation.target;
+  // DBML uses the second endpoint for one-to-one FKs. The parser also
+  // normalizes inline one-to-one refs into this order before the adapter runs.
+  if (one(relation.source.cardinality) && one(relation.target.cardinality)) return relation.target;
+  // A many-to-many relationship does not define an FK on either table.
+  return null;
+}
 
 export interface DiagramCanvasProps {
   graph: SchemaGraph;
@@ -23,8 +35,8 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange, onSel
       : { x: 40 + (index % 3) * 280, y: 60 + Math.floor(index / 3) * 220 },
     hidden: saved?.hidden ?? false, ariaLabel: `Table ${table.id}`, selected: selected.current === table.id,
     data: { table, detail: saved?.detail ?? view.defaultDetail,
-      foreignKeys: graph.relations.flatMap((relation) => [relation.source, relation.target])
-        .filter((endpoint) => endpoint.tableId === table.id).flatMap((endpoint) => endpoint.columnNames) },
+      foreignKeys: graph.relations.map(foreignKeyEndpoint)
+        .flatMap((endpoint) => endpoint?.tableId === table.id ? endpoint.columnNames : []) },
     };
   }), [graph, view]);
   const [nodes, setNodes] = useState(mappedNodes);

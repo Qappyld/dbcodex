@@ -47,10 +47,23 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
   const [displayPending, setDisplayPending] = useState(false);
   const [displayMessage, setDisplayMessage] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const panels = session.presentation.panels;
-  const updatePanels = (change: Partial<Panels>): void => session.setPresentation({
-    ...session.presentation, panels: { ...panels, ...change },
-  });
+  const [panels, setPanels] = useState(session.presentation.panels);
+  const savedPanels = JSON.stringify(session.presentation.panels);
+  const inspectorTrigger = useRef<HTMLButtonElement>(null);
+  const drawerClose = useRef<HTMLButtonElement>(null);
+  // Value-based reconciliation preserves transient read-only changes across ordinary
+  // session renders, but accepts restored panel values and a different document.
+  useEffect(() => { setPanels(JSON.parse(savedPanels) as Panels); }, [savedPanels, projectPath]);
+  const updatePanels = (change: Partial<Panels>): void => {
+    const next = { ...panels, ...change };
+    setPanels(next);
+    if (!readOnly) session.setPresentation({ ...session.presentation, panels: next });
+  };
+  useEffect(() => { if (narrow && drawerOpen) drawerClose.current?.focus(); }, [narrow, drawerOpen]);
+  const closeDrawer = (): void => {
+    setDrawerOpen(false);
+    inspectorTrigger.current?.focus();
+  };
   useEffect(() => bridge.subscribeToDisplayMode?.(setDisplayMode), [bridge]);
   useEffect(() => {
     const measure = (): void => setNarrow((root.current?.getBoundingClientRect().width || window.innerWidth) < 900);
@@ -80,7 +93,8 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
       <span role="status">{readOnly ? "Lecture seule" : session.saving ? "Enregistrement…" : session.dirty ? "Modifications non enregistrées" : "Enregistré"}</span>
       <span>{session.validating ? "Validation…" : invalid ? "DBML invalide" : "DBML valide"}</span>
       <button type="button" disabled={readOnly || !session.dirty || session.saving || session.validating || invalid} onClick={() => void session.save()}>Enregistrer</button>
-      <button type="button" onClick={() => narrow ? setDrawerOpen(true) : updatePanels({ inspectorCollapsed: !panels.inspectorCollapsed })}>
+      <button ref={inspectorTrigger} type="button" aria-expanded={inspectorVisible}
+        onClick={() => narrow ? setDrawerOpen(true) : updatePanels({ inspectorCollapsed: !panels.inspectorCollapsed })}>
         {narrow || panels.inspectorCollapsed ? "Afficher l’inspecteur" : "Masquer l’inspecteur"}
       </button>
       <button type="button" disabled={displayPending} onClick={() => void toggleDisplay()}>{displayMode === "inline" ? "Plein écran" : "Quitter le plein écran"}</button>
@@ -105,8 +119,10 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
       {inspectorVisible && <>
         {!narrow && <PanelSeparator region="inspector" width={clamp(panels.inspector)} onChange={(inspector) => updatePanels({ inspector })} />}
         <aside role={narrow ? "dialog" : "region"} aria-label="Inspecteur" className={`inspector-panel${narrow ? " inspector-drawer" : ""}`}
-          style={{ width: clamp(panels.inspector) }} onKeyDown={(event) => { if (event.key === "Escape" && narrow) setDrawerOpen(false); }}>
-          <header><h2>Inspecteur</h2>{narrow && <button type="button" onClick={() => setDrawerOpen(false)}>Fermer l’inspecteur</button>}</header>
+          style={{ width: clamp(panels.inspector) }} onKeyDown={(event) => {
+            if (event.key === "Escape" && narrow) { event.preventDefault(); event.stopPropagation(); closeDrawer(); }
+          }}>
+          <header><h2>Inspecteur</h2>{narrow && <button ref={drawerClose} type="button" onClick={closeDrawer}>Fermer l’inspecteur</button>}</header>
           {selectedTable ? <><h3>{selectedTable.id}</h3><p>{selectedTable.columns.length} champs</p></> : <p>Sélectionnez une table pour voir ses détails.</p>}
         </aside>
       </>}

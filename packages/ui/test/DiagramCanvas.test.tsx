@@ -4,11 +4,42 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DiagramCanvas } from "../src/DiagramCanvas.js";
 import { graph, presentation } from "./workbench-fixture.js";
 import { setupFlowDom } from "./flow-dom.js";
+import { parseDbml } from "../../core/src/dbml-adapter.js";
 
 beforeEach(setupFlowDom);
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("DiagramCanvas", () => {
+  it.each(["child.parent_code > parent.code", "parent.code < child.parent_code", "parent.code - child.parent_code",
+    "child.parent_code >? parent.code", "parent.code ?< child.parent_code"])("shows only actual foreign keys for Ref: %s", (reference) => {
+    const parsed = parseDbml(`Table parent {\n parent_id int [pk]\n code int [unique]\n}\nTable child {\n child_id int [pk]\n parent_code int\n}\nRef: ${reference}`, "keys.dbml");
+    expect(parsed.diagnostics).toEqual([]);
+    const { rerender } = render(<DiagramCanvas graph={parsed.graph!} presentation={presentation()} onPresentationChange={vi.fn()} />);
+    expect(screen.getByText("parent_code")).toBeTruthy();
+    expect(screen.getByText("parent_id")).toBeTruthy();
+    expect(screen.getByText("child_id")).toBeTruthy();
+    expect(screen.queryByText("code")).toBeNull();
+    expect(screen.getAllByText("FK")).toHaveLength(1);
+    const all = presentation();
+    all.views.all!.defaultDetail = "all";
+    rerender(<DiagramCanvas graph={parsed.graph!} presentation={all} onPresentationChange={vi.fn()} />);
+    expect(screen.getByText("code").closest("li")?.textContent).not.toContain("FK");
+  });
+
+  it("does not invent foreign keys for a many-to-many relation", () => {
+    const parsed = parseDbml("Table a { code_a int [unique] }\nTable b { code_b int [unique] }\nRef: a.code_a <> b.code_b", "many.dbml");
+    render(<DiagramCanvas graph={parsed.graph!} presentation={presentation()} onPresentationChange={vi.fn()} />);
+    expect(screen.queryByText("code_a")).toBeNull();
+    expect(screen.queryByText("code_b")).toBeNull();
+    expect(screen.queryByText("FK")).toBeNull();
+  });
+
+  it("uses the inline one-to-one column as the foreign key", () => {
+    const parsed = parseDbml("Table parent { code int [unique] }\nTable child { parent_code int [ref: - parent.code] }", "inline.dbml");
+    render(<DiagramCanvas graph={parsed.graph!} presentation={presentation()} onPresentationChange={vi.fn()} />);
+    expect(screen.getByText("parent_code")).toBeTruthy();
+    expect(screen.queryByText("code")).toBeNull();
+  });
   it("shows relationship columns when the foreign key is on the target endpoint", () => {
     const reversed = { ...graph, relations: graph.relations.map((relation) => ({ ...relation, source: relation.target, target: relation.source })) };
     render(<DiagramCanvas graph={reversed} presentation={presentation()} onPresentationChange={vi.fn()} />);

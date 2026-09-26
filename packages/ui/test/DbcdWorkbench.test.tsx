@@ -2,7 +2,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ProjectWorkbench } from "../src/DbcdWorkbench.js";
+import { DbcdWorkbench, ProjectWorkbench } from "../src/DbcdWorkbench.js";
+import type { DocumentSession } from "../src/useDocumentSession.js";
 import { openResult } from "./workbench-fixture.js";
 import { setupFlowDom } from "./flow-dom.js";
 
@@ -14,6 +15,75 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 function bridge() { return { callTool: vi.fn().mockResolvedValue({ structuredContent: { saved: true } }), requestDisplayMode: vi.fn().mockResolvedValue(undefined) }; }
 
 describe("DbcdWorkbench", () => {
+  it("opens and resizes read-only panels transiently and reconciles only changed session inputs", () => {
+    const opened = openResult();
+    opened.structuredContent.presentation.panels.editorCollapsed = true;
+    opened.structuredContent.presentation.panels.inspectorCollapsed = true;
+    const initial = structuredClone(opened.structuredContent.presentation);
+    const session: DocumentSession = { source: opened._meta.dbcodex.sourceText,
+      presentation: opened.structuredContent.presentation, graph: opened.structuredContent.graph,
+      diagnostics: [], generation: 3, revisions: [], dirty: false, validating: false, saving: false, error: null,
+      setSource: vi.fn(), setPresentation: vi.fn(), save: vi.fn(), restore: vi.fn(), pin: vi.fn() };
+    const host = bridge();
+    const { rerender } = render(<DbcdWorkbench session={session} bridge={host} projectPath="read-only.dbcd" readOnly />);
+    fireEvent.click(screen.getByRole("button", { name: "Afficher l’éditeur" }));
+    expect(screen.getByRole("textbox", { name: "DBML source" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Afficher l’inspecteur" }));
+    fireEvent.keyDown(screen.getByRole("separator", { name: "Largeur de l’éditeur" }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("separator", { name: "Largeur de l’inspecteur" }), { key: "ArrowLeft" });
+    expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("330px");
+    expect(screen.getByRole("region", { name: "Inspecteur" }).style.width).toBe("290px");
+    const divider = screen.getByRole("separator", { name: "Largeur de l’inspecteur" });
+    const capture = vi.fn();
+    Object.defineProperty(divider, "setPointerCapture", { value: capture });
+    Object.defineProperty(divider, "releasePointerCapture", { value: vi.fn() });
+    fireEvent.pointerDown(divider, { pointerId: 2, clientX: 500 });
+    fireEvent.pointerMove(divider, { pointerId: 2, clientX: 450 });
+    fireEvent.pointerUp(divider, { pointerId: 2 });
+    expect(capture).toHaveBeenCalledWith(2);
+    expect(screen.getByRole("region", { name: "Inspecteur" }).style.width).toBe("340px");
+    rerender(<DbcdWorkbench session={{ ...session, presentation: structuredClone(initial) }} bridge={host} projectPath="read-only.dbcd" readOnly />);
+    expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("330px");
+    expect(screen.getByRole("region", { name: "Inspecteur" }).style.width).toBe("340px");
+    fireEvent.click(screen.getByRole("button", { name: "Masquer l’inspecteur" }));
+    expect(screen.queryByRole("region", { name: "Inspecteur" })).toBeNull();
+    expect(session.setPresentation).not.toHaveBeenCalled();
+    expect(session.save).not.toHaveBeenCalled();
+    expect(host.callTool).not.toHaveBeenCalled();
+    expect(session.presentation).toEqual(initial);
+    rerender(<DbcdWorkbench session={session} bridge={host} projectPath="another.dbcd" readOnly />);
+    expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("40px");
+  });
+
+  it("reconciles changed saved panel values after a session restore", () => {
+    const opened = openResult();
+    const session: DocumentSession = { source: opened._meta.dbcodex.sourceText,
+      presentation: opened.structuredContent.presentation, graph: opened.structuredContent.graph,
+      diagnostics: [], generation: 3, revisions: [], dirty: false, validating: false, saving: false, error: null,
+      setSource: vi.fn(), setPresentation: vi.fn(), save: vi.fn(), restore: vi.fn(), pin: vi.fn() };
+    const host = bridge();
+    const { rerender } = render(<DbcdWorkbench session={session} bridge={host} projectPath="restore.dbcd" />);
+    fireEvent.click(screen.getByRole("button", { name: "Réduire l’éditeur" }));
+    const restored = structuredClone(session.presentation);
+    restored.panels.editor = 450;
+    rerender(<DbcdWorkbench session={{ ...session, presentation: restored, generation: 4 }} bridge={host} projectPath="restore.dbcd" />);
+    expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("450px");
+    expect(screen.getByRole("textbox", { name: "DBML source" })).toBeTruthy();
+  });
+
+  it("focuses the narrow inspector and returns focus to its trigger on Escape", () => {
+    window.innerWidth = 800;
+    render(<ProjectWorkbench result={openResult()} bridge={bridge()} />);
+    const trigger = screen.getByRole("button", { name: "Afficher l’inspecteur" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const drawer = screen.getByRole("dialog", { name: "Inspecteur" });
+    expect(drawer.contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Inspecteur" })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
   it("saves presentation through the document session only after explicit save", async () => {
     const opened = openResult();
     const host = bridge();

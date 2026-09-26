@@ -6,6 +6,23 @@ import { parseDbml } from "../src/dbml-adapter.js";
 const fixtureUrl = new URL("../../../fixtures/basic.dbml", import.meta.url);
 
 describe("parseDbml", () => {
+  it.each([
+    ["Ref: a.fk > b.code", ["public.a", "*"], ["public.b", "1"]],
+    ["Ref: b.code < a.fk", ["public.b", "1"], ["public.a", "*"]],
+    ["Ref: b.code - a.fk", ["public.b", "1"], ["public.a", "1"]],
+  ])("retains endpoint order and cardinality for %s", (reference, source, target) => {
+    const result = parseDbml(`Table a { fk int }\nTable b { code int [unique] }\n${reference}`, "direction.dbml");
+    const relation = result.graph!.relations[0]!;
+    expect([relation.source.tableId, relation.source.cardinality]).toEqual(source);
+    expect([relation.target.tableId, relation.target.cardinality]).toEqual(target);
+  });
+
+  it("normalizes inline one-to-one references with the FK endpoint second", () => {
+    const result = parseDbml("Table a { fk int [ref: - b.code] }\nTable b { code int [unique] }", "inline.dbml");
+    const relation = result.graph!.relations[0]!;
+    expect(relation.source.tableId).toBe("public.b");
+    expect(relation.target.tableId).toBe("public.a");
+  });
   it("normalizes tables, columns, and relations deterministically", async () => {
     const source = await readFile(fileURLToPath(fixtureUrl), "utf8");
 
