@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "build": "npm run build --workspace @dbcodex/core && npm run build --workspace @dbcodex/ui && npm run build --workspace @dbcodex/mcp",

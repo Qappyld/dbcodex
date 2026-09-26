@@ -1,55 +1,44 @@
 import type { Diagnostic, SchemaGraph } from "./schema-graph.js";
-import type { LayoutDocument } from "./layout-store.js";
+import type { PresentationDocument } from "./presentation.js";
 
-export interface RevisionSummary {
+export interface DbcdRevisionSummary {
   id: string;
+  parentId: string | null;
   createdAt: string;
   sourceHash: string;
-  layoutHash: string;
+  presentationHash: string;
   summary: string;
   label?: string;
   pinned: boolean;
 }
 
-export interface DocumentSnapshot {
-  sourcePath: string;
+export interface DbcdDraft {
+  baseGeneration: number;
   sourceText: string;
-  sourceHash: string;
-  graph: SchemaGraph | null;
-  diagnostics: Diagnostic[];
-  layout: LayoutDocument;
-  layoutWarnings: string[];
-  revisions: RevisionSummary[];
-}
-
-export interface DocumentDraft {
-  sourcePath: string;
-  sourceText: string;
-  baseHash: string;
-  layout: LayoutDocument;
+  presentation: PresentationDocument;
   updatedAt: string;
 }
 
-export interface ValidationResult {
-  sourcePath: string;
+export interface DbcdProjectSnapshot {
+  projectPath: string;
+  projectId: string;
+  generation: number;
+  currentRevisionId: string;
+  sourceText: string;
   sourceHash: string;
   graph: SchemaGraph | null;
   diagnostics: Diagnostic[];
+  presentation: PresentationDocument;
+  draft: DbcdDraft | null;
+  revisions: DbcdRevisionSummary[];
+  readOnly: boolean;
 }
 
-export interface SaveDocumentInput {
-  sourcePath: string;
+export interface SaveDbcdInput {
+  workspaceRoot: string;
+  projectPath: string;
+  expectedGeneration: number;
   sourceText: string;
-  expectedHash: string;
-  layout: LayoutDocument;
+  presentation: PresentationDocument;
   label?: string;
-}
-
-export interface SaveDocumentResult {
-  sourcePath: string;
-  sourceHash: string;
-  graph: SchemaGraph;
-  diagnostics: Diagnostic[];
-  layout: LayoutDocument;
-  revision: RevisionSummary;
 }
