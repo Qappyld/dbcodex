@@ -40,4 +40,40 @@ describe("MCP tool definitions", () => {
 
     await expect(provider()).resolves.toEqual([projectRoot]);
   });
+
+  it("fails closed when an advertised roots request throws", async () => {
+    const provider = createWorkspaceRootProvider({
+      getClientCapabilities: () => ({ roots: {} }),
+      listRoots: async () => { throw new Error("roots unavailable"); },
+    }, "trusted-fallback");
+
+    await expect(provider()).resolves.toEqual([]);
+  });
+
+  it("fails closed when an advertised roots list is empty", async () => {
+    const provider = createWorkspaceRootProvider({
+      getClientCapabilities: () => ({ roots: {} }),
+      listRoots: async () => ({ roots: [] }),
+    }, "trusted-fallback");
+
+    await expect(provider()).resolves.toEqual([]);
+  });
+
+  it("requires an explicit fallback when the client has no roots capability", async () => {
+    const provider = createWorkspaceRootProvider({
+      getClientCapabilities: () => ({}),
+      listRoots: async () => ({ roots: [] }),
+    }, undefined);
+
+    await expect(provider()).resolves.toEqual([]);
+  });
+
+  it("uses an explicitly trusted fallback when the client has no roots capability", async () => {
+    const provider = createWorkspaceRootProvider({
+      getClientCapabilities: () => ({}),
+      listRoots: async () => ({ roots: [] }),
+    }, "trusted-fallback");
+
+    await expect(provider()).resolves.toEqual(["trusted-fallback"]);
+  });
 });

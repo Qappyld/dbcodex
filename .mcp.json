@@ -3,7 +3,7 @@
     "dbcodex": {
       "type": "stdio",
       "command": "node",
-      "args": ["${PLUGIN_ROOT}/packages/mcp/dist/index.js"]
+      "args": ["${PLUGIN_ROOT}/packages/mcp/dist/index.js", "--trust-cwd-as-workspace"]
     }
   }
 }

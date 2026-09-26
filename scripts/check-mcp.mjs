@@ -16,7 +16,7 @@ await copyFile(path.join(root, "fixtures/basic.dbml"), path.join(workspace, "fix
 await mkdir(path.join(workspace, "fixtures", "directory.dbml"));
 const transport = new StdioClientTransport({
   command: process.execPath,
-  args: [serverEntry],
+  args: [serverEntry, "--trust-cwd-as-workspace"],
   cwd: workspace,
   stderr: "pipe",
 });

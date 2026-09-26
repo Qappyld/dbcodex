@@ -37,7 +37,7 @@ describe("Codex plugin package", () => {
     expect(servers.dbcodex).toEqual({
       type: "stdio",
       command: "node",
-      args: ["${PLUGIN_ROOT}/packages/mcp/dist/index.js"],
+      args: ["${PLUGIN_ROOT}/packages/mcp/dist/index.js", "--trust-cwd-as-workspace"],
     });
     expect(JSON.stringify(servers.dbcodex)).not.toMatch(/https?:\/\//);
   });

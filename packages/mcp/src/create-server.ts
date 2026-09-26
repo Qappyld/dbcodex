@@ -16,10 +16,12 @@ interface RootsClient {
 
 export function createWorkspaceRootProvider(
   client: RootsClient,
-  fallbackRoot: string,
+  trustedFallbackRoot?: string,
 ): () => Promise<readonly string[]> {
   return async () => {
-    if (!client.getClientCapabilities()?.roots) return [fallbackRoot];
+    if (!client.getClientCapabilities()?.roots) {
+      return trustedFallbackRoot ? [trustedFallbackRoot] : [];
+    }
 
     try {
       const result = await client.listRoots();
@@ -30,9 +32,9 @@ export function createWorkspaceRootProvider(
           return [];
         }
       });
-      return roots.length > 0 ? roots : [fallbackRoot];
+      return roots;
     } catch {
-      return [fallbackRoot];
+      return [];
     }
   };
 }
@@ -72,13 +74,13 @@ export const buildToolDefinitions = () => ({
   },
 });
 
-export function createServer(workspaceRoot: string): McpServer {
+export function createServer(trustedFallbackRoot?: string): McpServer {
   const server = new McpServer({
     name: "dbcodex",
     version: "0.1.0-dev.0",
   });
   const handlers = createHandlers(
-    createWorkspaceRootProvider(server.server, workspaceRoot),
+    createWorkspaceRootProvider(server.server, trustedFallbackRoot),
   );
   const definitions = buildToolDefinitions();
 
