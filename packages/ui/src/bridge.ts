@@ -1,3 +1,28 @@
+import type { DbcdProjectSnapshot } from "@dbcodex/core";
+
+/** Reads the private app payload without copying it into structuredContent. */
+export function readDbcdProjectResult(value: unknown): DbcdProjectSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  const envelope = value as Record<string, unknown>;
+  if (envelope.isError === true || !envelope.structuredContent || typeof envelope.structuredContent !== "object") return null;
+  const visible = envelope.structuredContent as Record<string, unknown>;
+  if ("sourceText" in visible || "projectId" in visible || "draft" in visible) return null;
+  const meta = envelope._meta && typeof envelope._meta === "object"
+    ? (envelope._meta as Record<string, unknown>).dbcodex : null;
+  if (!meta || typeof meta !== "object") return null;
+  const privateData = meta as Record<string, unknown>;
+  if (typeof privateData.sourceText !== "string" || typeof privateData.projectId !== "string"
+    || typeof visible.projectPath !== "string" || typeof visible.generation !== "number"
+    || !Array.isArray(visible.diagnostics) || !Array.isArray(visible.revisions)
+    || !visible.presentation || typeof visible.presentation !== "object") return null;
+  return {
+    ...(visible as unknown as Omit<DbcdProjectSnapshot, "sourceText" | "projectId" | "draft">),
+    sourceText: privateData.sourceText,
+    projectId: privateData.projectId,
+    draft: (privateData.draft ?? null) as DbcdProjectSnapshot["draft"],
+  };
+}
+
 type RpcResponse = {
   jsonrpc: "2.0";
   id: number;
