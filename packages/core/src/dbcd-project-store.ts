@@ -2,16 +2,17 @@ import { createHash, randomUUID } from "node:crypto";
 import { closeSync, fstatSync, lstatSync, openSync, realpathSync, unlinkSync, type BigIntStats } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { gzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 import { z } from "zod";
 import { parseDbml } from "./dbml-adapter.js";
 import { DbcdPathPolicyError, resolveExistingDbcd, resolveNewDbcd, type ResolvedDbcdPath } from "./dbcd-path-policy.js";
 import { DBCD_FORMAT_VERSION, DBCD_SCHEMA_SQL } from "./dbcd-schema.js";
-import type { DbcdProjectSnapshot } from "./document-contract.js";
+import type { DbcdProjectSnapshot, DbcdRevisionSnapshot, DbcdRevisionSummary, SaveDbcdInput } from "./document-contract.js";
 import { hashDocument } from "./document-hash.js";
 import { decodePresentation, emptyPresentation, encodePresentation, type PresentationDocument } from "./presentation.js";
 
-export type DbcdProjectStoreCode = "INVALID_DBML" | "INVALID_PRESENTATION" | "NOT_DBCD" | "CORRUPT_PROJECT" | "CREATE_FAILED" | "PATH_CHANGED";
+export type DbcdProjectStoreCode = "INVALID_DBML" | "INVALID_PRESENTATION" | "NOT_DBCD" | "CORRUPT_PROJECT"
+  | "CREATE_FAILED" | "PATH_CHANGED" | "CONFLICT" | "READ_ONLY" | "REVISION_NOT_FOUND" | "WRITE_FAILED";
 
 export class DbcdProjectStoreError extends Error {
   constructor(public readonly code: DbcdProjectStoreCode, message: string) {
@@ -30,6 +31,49 @@ export interface CreateDbcdProjectInput extends OpenDbcdProjectInput {
   presentation?: PresentationDocument;
   now?: () => string;
   projectId?: () => string;
+}
+
+export interface SaveDbcdDraftInput extends OpenDbcdProjectInput {
+  baseGeneration: number;
+  sourceText: string;
+  presentation: PresentationDocument;
+  now?: () => string;
+}
+
+export interface DiscardDbcdDraftInput extends OpenDbcdProjectInput {
+  expectedGeneration: number;
+}
+
+export interface ReadDbcdRevisionInput extends OpenDbcdProjectInput {
+  revisionId: string;
+}
+
+export interface RestoreDbcdRevisionInput extends ReadDbcdRevisionInput {
+  expectedGeneration: number;
+  now?: () => string;
+}
+
+export interface SetDbcdRevisionPinnedInput extends ReadDbcdRevisionInput {
+  pinned: boolean;
+}
+
+export type SaveCheckpoint = "after-begin" | "after-revision" | "after-document" | "before-commit";
+/** Fault injection for transaction recovery tests; never supplied by tool clients. */
+export interface DbcdStoreTestHooks { checkpoint?(name: SaveCheckpoint): void; }
+
+const projectQueues = new Map<string, Promise<void>>();
+
+async function withProjectWrite<T>(path: string, action: () => T): Promise<T> {
+  const previous = projectQueues.get(path) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  projectQueues.set(path, current);
+  await previous;
+  try { return action(); }
+  finally {
+    release();
+    if (projectQueues.get(path) === current) projectQueues.delete(path);
+  }
 }
 
 function openConnection(path: string, readOnly: boolean): DatabaseSync {
@@ -98,7 +142,7 @@ function readSnapshot(db: DatabaseSync, projectPath: string): DbcdProjectSnapsho
   // Listing history deliberately never reads or decompresses revision payloads.
   const revisions = z.array(revisionSchema).parse(db.prepare(`
     SELECT id, parent_id, created_at, source_hash, presentation_hash, summary, label, pinned
-    FROM revisions ORDER BY created_at DESC, id DESC
+    FROM revisions ORDER BY created_at DESC, rowid DESC
   `).all()).map((row) => ({
     id: row.id, parentId: row.parent_id, createdAt: row.created_at,
     sourceHash: row.source_hash, presentationHash: row.presentation_hash,
@@ -122,8 +166,10 @@ function readSnapshot(db: DatabaseSync, projectPath: string): DbcdProjectSnapsho
   };
 }
 
-function revisionId(createdAt: string, sourceHash: string, presentationHash: string): string {
-  return createHash("sha256").update(`${createdAt}\0${sourceHash}\0${presentationHash}`).digest("hex");
+function revisionId(createdAt: string, sourceHash: string, presentationHash: string, parentId?: string): string {
+  const identity = `${createdAt}\0${sourceHash}\0${presentationHash}`;
+  // Parent identity distinguishes repeated saves of unchanged content at the same clock tick.
+  return createHash("sha256").update(parentId === undefined ? identity : `${identity}\0${parentId}`).digest("hex");
 }
 
 function assertConfinedParent(path: ResolvedDbcdPath): void {
@@ -257,4 +303,187 @@ export async function openDbcdProject(input: OpenDbcdProjectInput): Promise<Dbcd
   } finally {
     db?.close();
   }
+}
+
+function validatedPresentation(presentation: PresentationDocument): string {
+  try { return encodePresentation(presentation); }
+  catch { throw new DbcdProjectStoreError("INVALID_PRESENTATION", "Unable to read the presentation document."); }
+}
+
+function assertGeneration(actual: number, expected: number): void {
+  if (actual !== expected) {
+    throw new DbcdProjectStoreError("CONFLICT", "The project has changed. Reload it before saving.");
+  }
+}
+
+function assertWritable(db: DatabaseSync): void {
+  const version = db.prepare("PRAGMA user_version").get()?.user_version;
+  if (typeof version === "number" && version > DBCD_FORMAT_VERSION) {
+    throw new DbcdProjectStoreError("READ_ONLY", "This project requires a newer version of DBCodex.");
+  }
+}
+
+/** Keeps file identity reserved across queue waits and SQLite connection changes. */
+async function writeProject(
+  input: OpenDbcdProjectInput,
+  action: (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => void,
+  hooks?: DbcdStoreTestHooks,
+): Promise<DbcdProjectSnapshot> {
+  const path = await resolveExistingDbcd(input.workspaceRoot, input.projectPath);
+  assertConfinedParent(path);
+  if (!lstatSync(path.absolutePath).isFile()) {
+    throw new DbcdProjectStoreError("PATH_CHANGED", "The project path changed before writing.");
+  }
+  const fd = openSync(path.absolutePath, "r");
+  try {
+    const reserved = fstatSync(fd, { bigint: true });
+    assertReservedFile(path, reserved);
+    // realpath also canonicalizes path casing on Windows, so aliases share one queue.
+    const key = realpathSync(path.absolutePath);
+    return await withProjectWrite(key, () => {
+      let db: DatabaseSync | undefined;
+      let transactionStarted = false;
+      try {
+        assertReservedFile(path, reserved);
+        // Future formats must be rejected before opening any writable connection.
+        db = openConnection(path.absolutePath, true);
+        assertReservedFile(path, reserved);
+        assertWritable(db);
+        db.close();
+        db = undefined;
+        assertReservedFile(path, reserved);
+        db = openConnection(path.absolutePath, false);
+        assertReservedFile(path, reserved);
+        db.exec("BEGIN IMMEDIATE");
+        transactionStarted = true;
+        hooks?.checkpoint?.("after-begin");
+        assertWritable(db);
+        const snapshot = readSnapshot(db, path.relativePath);
+        action(db, snapshot);
+        const saved = readSnapshot(db, path.relativePath);
+        hooks?.checkpoint?.("before-commit");
+        assertReservedFile(path, reserved);
+        db.exec("COMMIT");
+        transactionStarted = false;
+        return saved;
+      } catch (error) {
+        if (db && transactionStarted) {
+          try { db.exec("ROLLBACK"); } catch { /* Closing rolls back if explicit rollback failed. */ }
+        }
+        if (error instanceof DbcdProjectStoreError || error instanceof DbcdPathPolicyError) throw error;
+        throw new DbcdProjectStoreError("WRITE_FAILED", "Unable to update the .dbcd project.");
+      } finally {
+        db?.close();
+      }
+    });
+  } finally {
+    closeSync(fd);
+  }
+}
+
+export async function saveDbcdDraft(input: SaveDbcdDraftInput): Promise<DbcdProjectSnapshot> {
+  const presentationJson = validatedPresentation(input.presentation);
+  return writeProject(input, (db, snapshot) => {
+    assertGeneration(snapshot.generation, input.baseGeneration);
+    db.prepare(`INSERT INTO draft_state(id, base_generation, dbml_text, presentation_json, updated_at)
+      VALUES(1, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET base_generation=excluded.base_generation,
+        dbml_text=excluded.dbml_text, presentation_json=excluded.presentation_json, updated_at=excluded.updated_at`)
+      .run(input.baseGeneration, input.sourceText, presentationJson, input.now?.() ?? new Date().toISOString());
+  });
+}
+
+export async function discardDbcdDraft(input: DiscardDbcdDraftInput): Promise<DbcdProjectSnapshot> {
+  return writeProject(input, (db, snapshot) => {
+    assertGeneration(snapshot.generation, input.expectedGeneration);
+    db.prepare("DELETE FROM draft_state WHERE id=1").run();
+  });
+}
+
+function pruneRevisions(db: DatabaseSync, currentId: string, createdAt: string): void {
+  const cutoff = new Date(Date.parse(createdAt) - 90 * 24 * 60 * 60 * 1000).toISOString();
+  // ON DELETE SET NULL detaches only links whose parent is actually removed.
+  db.prepare("DELETE FROM revisions WHERE pinned=0 AND id<>? AND created_at<?").run(currentId, cutoff);
+  db.prepare(`DELETE FROM revisions WHERE id IN (
+    SELECT id FROM revisions WHERE pinned=0 AND id<>? ORDER BY created_at ASC, rowid ASC
+    LIMIT MAX(0, (SELECT COUNT(*) FROM revisions) - 500)
+  )`).run(currentId);
+}
+
+export async function saveDbcdProject(input: SaveDbcdInput, hooks?: DbcdStoreTestHooks): Promise<DbcdProjectSnapshot> {
+  return saveProject(input, "Saved revision", hooks);
+}
+
+async function saveProject(input: SaveDbcdInput, summary: string, hooks?: DbcdStoreTestHooks): Promise<DbcdProjectSnapshot> {
+  // DBML validation and compression happen before acquiring the write transaction.
+  if (!parseDbml(input.sourceText, input.projectPath).graph) {
+    throw new DbcdProjectStoreError("INVALID_DBML", "Unable to parse DBML.");
+  }
+  const presentationJson = validatedPresentation(input.presentation);
+  const sourceHash = hashDocument(input.sourceText);
+  const presentationHash = hashDocument(presentationJson);
+  const sourceGzip = gzipSync(input.sourceText);
+  const presentationGzip = gzipSync(presentationJson);
+  return writeProject(input, (db, snapshot) => {
+    assertGeneration(snapshot.generation, input.expectedGeneration);
+    const createdAt = timestamp.parse(input.now?.() ?? new Date().toISOString());
+    const id = revisionId(createdAt, sourceHash, presentationHash, snapshot.currentRevisionId);
+    db.prepare(`INSERT INTO revisions
+      (id, parent_id, created_at, dbml_gzip, presentation_gzip, source_hash, presentation_hash, summary, label, pinned)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`)
+      .run(id, snapshot.currentRevisionId, createdAt, sourceGzip, presentationGzip, sourceHash, presentationHash, summary, input.label ?? null);
+    hooks?.checkpoint?.("after-revision");
+    const changed = db.prepare(`UPDATE document_state SET dbml_text=?, source_hash=?, presentation_json=?,
+      presentation_hash=?, generation=generation+1, current_revision_id=? WHERE id=1 AND generation=?`)
+      .run(input.sourceText, sourceHash, presentationJson, presentationHash, id, input.expectedGeneration);
+    if (changed.changes !== 1) {
+      throw new DbcdProjectStoreError("CONFLICT", "The project has changed. Reload it before saving.");
+    }
+    hooks?.checkpoint?.("after-document");
+    db.prepare("DELETE FROM draft_state WHERE id=1").run();
+    db.prepare("UPDATE project_meta SET updated_at=? WHERE id=1").run(createdAt);
+    pruneRevisions(db, id, createdAt);
+  }, hooks);
+}
+
+export async function listDbcdRevisions(input: OpenDbcdProjectInput): Promise<DbcdRevisionSummary[]> {
+  return (await openDbcdProject(input)).revisions;
+}
+
+export async function readDbcdRevision(input: ReadDbcdRevisionInput): Promise<DbcdRevisionSnapshot> {
+  const path = await resolveExistingDbcd(input.workspaceRoot, input.projectPath);
+  let db: DatabaseSync | undefined;
+  try {
+    db = openConnection(path.absolutePath, true);
+    const snapshot = readSnapshot(db, path.relativePath);
+    const summary = snapshot.revisions.find((revision) => revision.id === input.revisionId);
+    if (!summary) throw new DbcdProjectStoreError("REVISION_NOT_FOUND", "The revision does not exist.");
+    const row = db.prepare("SELECT dbml_gzip, presentation_gzip FROM revisions WHERE id=?").get(input.revisionId)!;
+    const sourceText = gunzipSync(z.instanceof(Uint8Array).parse(row.dbml_gzip)).toString("utf8");
+    const presentationJson = gunzipSync(z.instanceof(Uint8Array).parse(row.presentation_gzip)).toString("utf8");
+    if (hashDocument(sourceText) !== summary.sourceHash || hashDocument(presentationJson) !== summary.presentationHash) {
+      throw new Error("Invalid revision hashes.");
+    }
+    const presentation = decodePresentation(presentationJson);
+    if (!parseDbml(sourceText, path.relativePath).graph) throw new Error("Invalid revision source.");
+    return { ...summary, sourceText, presentation };
+  } catch (error) {
+    if (error instanceof DbcdProjectStoreError) throw error;
+    throw new DbcdProjectStoreError("CORRUPT_PROJECT", "Unable to read the .dbcd revision.");
+  } finally {
+    db?.close();
+  }
+}
+
+export async function setDbcdRevisionPinned(input: SetDbcdRevisionPinnedInput): Promise<DbcdProjectSnapshot> {
+  return writeProject(input, (db) => {
+    const result = db.prepare("UPDATE revisions SET pinned=? WHERE id=?").run(input.pinned ? 1 : 0, input.revisionId);
+    if (result.changes !== 1) throw new DbcdProjectStoreError("REVISION_NOT_FOUND", "The revision does not exist.");
+  });
+}
+
+export async function restoreDbcdRevision(input: RestoreDbcdRevisionInput, hooks?: DbcdStoreTestHooks): Promise<DbcdProjectSnapshot> {
+  const revision = await readDbcdRevision(input);
+  return saveProject({ ...input, sourceText: revision.sourceText, presentation: revision.presentation },
+    `Restauration de ${revision.id.slice(0, 8)}`, hooks);
 }

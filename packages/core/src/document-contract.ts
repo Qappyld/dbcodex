@@ -19,6 +19,11 @@ export interface DbcdDraft {
   updatedAt: string;
 }
 
+export interface DbcdRevisionSnapshot extends DbcdRevisionSummary {
+  sourceText: string;
+  presentation: PresentationDocument;
+}
+
 export interface DbcdProjectSnapshot {
   projectPath: string;
   projectId: string;
@@ -41,4 +46,5 @@ export interface SaveDbcdInput {
   sourceText: string;
   presentation: PresentationDocument;
   label?: string;
+  now?: () => string;
 }

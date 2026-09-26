@@ -10,7 +10,7 @@ CREATE TABLE project_meta (
 ) STRICT;
 CREATE TABLE revisions (
   id TEXT PRIMARY KEY,
-  parent_id TEXT REFERENCES revisions(id),
+  parent_id TEXT REFERENCES revisions(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL,
   dbml_gzip BLOB NOT NULL,
   presentation_gzip BLOB NOT NULL,
