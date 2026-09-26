@@ -311,6 +311,20 @@ describe("useDocumentSession", () => {
     });
   });
 
+  it("revalidates pending source after restore fails before debounce validation", async () => {
+    const bridge = makeBridge();
+    bridge.callTool.mockImplementation((name: string) => name === "restore_dbcd_revision"
+      ? Promise.reject(new Error("Restore unavailable"))
+      : Promise.resolve({ structuredContent: { graph: null, diagnostics: [syntaxError], saved: true } }));
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    act(() => result.current.setSource("Table users {"));
+    await act(async () => result.current.restore("r1"));
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(result.current.diagnostics).toEqual([syntaxError]);
+    expect(result.current.validating).toBe(false);
+    expect(result.current.error).toBe("Restore unavailable");
+  });
+
   it("preserves edits made during save and uses the advanced generation for their draft", async () => {
     const bridge = makeBridge();
     let resolveSave!: (value: unknown) => void;

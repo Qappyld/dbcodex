@@ -2,11 +2,23 @@
 
 ## Statut
 
-- **Phase :** prototype de compatibilité Codex en validation.
-- **Dernière mise à jour :** 25 septembre 2026.
-- **Implémentation :** prototype local construit, testé et installé ; la V1 reste conditionnée par la validation interactive desktop.
+- **Phase :** atelier `.dbcd` en validation finale.
+- **Dernière mise à jour :** 26 septembre 2026.
+- **Implémentation :** édition, présentation, historique et échange DBML implémentés ; la validation interactive desktop reste à effectuer pour ce nouveau parcours.
 - **Série active :** aucune ; les questions 8 et 10 sont différées à la demande de l'utilisateur.
-- **Conception active :** spécification et plan du prototype exécutés ; preuve desktop finale encore requise.
+- **Conception active :** atelier `.dbcd` ; preuve desktop finale encore requise.
+
+## Décisions de l’atelier `.dbcd` — 26 septembre 2026
+
+Ces décisions du chantier approuvé remplacent les choix historiques de persistance et de versioning ci-dessous pour le nouvel atelier. L’ancien prototype `.dbml` conserve sa compatibilité.
+
+- `.dbcd` est un fichier projet SQLite local contenant source DBML exacte, présentation, brouillon et révisions ; `.dbml` est le format d’échange.
+- Un enregistrement explicite accepté crée une révision atomique et avance la génération. Un brouillon ne crée pas de révision. Les conflits empêchent l’écriture.
+- L’historique interne est indépendant de Git ; aucune création automatique de commit. La restauration délibérée dans Historique crée une nouvelle révision et préserve les anciennes selon la rétention ; l’épinglage les protège.
+- La comparaison est un résumé de la révision sélectionnée vers le travail courant. Les remplacements sont appariés à l’intérieur de chaque bloc de lignes modifiées. Les changements de présentation comptent les déplacements et niveaux de détail par vue commune, les tracés et les vues ajoutées/supprimées ; les panneaux, noms et groupes ne sont pas exhaustivement détaillés.
+- `read_dbcd_revision` est une lecture réservée au composant MCP Apps. Le contenu complet DBML et présentation reste dans `_meta.dbcodex.revision`, jamais dans le contenu visible au modèle. La liste d’historique demeure légère.
+- Le plein écran dépend de l’accord du client MCP Apps. Aucune association OS/éditeur personnalisée ou ouverture dans un panneau latéral n’est promise sans preuve dédiée.
+- Le traitement reste local et aucune écriture spéculative n’est autorisée. Licence, distribution publique et autres exigences V1 restent distinctes de cette livraison.
 
 ## Décisions acquises
 

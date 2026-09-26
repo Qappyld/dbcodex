@@ -12,19 +12,19 @@ describe("MCP tool definitions", () => {
 
     expect(Object.keys(definitions).sort()).toEqual([
       "openDbcd", "openDbml", "importDbml", "exportDbml", "validateDraft", "saveDraft", "discardDraft",
-      "saveDbcd", "listRevisions", "restoreRevision", "pinRevision", "saveLayout",
+      "saveDbcd", "listRevisions", "readRevision", "restoreRevision", "pinRevision", "saveLayout",
     ].sort());
     for (const [name, definition] of Object.entries(definitions)) {
       expect(definition.annotations.openWorldHint, name).toBe(false);
       expect(definition._meta.ui.resourceUri, name).toBe(UI_RESOURCE_URI);
     }
-    for (const name of ["validateDraft", "saveDraft", "discardDraft", "saveDbcd", "listRevisions", "restoreRevision", "pinRevision", "saveLayout"] as const) {
+    for (const name of ["validateDraft", "saveDraft", "discardDraft", "saveDbcd", "listRevisions", "readRevision", "restoreRevision", "pinRevision", "saveLayout"] as const) {
       expect(definitions[name]._meta.ui.visibility).toEqual(["app"]);
     }
     for (const name of ["openDbcd", "openDbml", "importDbml", "exportDbml"] as const) {
       expect(definitions[name]._meta.ui.visibility).toBeUndefined();
     }
-    for (const name of ["openDbcd", "openDbml", "validateDraft", "listRevisions"] as const) {
+    for (const name of ["openDbcd", "openDbml", "validateDraft", "listRevisions", "readRevision"] as const) {
       expect(definitions[name].annotations.readOnlyHint).toBe(true);
     }
     for (const name of ["importDbml", "exportDbml", "saveDbcd", "restoreRevision"] as const) {

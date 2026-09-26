@@ -2,14 +2,15 @@ import { readFile } from "node:fs/promises";
 import {
   DbcdPathPolicyError, DbcdProjectStoreError, LayoutStoreError, PathPolicyError,
   discardDbcdDraft, exportDbmlProject, importDbmlProject, listDbcdRevisions, loadLayout, openDbcdProject,
-  parseDbml, resolveExistingDbcd, resolveNewDbcd, resolveWorkspaceDbml,
+  parseDbml, readDbcdRevision, resolveExistingDbcd, resolveNewDbcd, resolveWorkspaceDbml,
   restoreDbcdRevision, saveDbcdDraft, saveDbcdProject, saveNodePosition, setDbcdRevisionPinned,
-  type DbcdProjectSnapshot, type DbcdRevisionSummary, type PresentationDocument,
+  type DbcdProjectSnapshot, type DbcdRevisionSnapshot, type DbcdRevisionSummary, type PresentationDocument,
 } from "@dbcodex/core";
 
 export interface OpenDbmlInput { path: string }
 export interface ProjectPathInput { path: string }
 export interface OpenDbcdInput extends ProjectPathInput {}
+export interface ReadDbcdRevisionInput extends ProjectPathInput { revisionId: string }
 export interface ValidateDbcdDraftInput extends ProjectPathInput { sourceText: string }
 export interface SaveDbcdDraftInput extends ValidateDbcdDraftInput { baseGeneration: number; presentation: PresentationDocument }
 export interface DiscardDbcdDraftInput extends ProjectPathInput { expectedGeneration: number }
@@ -30,6 +31,7 @@ export interface ProjectOperations {
   discardDraft(input: Scoped<DiscardDbcdDraftInput>): Promise<void>;
   save(input: Scoped<SaveDbcdInput>): Promise<DbcdProjectSnapshot>;
   revisions(input: Scoped<ProjectPathInput>): Promise<DbcdRevisionSummary[]>;
+  revision(input: Scoped<ReadDbcdRevisionInput>): Promise<DbcdRevisionSnapshot>;
   restore(input: Scoped<RestoreDbcdInput>): Promise<DbcdProjectSnapshot>;
   pin(input: Scoped<PinDbcdRevisionInput>): Promise<void>;
   importDbml(input: Scoped<ImportDbmlInput>): Promise<DbcdProjectSnapshot>;
@@ -43,6 +45,7 @@ export const defaultProjectOperations: ProjectOperations = {
   discardDraft: async ({ workspaceRoot, path, ...input }) => { await discardDbcdDraft({ workspaceRoot, projectPath: path, ...input }); },
   save: ({ workspaceRoot, path, ...input }) => saveDbcdProject({ workspaceRoot, projectPath: path, ...input }),
   revisions: ({ workspaceRoot, path }) => listDbcdRevisions({ workspaceRoot, projectPath: path }),
+  revision: ({ workspaceRoot, path, revisionId }) => readDbcdRevision({ workspaceRoot, projectPath: path, revisionId }),
   restore: ({ workspaceRoot, path, ...input }) => restoreDbcdRevision({ workspaceRoot, projectPath: path, ...input }),
   pin: async ({ workspaceRoot, path, ...input }) => { await setDbcdRevisionPinned({ workspaceRoot, projectPath: path, ...input }); },
   importDbml: ({ workspaceRoot, ...input }) => importDbmlProject({ workspaceRoot, ...input }),
@@ -151,6 +154,15 @@ export function createHandlers(roots: WorkspaceRoots, projects: ProjectOperation
     saveDbcd: async (input: SaveDbcdInput) => {
       try { return projectResult(await projects.save({ ...input, workspaceRoot: await resolveProjectRoot(roots, input.path) }), "Saved"); }
       catch (error) { return sanitizedError(error); }
+    },
+    readDbcdRevision: async (input: ReadDbcdRevisionInput) => {
+      try {
+        const revision = await projects.revision({ ...input, workspaceRoot: await resolveProjectRoot(roots, input.path) });
+        const { sourceText, presentation, ...summary } = revision;
+        return { structuredContent: { projectPath: input.path, revision: summary },
+          content: [{ type: "text" as const, text: `Read revision ${revision.id.slice(0, 8)} in ${input.path}.` }],
+          _meta: { dbcodex: { revision } } };
+      } catch (error) { return sanitizedError(error); }
     },
     listDbcdRevisions: async (input: ProjectPathInput) => {
       try {

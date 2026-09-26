@@ -13,6 +13,7 @@ const serverEntry = process.argv[2]
 const workspace = await mkdtemp(path.join(os.tmpdir(), "dbcodex-mcp-"));
 await mkdir(path.join(workspace, "fixtures"));
 await copyFile(path.join(root, "fixtures/basic.dbml"), path.join(workspace, "fixtures/basic.dbml"));
+await copyFile(path.join(root, "fixtures/demo-shop.dbcd"), path.join(workspace, "fixtures/demo-shop.dbcd"));
 await mkdir(path.join(workspace, "fixtures", "directory.dbml"));
 const transport = new StdioClientTransport({
   command: process.execPath,
@@ -44,11 +45,11 @@ try {
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map(({ name }) => name).sort(), [
     "discard_dbcd_draft", "export_dbml", "import_dbml", "list_dbcd_revisions", "open_dbcd", "open_dbml",
-    "pin_dbcd_revision", "restore_dbcd_revision", "save_dbcd", "save_dbcd_draft",
+    "pin_dbcd_revision", "read_dbcd_revision", "restore_dbcd_revision", "save_dbcd", "save_dbcd_draft",
     "save_layout", "validate_dbcd_draft",
   ]);
   for (const name of ["validate_dbcd_draft", "save_dbcd_draft", "discard_dbcd_draft", "save_dbcd",
-    "list_dbcd_revisions", "restore_dbcd_revision", "pin_dbcd_revision", "save_layout"]) {
+    "list_dbcd_revisions", "read_dbcd_revision", "restore_dbcd_revision", "pin_dbcd_revision", "save_layout"]) {
     assert.deepEqual(tools.find((tool) => tool.name === name)?._meta?.ui?.visibility, ["app"]);
   }
   for (const name of ["open_dbcd", "open_dbml", "import_dbml", "export_dbml"]) {
@@ -102,6 +103,32 @@ try {
   assert.ok(!JSON.stringify(project.content).includes("Table users"));
   assert.ok(!JSON.stringify(project.structuredContent).includes("Table users"));
   assert.ok(!JSON.stringify(project).includes(workspace));
+
+  const demoPath = "fixtures/demo-shop.dbcd";
+  const demo = await client.callTool({ name: "open_dbcd", arguments: { path: demoPath } });
+  assert.equal(demo.isError, undefined);
+  const generation = demo.structuredContent.generation;
+  const revisionCount = demo.structuredContent.revisions.length;
+  const sourceText = `${demo._meta.dbcodex.sourceText}\n// MCP acceptance edit\n`;
+  const presentation = demo.structuredContent.presentation;
+  const draft = await client.callTool({ name: "save_dbcd_draft", arguments: { path: demoPath, baseGeneration: generation, sourceText, presentation } });
+  assert.equal(draft.isError, undefined);
+  const drafted = await client.callTool({ name: "open_dbcd", arguments: { path: demoPath } });
+  assert.equal(drafted.structuredContent.generation, generation);
+  assert.equal(drafted.structuredContent.revisions.length, revisionCount);
+  assert.equal(drafted._meta.dbcodex.draft.sourceText, sourceText);
+  const savedDemo = await client.callTool({ name: "save_dbcd", arguments: { path: demoPath, expectedGeneration: generation, sourceText, presentation } });
+  assert.equal(savedDemo.isError, undefined);
+  const reopenedDemo = await client.callTool({ name: "open_dbcd", arguments: { path: demoPath } });
+  assert.equal(reopenedDemo.structuredContent.generation, generation + 1);
+  assert.equal(reopenedDemo.structuredContent.revisions.length, revisionCount + 1);
+  assert.equal(reopenedDemo.structuredContent.hasDraft, false);
+  assert.equal(reopenedDemo._meta.dbcodex.sourceText, sourceText);
+  const revision = await client.callTool({ name: "read_dbcd_revision", arguments: { path: demoPath, revisionId: reopenedDemo.structuredContent.currentRevisionId } });
+  assert.equal(revision.isError, undefined);
+  assert.equal(revision._meta.dbcodex.revision.sourceText, sourceText);
+  assert.equal(revision.structuredContent.revision.sourceText, undefined);
+  assert.equal(revision.structuredContent.revision.presentation, undefined);
 
   const unknownTable = await client.callTool({
     name: "save_layout",

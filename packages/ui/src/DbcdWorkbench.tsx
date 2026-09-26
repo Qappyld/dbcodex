@@ -5,6 +5,7 @@ import { useDocumentSession, type DocumentSession } from "./useDocumentSession.j
 import { DbmlEditor } from "./DbmlEditor.js";
 import { DiagramCanvas } from "./DiagramCanvas.js";
 import { ViewInspector } from "./ViewInspector.js";
+import { HistoryPanel } from "./HistoryPanel.js";
 import { setNodeHidden, updateGroup, setPanels as changePanels } from "./presentation-commands.js";
 
 const clamp = (width: number): number => Math.max(240, Math.min(600, width));
@@ -45,6 +46,8 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
   const root = useRef<HTMLElement>(null);
   const [narrow, setNarrow] = useState(window.innerWidth < 900);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyTrigger = useRef<HTMLButtonElement>(null);
   const [displayMode, setDisplayMode] = useState<DisplayMode>("inline");
   const [displayPending, setDisplayPending] = useState(false);
   const [displayMessage, setDisplayMessage] = useState("");
@@ -98,6 +101,7 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
       <span role="status">{readOnly ? "Lecture seule" : session.saving ? "Enregistrement…" : session.dirty ? "Modifications non enregistrées" : "Enregistré"}</span>
       <span>{session.validating ? "Validation…" : invalid ? "DBML invalide" : "DBML valide"}</span>
       <button type="button" disabled={readOnly || !session.dirty || session.saving || session.validating || invalid} onClick={() => void session.save()}>Enregistrer</button>
+      <button ref={historyTrigger} type="button" aria-expanded={historyOpen} onClick={() => setHistoryOpen(!historyOpen)}>Historique</button>
       <button ref={inspectorTrigger} type="button" aria-expanded={inspectorVisible}
         onClick={() => narrow ? setDrawerOpen(true) : updatePanels({ inspectorCollapsed: !panels.inspectorCollapsed })}>
         {narrow || panels.inspectorCollapsed ? "Afficher l’inspecteur" : "Masquer l’inspecteur"}
@@ -106,6 +110,8 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
     </header>
     {session.error && <p role="alert" className="workbench-message">{session.error}</p>}
     {displayMessage && <p role="status" className="workbench-message">{displayMessage}</p>}
+    {historyOpen && <HistoryPanel session={session} bridge={bridge} projectPath={projectPath} readOnly={readOnly}
+      onClose={() => { setHistoryOpen(false); historyTrigger.current?.focus(); }} />}
     <section className="workbench-body">
       <section role="region" aria-label="Éditeur DBML" className="editor-panel" style={{ width: editorWidth } as CSSProperties}>
         <button type="button" className="editor-toggle" aria-expanded={!panels.editorCollapsed}

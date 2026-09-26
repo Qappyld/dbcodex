@@ -1,5 +1,24 @@
 # Inventaire fonctionnel de dbcodex
 
+## État implémenté — atelier `.dbcd`, 26 septembre 2026
+
+Cette section décrit le livrable actuel et prime sur les recommandations historiques de la revue ci-dessous. `.dbcd` est le projet éditable SQLite ; `.dbml` reste le format d’échange. Le texte exact, la présentation par vue, les brouillons récupérables et les révisions résident dans un fichier local.
+
+| Fonction | État actuel |
+|---|---|
+| Édition et validation | Éditeur DBML, validation différée, dernier graphe valide conservé, enregistrement explicite avec contrôle de génération |
+| Diagramme et vues | Déplacement clavier/pointeur, zoom, recherche, vues nommées, vue système permanente, groupes, trois niveaux de détail, tracés modifiables |
+| Historique | Liste récente d’abord, date/résumé/libellé/ID court, épinglage, lecture privée à la demande, comparaison au travail courant et restauration créant une nouvelle révision |
+| Diff | Lignes ajoutées/supprimées/remplacées par bloc de changements, déplacements par vue commune, niveaux de détail, tracés, ajouts/suppressions de vues ; pas un diff sémantique DBML exhaustif |
+| Import/export | Import vers un nouveau `.dbcd`, export exact de la version enregistrée ou d’une révision vers un nouveau `.dbml` |
+| Présentation Codex | MCP Apps intégré et demande de plein écran avec session conservée ; parcours desktop encore à observer, association OS/éditeur non garantie |
+| Confidentialité | Traitement local, ressources embarquées, aucune connexion réseau de l’interface, source et instantanés complets privés dans les métadonnées du composant |
+| Validation | Tests transactionnels/conflits/récupération, tests UI et manifestes, vérification hors ligne et MCP sur copie temporaire de la fixture déterministe |
+
+Les brouillons ne créent aucune révision ; chaque enregistrement explicite accepté en crée une. La restauration est déclenchée dans le panneau Historique et remplace le travail courant. La rétention conserve les révisions épinglées/courantes, retire les anciennes révisions non épinglées au-delà de 90 jours puis vise 500 entrées. Les exports PNG/SVG et la couverture intégrale des constructions DBML restent des exigences produit à vérifier séparément, non des capacités certifiées par ce livrable.
+
+## Revue historique des possibilités produit
+
 ## Cadre de la revue
 
 - **Date de revue :** 25 septembre 2026.

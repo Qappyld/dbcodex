@@ -104,6 +104,13 @@ export const buildToolDefinitions = () => ({
     annotations: writeOnce,
     _meta: appUi,
   },
+  readRevision: {
+    title: "Read DBCodex revision",
+    description: "Read one revision privately for the history comparison panel.",
+    inputSchema: pathInput.extend({ revisionId: z.string().min(1) }),
+    annotations: readOnly,
+    _meta: appUi,
+  },
   listRevisions: {
     title: "List DBCodex revisions",
     description: "List revision summaries.",
@@ -159,6 +166,7 @@ export function createServer(trustedFallbackRoot?: string): McpServer {
   registerAppTool(server, "discard_dbcd_draft", definitions.discardDraft, handlers.discardDbcdDraft);
   registerAppTool(server, "save_dbcd", definitions.saveDbcd, handlers.saveDbcd);
   registerAppTool(server, "list_dbcd_revisions", definitions.listRevisions, handlers.listDbcdRevisions);
+  registerAppTool(server, "read_dbcd_revision", definitions.readRevision, handlers.readDbcdRevision);
   registerAppTool(server, "restore_dbcd_revision", definitions.restoreRevision, handlers.restoreDbcdRevision);
   registerAppTool(server, "pin_dbcd_revision", definitions.pinRevision, handlers.pinDbcdRevision);
   registerAppTool(server, "save_layout", definitions.saveLayout, handlers.saveLayout);

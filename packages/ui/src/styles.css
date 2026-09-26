@@ -138,6 +138,16 @@ button {
 
 .workbench { display: flex; flex-direction: column; height: min(800px, 100dvh); min-height: 420px; min-width: 320px; overflow: hidden; }
 .workbench[data-mode="fullscreen"] { height: 100dvh; }
+.history-panel { background: var(--dbc-surface); border-bottom: 1px solid var(--dbc-border); padding: 12px; overflow: auto; max-height: 45%; flex-shrink: 0; font-size: 12px; }
+.history-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-panel h2, .history-panel h3 { font-size: 14px; margin: 4px 0 10px; }
+.history-content { display: flex; flex-wrap: wrap; gap: 16px; }
+.history-content > ol { list-style: none; padding: 0; margin: 0; min-width: 260px; flex: 1; }
+.history-content > ol > li { border-bottom: 1px solid var(--dbc-border); padding: 8px 0; }
+.history-content p { margin: 6px 0; }
+.history-content time { color: var(--dbc-muted); font-size: 11px; }
+.history-content button[aria-pressed="true"] { border-color: var(--dbc-accent); }
+.revision-detail { flex: 1; min-width: 240px; }
 .workbench-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; border-bottom: 1px solid var(--dbc-border); background: var(--dbc-surface); }
 .workbench-toolbar strong { margin-right: auto; overflow: hidden; text-overflow: ellipsis; max-width: 30%; white-space: nowrap; }
 .workbench-toolbar span { color: var(--dbc-muted); font-size: 12px; }

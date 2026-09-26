@@ -1,7 +1,7 @@
 {
   "name": "dbcodex",
   "version": "0.1.0-dev.0+codex.20260925141618",
-  "description": "Open and explore local DBML diagrams directly in Codex.",
+  "description": "Edit local .dbcd schema projects with DBML exchange and revision history in Codex.",
   "author": {
     "name": "Qappyld"
   },
@@ -10,8 +10,8 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "dbcodex",
-    "shortDescription": "Explore local DBML diagrams in Codex",
-    "longDescription": "Open, validate, and interact with local DBML diagrams without sending schema files to an external service.",
+    "shortDescription": "Edit local .dbcd schema projects in Codex",
+    "longDescription": "Edit DBML, arrange views, save revisions and restore history in local .dbcd projects without sending schema files to an external service.",
     "developerName": "Qappyld",
     "category": "Developer Tools",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Open fixtures/basic.dbml with dbcodex."
+      "Ouvre fixtures/demo-shop.dbcd avec dbcodex."
     ],
     "brandColor": "#6D5EF5"
   }

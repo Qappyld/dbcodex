@@ -25,6 +25,8 @@ describe("Codex plugin package", () => {
       mcpServers: "./.mcp.json",
     });
     expect(compatible.version).toBe(portable.version);
+    expect(compatible.description).toBe(portable.description);
+    expect(compatible.interface).toEqual((portable.extensions as { "com.openai": { interface: unknown } })["com.openai"].interface);
   });
 
   it("declares the same local stdio server in both MCP formats", async () => {
@@ -58,12 +60,20 @@ describe("Codex plugin package", () => {
       .toContain('[plugins."dbcodex@dbcodex-local"]');
   });
 
-  it("ships a focused skill for both tools", async () => {
+  it("ships editable project guidance and the three exact user flows", async () => {
     const skill = await readFile(path.join(root, "skills/dbcodex/SKILL.md"), "utf8");
 
     expect(skill).toMatch(/^---\r?\nname: dbcodex\r?\n/m);
     expect(skill).toContain("open_dbml");
     expect(skill).toContain("save_layout");
     expect(skill).toContain("workspace-relative");
+    const readme = await readFile(path.join(root, "README.md"), "utf8");
+    for (const flow of ["Ouvre fixtures/demo-shop.dbcd avec dbcodex.", "Importe fixtures/demo-shop.dbml dans fixtures/demo-shop.dbcd.", "Exporte la version courante de fixtures/demo-shop.dbcd vers fixtures/demo-shop-export.dbml."]) {
+      expect(skill).toContain(flow);
+      expect(readme).toContain(flow);
+    }
+    expect(skill).toContain("open_dbcd");
+    expect(skill).toContain("read_dbcd_revision");
+    expect(JSON.stringify(await json("plugin.json"))).toContain("demo-shop.dbcd");
   });
 });

@@ -182,6 +182,13 @@ describe("MCP handlers", () => {
     expect(saved.structuredContent).toMatchObject({ generation: 2 });
     const listed = await handlers.listDbcdRevisions({ path: "shop.dbcd" });
     expect(listed.structuredContent.revisions).toHaveLength(2);
+    const revision = await handlers.readDbcdRevision({ path: "shop.dbcd", revisionId: initialRevision });
+    expect(revision._meta.dbcodex.revision.sourceText).toBe(sourceText);
+    expect(revision._meta.dbcodex.revision.presentation).toEqual(emptyPresentation());
+    expect(JSON.stringify(revision.structuredContent)).not.toContain("sourceText");
+    expect(JSON.stringify(revision.structuredContent)).not.toContain('"presentation":');
+    expect(JSON.stringify(revision.content)).not.toContain(sourceText);
+    expect(JSON.stringify(revision)).not.toContain(root);
     await handlers.pinDbcdRevision({ path: "shop.dbcd", revisionId: initialRevision, pinned: true });
     const restored = await handlers.restoreDbcdRevision({ path: "shop.dbcd", expectedGeneration: 2, revisionId: initialRevision });
     expect(restored.structuredContent).toMatchObject({ generation: 3 });

@@ -227,6 +227,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     ++draftEpoch.current;
     ++validationId.current;
     const edit = editId.current;
+    let failed = false;
     savingRef.current = true;
     update({ saving: true, validating: false, error: null });
     try {
@@ -242,10 +243,18 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
         currentSourceValidated ? stateRef.current.graph : snapshot.graph,
         currentSourceValidated ? stateRef.current.diagnostics : snapshot.diagnostics);
       if (!concurrentEdit) editId.current += 1;
-    } catch (error) { update({ error: message(error) }); }
+    } catch (error) { failed = true; update({ error: message(error) }); }
     finally {
       savingRef.current = false;
       update({ saving: false, ...(edit === editId.current ? { validating: false } : {}) });
+      if (failed && edit === editId.current && validatedSource.current !== stateRef.current.source) {
+        const source = stateRef.current.source, id = ++validationId.current;
+        update({ validating: true });
+        validationTimer.current = setTimeout(() => {
+          validationTimer.current = null;
+          void validate(source, id);
+        }, 300);
+      }
       if (stateRef.current.dirty) scheduleDraft();
     }
   };
