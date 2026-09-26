@@ -33,10 +33,10 @@ export interface CreateDbcdProjectInput extends OpenDbcdProjectInput {
 }
 
 function openConnection(path: string, readOnly: boolean): DatabaseSync {
-  const db = new DatabaseSync(path, { readOnly, timeout: 2000 });
+  const db = new DatabaseSync(path, { readOnly });
   try {
     db.enableLoadExtension(false);
-    db.exec("PRAGMA foreign_keys=ON; PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;");
+    db.exec("PRAGMA busy_timeout=2000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;");
     if (db.prepare("PRAGMA foreign_keys").get()?.foreign_keys !== 1
       || db.prepare("PRAGMA journal_mode").get()?.journal_mode !== "delete"
       || db.prepare("PRAGMA synchronous").get()?.synchronous !== 2
@@ -147,9 +147,16 @@ function assertReservedFile(path: ResolvedDbcdPath, reserved: BigIntStats): void
   const changed = () => new DbcdProjectStoreError("PATH_CHANGED", "The project path changed during creation.");
   try {
     assertConfinedParent(path);
-    const actual = lstatSync(path.absolutePath, { bigint: true });
-    if (!actual.isFile() || actual.dev !== reserved.dev || actual.ino !== reserved.ino
-      || actual.birthtimeNs !== reserved.birthtimeNs) throw changed();
+    if (!lstatSync(path.absolutePath).isFile()) throw changed();
+    // Older Windows runtimes report dev=0 from lstat; compare two handle-based identities.
+    const checkFd = openSync(path.absolutePath, "r");
+    try {
+      const actual = fstatSync(checkFd, { bigint: true });
+      if (!actual.isFile() || actual.dev !== reserved.dev || actual.ino !== reserved.ino
+        || actual.birthtimeNs !== reserved.birthtimeNs) throw changed();
+    } finally {
+      closeSync(checkFd);
+    }
   } catch {
     throw changed();
   }
@@ -179,6 +186,7 @@ export async function createDbcdProject(input: CreateDbcdProjectInput): Promise<
   const reserved = fstatSync(fd, { bigint: true });
   let db: DatabaseSync | undefined;
   let committed = false;
+  let transactionStarted = false;
   try {
     const checked = await resolveExistingDbcd(path.workspaceRoot, path.relativePath);
     if (checked.workspaceRoot !== path.workspaceRoot || checked.absolutePath !== path.absolutePath) {
@@ -193,6 +201,7 @@ export async function createDbcdProject(input: CreateDbcdProjectInput): Promise<
     const presentationHash = hashDocument(presentationJson);
     const id = revisionId(createdAt, sourceHash, presentationHash);
     db.exec("BEGIN IMMEDIATE");
+    transactionStarted = true;
     db.exec(DBCD_SCHEMA_SQL);
     db.exec(`PRAGMA user_version=${DBCD_FORMAT_VERSION}`);
     db.prepare("INSERT INTO project_meta VALUES (1, ?, ?, ?, ?)")
@@ -206,10 +215,11 @@ export async function createDbcdProject(input: CreateDbcdProjectInput): Promise<
     const snapshot = readSnapshot(db, path.relativePath);
     assertReservedFile(path, reserved);
     db.exec("COMMIT");
+    transactionStarted = false;
     committed = true;
     return snapshot;
   } catch (error) {
-    if (db?.isTransaction) {
+    if (db && transactionStarted) {
       try { db.exec("ROLLBACK"); } catch { /* Closing also rolls back an outstanding transaction. */ }
     }
     if (error instanceof DbcdProjectStoreError && error.code === "PATH_CHANGED") throw error;

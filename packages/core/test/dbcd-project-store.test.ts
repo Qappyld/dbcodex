@@ -76,6 +76,16 @@ describe("dbcd project store", () => {
     expect(await openDbcdProject(input)).toMatchObject({ sourceText, presentation });
   });
 
+  it("sets the busy timeout explicitly when the constructor leaves it at zero", async () => {
+    const exec = DatabaseSync.prototype.exec;
+    vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (this: DatabaseSync, sql: string) {
+      if (sql.includes("PRAGMA foreign_keys")) exec.call(this, "PRAGMA busy_timeout=0");
+      return exec.call(this, sql);
+    });
+    const { input } = await makeDbcdFixture(roots);
+    expect((await openDbcdProject(input)).sourceText).toBe(fixtureSource);
+  });
+
   it("validates DBML before touching the workspace", async () => {
     const root = await makeTempWorkspace(roots);
     await expect(createDbcdProject({ workspaceRoot: root, projectPath: "bad.dbcd", sourceText: "Table {" }))
@@ -154,6 +164,33 @@ describe("dbcd project store", () => {
     });
     await expect(createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: fixtureSource }))
       .rejects.toMatchObject({ code: "CREATE_FAILED", message: "Unable to create the .dbcd project." });
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it("rolls back explicitly before closing on every supported runtime", async () => {
+    const root = await makeTempWorkspace(roots);
+    const exec = DatabaseSync.prototype.exec;
+    const close = DatabaseSync.prototype.close;
+    let remainingTables: unknown;
+    let reachedCommit = false;
+    vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (this: DatabaseSync, sql: string) {
+      if (sql === "COMMIT") {
+        reachedCommit = true;
+        throw new Error("private commit details");
+      }
+      return exec.call(this, sql);
+    });
+    vi.spyOn(DatabaseSync.prototype, "close").mockImplementation(function (this: DatabaseSync) {
+      try {
+        remainingTables = this.prepare("SELECT count(*) AS count FROM sqlite_schema WHERE name='project_meta'").get()?.count;
+      } finally {
+        close.call(this);
+      }
+    });
+    await expect(createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: fixtureSource }))
+      .rejects.toMatchObject({ code: "CREATE_FAILED", message: "Unable to create the .dbcd project." });
+    expect(reachedCommit).toBe(true);
+    expect(remainingTables).toBe(0);
     expect(await readdir(root)).toEqual([]);
   });
 
