@@ -42,7 +42,18 @@ try {
   await client.connect(transport);
 
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(({ name }) => name).sort(), ["open_dbml", "save_layout"]);
+  assert.deepEqual(tools.map(({ name }) => name).sort(), [
+    "export_dbml", "import_dbml", "list_dbcd_revisions", "open_dbcd", "open_dbml",
+    "pin_dbcd_revision", "restore_dbcd_revision", "save_dbcd", "save_dbcd_draft",
+    "save_layout", "validate_dbcd_draft",
+  ]);
+  for (const name of ["validate_dbcd_draft", "save_dbcd_draft", "save_dbcd",
+    "list_dbcd_revisions", "restore_dbcd_revision", "pin_dbcd_revision", "save_layout"]) {
+    assert.deepEqual(tools.find((tool) => tool.name === name)?._meta?.ui?.visibility, ["app"]);
+  }
+  for (const name of ["open_dbcd", "open_dbml", "import_dbml", "export_dbml"]) {
+    assert.equal(tools.find((tool) => tool.name === name)?._meta?.ui?.visibility, undefined);
+  }
   const openTool = tools.find(({ name }) => name === "open_dbml");
   assert.equal(openTool?._meta?.ui?.resourceUri, "ui://dbcodex/diagram-v1.html");
   assert.equal(openTool?._meta?.["ui/resourceUri"], "ui://dbcodex/diagram-v1.html");
@@ -69,6 +80,28 @@ try {
   assert.equal(result.structuredContent?.graph?.tables?.length, 3);
   assert.equal(result.structuredContent?.graph?.relations?.length, 2);
   assert.ok(elapsedMs < 2_000, `open_dbml took ${elapsedMs.toFixed(1)} ms`);
+
+  const imported = await client.callTool({
+    name: "import_dbml",
+    arguments: { sourcePath: "fixtures/basic.dbml", projectPath: "fixtures/basic.dbcd" },
+  });
+  assert.equal(imported.isError, undefined);
+  assert.ok(imported._meta?.dbcodex?.sourceText?.includes("Table"));
+  assert.ok(!JSON.stringify(imported.content).includes("Table users"));
+  assert.ok(!JSON.stringify(imported.structuredContent).includes("Table users"));
+  assert.ok(!JSON.stringify(imported).includes(workspace));
+
+  const project = await client.callTool({
+    name: "open_dbcd",
+    arguments: { path: "fixtures/basic.dbcd" },
+  });
+  assert.equal(project.isError, undefined);
+  assert.equal(project.structuredContent?.graph?.tables?.length, 3);
+  assert.equal(project.structuredContent?.hasDraft, false);
+  assert.equal(project._meta?.dbcodex?.sourceText, imported._meta?.dbcodex?.sourceText);
+  assert.ok(!JSON.stringify(project.content).includes("Table users"));
+  assert.ok(!JSON.stringify(project.structuredContent).includes("Table users"));
+  assert.ok(!JSON.stringify(project).includes(workspace));
 
   const unknownTable = await client.callTool({
     name: "save_layout",

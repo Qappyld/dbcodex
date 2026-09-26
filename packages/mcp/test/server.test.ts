@@ -7,26 +7,29 @@ import {
 import { UI_RESOURCE_URI } from "../src/ui-resource.js";
 
 describe("MCP tool definitions", () => {
-  it("advertises closed-world open and save tools", () => {
+  it("advertises exact closed-world public and app-only tools", () => {
     const definitions = buildToolDefinitions();
 
-    expect(Object.keys(definitions)).toEqual(["open", "save"]);
-    expect(definitions.open.annotations).toMatchObject({
-      readOnlyHint: true,
-      openWorldHint: false,
-    });
-    expect(definitions.save.annotations).toMatchObject({
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-    });
-    expect(definitions.open._meta).toEqual({
-      ui: { resourceUri: UI_RESOURCE_URI },
-    });
-    expect(definitions.save._meta).toEqual({
-      ui: { visibility: ["app"] },
-    });
+    expect(Object.keys(definitions).sort()).toEqual([
+      "openDbcd", "openDbml", "importDbml", "exportDbml", "validateDraft", "saveDraft",
+      "saveDbcd", "listRevisions", "restoreRevision", "pinRevision", "saveLayout",
+    ].sort());
+    for (const [name, definition] of Object.entries(definitions)) {
+      expect(definition.annotations.openWorldHint, name).toBe(false);
+      expect(definition._meta.ui.resourceUri, name).toBe(UI_RESOURCE_URI);
+    }
+    for (const name of ["validateDraft", "saveDraft", "saveDbcd", "listRevisions", "restoreRevision", "pinRevision", "saveLayout"] as const) {
+      expect(definitions[name]._meta.ui.visibility).toEqual(["app"]);
+    }
+    for (const name of ["openDbcd", "openDbml", "importDbml", "exportDbml"] as const) {
+      expect(definitions[name]._meta.ui.visibility).toBeUndefined();
+    }
+    for (const name of ["openDbcd", "openDbml", "validateDraft", "listRevisions"] as const) {
+      expect(definitions[name].annotations.readOnlyHint).toBe(true);
+    }
+    for (const name of ["importDbml", "exportDbml", "saveDbcd", "restoreRevision"] as const) {
+      expect(definitions[name].annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
+    }
   });
 
   it("uses file roots advertised by the MCP client", async () => {
