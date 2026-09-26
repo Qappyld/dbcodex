@@ -138,6 +138,88 @@ describe("useDocumentSession", () => {
     expect(bridge.callTool).toHaveBeenLastCalledWith("save_dbcd", expect.objectContaining({ expectedProjectId: "replacement-project", expectedRevisionId: "replacement-r3", sourceText: "Table merged {}" }));
   });
 
+  it.each([
+    ["reload", "debounced"], ["reload", "in-flight"],
+    ["identical merge", "debounced"], ["identical merge", "in-flight"],
+  ] as const)("clears canceled validation after %s with a %s request", async (action, timing) => {
+    const bridge = makeBridge();
+    const diskSource = "Table orders { id int }";
+    const disk = { ...openResult, structuredContent: { ...openResult.structuredContent,
+      generation: 4, currentRevisionId: "r4", graph: nextGraph },
+      _meta: { dbcodex: { ...openResult._meta.dbcodex, sourceText: diskSource } } };
+    const localPresentation = structuredClone(snapshot.presentation);
+    localPresentation.views.all!.viewport = { x: 25, y: 50, zoom: 1.5 };
+    let resolveOldValidation: ((value: unknown) => void) | undefined;
+    bridge.callTool.mockImplementation((name: string, args?: Record<string, unknown>) => {
+      if (name === "validate_dbcd_draft" && args?.sourceText !== diskSource) {
+        return new Promise((resolve) => { resolveOldValidation = resolve; });
+      }
+      if (name === "validate_dbcd_draft") return Promise.resolve({ structuredContent: { graph: nextGraph, diagnostics: [] } });
+      if (name === "pin_dbcd_revision") return Promise.resolve({ isError: true,
+        structuredContent: { errorCode: "CONFLICT" }, content: [{ text: "Project changed." }] });
+      if (name === "open_dbcd") return Promise.resolve(disk);
+      if (name === "save_dbcd") return Promise.resolve({ ...disk, structuredContent: {
+        ...disk.structuredContent, generation: 5, currentRevisionId: "r5", presentation: localPresentation,
+      } });
+      return Promise.resolve({ structuredContent: { saved: true } });
+    });
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    act(() => result.current.setSource("Table local {"));
+    if (timing === "in-flight") await act(async () => vi.advanceTimersByTimeAsync(300));
+    await act(async () => result.current.pin("r1", true));
+    expect(result.current.conflict?.disk?.sourceText).toBe(diskSource);
+    expect(result.current.validating).toBe(true);
+
+    act(() => action === "reload" ? result.current.conflict!.reload()
+      : result.current.conflict!.merge(diskSource, localPresentation));
+    expect(result.current.validating).toBe(false);
+    expect(result.current.conflict).toBeNull();
+    expect(result.current.source).toBe(diskSource);
+    if (action === "reload") act(() => result.current.setPresentation(localPresentation));
+    expect(result.current.dirty).toBe(true);
+
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(bridge.callTool.mock.calls.filter(([name]) => name === "validate_dbcd_draft"))
+      .toHaveLength(timing === "in-flight" ? 1 : 0);
+    if (resolveOldValidation) await act(async () => resolveOldValidation!({ structuredContent: { graph: null, diagnostics: [syntaxError] } }));
+    expect(result.current.validating).toBe(false);
+    expect(result.current.graph).toEqual(nextGraph);
+    expect(result.current.diagnostics).toEqual([]);
+    await act(async () => result.current.save());
+    expect(result.current.generation).toBe(5);
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it.each(["debounced", "in-flight"] as const)("validates differing merged source after canceling a %s request", async (timing) => {
+    const bridge = makeBridge();
+    const validationResolvers: Array<(value: unknown) => void> = [];
+    bridge.callTool.mockImplementation((name: string) => {
+      if (name === "validate_dbcd_draft") return new Promise((resolve) => validationResolvers.push(resolve));
+      if (name === "pin_dbcd_revision") return Promise.resolve({ isError: true,
+        structuredContent: { errorCode: "CONFLICT" }, content: [{ text: "Project changed." }] });
+      if (name === "open_dbcd") return Promise.resolve(openResult);
+      return Promise.resolve({ structuredContent: { saved: true } });
+    });
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    act(() => result.current.setSource("Table discarded {"));
+    if (timing === "in-flight") await act(async () => vi.advanceTimersByTimeAsync(300));
+    await act(async () => result.current.pin("r1", true));
+    act(() => result.current.conflict!.merge("Table orders { id int }", snapshot.presentation));
+    expect(result.current.validating).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(299));
+    expect(validationResolvers).toHaveLength(timing === "in-flight" ? 1 : 0);
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(validationResolvers).toHaveLength(timing === "in-flight" ? 2 : 1);
+    if (timing === "in-flight") await act(async () => validationResolvers[0]!({ structuredContent: { graph: null, diagnostics: [syntaxError] } }));
+    expect(result.current.validating).toBe(true);
+    expect(result.current.diagnostics).toEqual([]);
+    await act(async () => validationResolvers.at(-1)!({ structuredContent: { graph: nextGraph, diagnostics: [] } }));
+    expect(result.current.validating).toBe(false);
+    expect(result.current.source).toBe("Table orders { id int }");
+    expect(result.current.graph).toEqual(nextGraph);
+    expect(result.current.dirty).toBe(true);
+  });
+
   it("debounces validation for 300 ms and retains the last valid graph on errors", async () => {
     const bridge = makeBridge();
     const { result } = renderHook(() => useDocumentSession(openResult, bridge));

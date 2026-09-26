@@ -203,6 +203,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
       presentation: preserveEdits ? stateRef.current.presentation : presentation,
       graph,
       diagnostics,
+      validating: preserveEdits && stateRef.current.validating,
       generation: snapshot.generation, revisions: snapshot.revisions,
       dirty: preserveEdits && (stateRef.current.source !== snapshot.sourceText
         || JSON.stringify(stateRef.current.presentation) !== JSON.stringify(presentation)), error: null,
