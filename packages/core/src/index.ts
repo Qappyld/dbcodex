@@ -6,3 +6,5 @@ export * from "./document-contract.js";
 export * from "./document-hash.js";
 export * from "./presentation.js";
 export * from "./dbcd-path-policy.js";
+export * from "./dbcd-schema.js";
+export * from "./dbcd-project-store.js";
