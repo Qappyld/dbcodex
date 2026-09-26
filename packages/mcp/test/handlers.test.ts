@@ -155,6 +155,20 @@ describe("MCP handlers", () => {
     expect(JSON.stringify(validation.structuredContent)).not.toContain(draftSource);
   });
 
+  it("discards a draft without changing the revision generation", async () => {
+    const root = await workspace();
+    await createDbcdProject({ workspaceRoot: root, projectPath: "shop.dbcd", sourceText: "Table users { id int [pk] }\n" });
+    const handlers = createHandlers(root);
+    await handlers.saveDbcdDraft({ path: "shop.dbcd", baseGeneration: 1,
+      sourceText: "Table secret {", presentation: emptyPresentation() });
+    const discarded = await handlers.discardDbcdDraft({ path: "shop.dbcd", expectedGeneration: 1 });
+    expect(discarded.structuredContent).toMatchObject({ projectPath: "shop.dbcd", discarded: true });
+    const reopened = await handlers.openDbcd({ path: "shop.dbcd" });
+    expect(reopened.structuredContent).toMatchObject({ generation: 1, hasDraft: false });
+    expect(reopened._meta.dbcodex.draft).toBeNull();
+    expect(JSON.stringify(discarded.structuredContent)).not.toContain("Table secret {");
+  });
+
   it("imports, saves, lists, pins, restores and exports without model-visible source", async () => {
     const root = await workspace();
     const sourceText = "Table users { id int [pk] }\n";

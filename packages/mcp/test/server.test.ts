@@ -11,14 +11,14 @@ describe("MCP tool definitions", () => {
     const definitions = buildToolDefinitions();
 
     expect(Object.keys(definitions).sort()).toEqual([
-      "openDbcd", "openDbml", "importDbml", "exportDbml", "validateDraft", "saveDraft",
+      "openDbcd", "openDbml", "importDbml", "exportDbml", "validateDraft", "saveDraft", "discardDraft",
       "saveDbcd", "listRevisions", "restoreRevision", "pinRevision", "saveLayout",
     ].sort());
     for (const [name, definition] of Object.entries(definitions)) {
       expect(definition.annotations.openWorldHint, name).toBe(false);
       expect(definition._meta.ui.resourceUri, name).toBe(UI_RESOURCE_URI);
     }
-    for (const name of ["validateDraft", "saveDraft", "saveDbcd", "listRevisions", "restoreRevision", "pinRevision", "saveLayout"] as const) {
+    for (const name of ["validateDraft", "saveDraft", "discardDraft", "saveDbcd", "listRevisions", "restoreRevision", "pinRevision", "saveLayout"] as const) {
       expect(definitions[name]._meta.ui.visibility).toEqual(["app"]);
     }
     for (const name of ["openDbcd", "openDbml", "importDbml", "exportDbml"] as const) {

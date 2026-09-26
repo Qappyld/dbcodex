@@ -57,6 +57,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   const validationId = useRef(0);
   const editId = useRef(0);
   const draftEpoch = useRef(0);
+  const draftQueue = useRef<Promise<void>>(Promise.resolve());
   const validationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
@@ -111,20 +112,36 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     }, 300);
   }, []);
 
+  const queueDraft = (name: "save_dbcd_draft" | "discard_dbcd_draft",
+    args: Record<string, unknown>, epoch: number, edit: number): void => {
+    const operation = draftQueue.current.then(async () => {
+      if (epoch !== draftEpoch.current || (name === "save_dbcd_draft" && edit !== editId.current)) return;
+      toolContent(await bridge.callTool(name, args));
+    });
+    draftQueue.current = operation.catch((error: unknown) => {
+      if (epoch === draftEpoch.current && edit === editId.current) update({ error: message(error) });
+    });
+  };
+
   const scheduleDraft = (): void => {
     if (draftTimer.current) clearTimeout(draftTimer.current);
     const scheduledEdit = editId.current;
     const epoch = draftEpoch.current;
+    if (!stateRef.current.dirty) {
+      draftTimer.current = null;
+      queueDraft("discard_dbcd_draft", {
+        path: initial.current.projectPath, expectedGeneration: stateRef.current.generation,
+      }, epoch, scheduledEdit);
+      return;
+    }
     draftTimer.current = setTimeout(() => {
       draftTimer.current = null;
-      if (scheduledEdit !== editId.current || savingRef.current || !stateRef.current.dirty) return;
+      if (scheduledEdit !== editId.current || epoch !== draftEpoch.current || savingRef.current || !stateRef.current.dirty) return;
       const current = stateRef.current;
-      void bridge.callTool("save_dbcd_draft", {
+      queueDraft("save_dbcd_draft", {
         path: initial.current.projectPath, baseGeneration: current.generation,
         sourceText: current.source, presentation: current.presentation,
-      }).then((value) => { toolContent(value); }).catch((error: unknown) => {
-        if (scheduledEdit === editId.current && epoch === draftEpoch.current) update({ error: message(error) });
-      });
+      }, epoch, scheduledEdit);
     }, 1000);
   };
 
@@ -151,15 +168,17 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     scheduleDraft();
   };
 
-  const applySnapshot = (snapshot: DbcdProjectSnapshot, preserveEdits: boolean): void => {
+  const applySnapshot = (snapshot: DbcdProjectSnapshot, preserveEdits: boolean,
+    graph = preserveEdits ? stateRef.current.graph : snapshot.graph): void => {
     loaded.current = { source: snapshot.sourceText, presentation: JSON.stringify(snapshot.presentation) };
     update({
       source: preserveEdits ? stateRef.current.source : snapshot.sourceText,
       presentation: preserveEdits ? stateRef.current.presentation : snapshot.presentation,
-      graph: preserveEdits ? stateRef.current.graph : snapshot.graph,
+      graph,
       diagnostics: preserveEdits ? stateRef.current.diagnostics : snapshot.diagnostics,
       generation: snapshot.generation, revisions: snapshot.revisions,
-      dirty: preserveEdits, error: null,
+      dirty: preserveEdits && (stateRef.current.source !== snapshot.sourceText
+        || JSON.stringify(stateRef.current.presentation) !== JSON.stringify(snapshot.presentation)), error: null,
     });
   };
 
@@ -186,13 +205,14 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
       });
       const snapshot = readDbcdProjectResult(response);
       if (!snapshot) { toolContent(response); throw new Error("The save returned no project snapshot."); }
+      ++draftEpoch.current;
       applySnapshot(snapshot, edit !== editId.current);
     } catch (error) {
       update({ error: message(error) });
     } finally {
       savingRef.current = false;
-      update({ saving: false, validating: false });
-      if (edit !== editId.current) scheduleDraft();
+      update({ saving: false, ...(edit === editId.current ? { validating: false } : {}) });
+      if (stateRef.current.dirty) scheduleDraft();
     }
   };
 
@@ -201,18 +221,25 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     clearTimers();
     ++draftEpoch.current;
     ++validationId.current;
+    const edit = editId.current;
     savingRef.current = true;
-    update({ saving: true, error: null });
+    update({ saving: true, validating: false, error: null });
     try {
       const response = await bridge.callTool("restore_dbcd_revision", {
         path: initial.current.projectPath, expectedGeneration: stateRef.current.generation, revisionId,
       });
       const snapshot = readDbcdProjectResult(response);
       if (!snapshot) { toolContent(response); throw new Error("The restore returned no project snapshot."); }
-      editId.current += 1;
-      applySnapshot(snapshot, false);
+      ++draftEpoch.current;
+      const concurrentEdit = edit !== editId.current;
+      applySnapshot(snapshot, concurrentEdit, snapshot.graph);
+      if (!concurrentEdit) editId.current += 1;
     } catch (error) { update({ error: message(error) }); }
-    finally { savingRef.current = false; update({ saving: false, validating: false }); }
+    finally {
+      savingRef.current = false;
+      update({ saving: false, ...(edit === editId.current ? { validating: false } : {}) });
+      if (edit !== editId.current && stateRef.current.dirty) scheduleDraft();
+    }
   };
 
   const pin = async (revisionId: string, pinned: boolean): Promise<void> => {

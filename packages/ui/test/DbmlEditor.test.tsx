@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { DbmlEditor } from "../src/DbmlEditor.js";
 import { diagnosticsToLint } from "../src/dbml-language.js";
 
@@ -16,8 +17,25 @@ describe("DbmlEditor", () => {
     rerender(<DbmlEditor value="Table orders {}" diagnostics={[]} readOnly={false} onChange={vi.fn()} onSave={onSave} />);
     expect(container.querySelector(".cm-editor")).toBe(editor);
     expect(editor?.textContent).toContain("Table orders {}");
-    fireEvent.keyDown(screen.getByRole("textbox"), { key: "s", ctrlKey: true });
+    const saveEvent = new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true, cancelable: true });
+    fireEvent(screen.getByRole("textbox"), saveEvent);
     expect(onSave).toHaveBeenCalledTimes(1);
+    expect(saveEvent.defaultPrevented).toBe(true);
+  });
+
+  it("reconfigures read-only state and destroys the view on unmount", () => {
+    const props = { value: "Table users {}", diagnostics: [], onChange: vi.fn(), onSave: vi.fn() };
+    const { container, rerender, unmount } = render(<DbmlEditor {...props} readOnly={false} />);
+    const editorElement = container.querySelector(".cm-editor") as HTMLElement;
+    const view = EditorView.findFromDOM(editorElement);
+    expect(view?.state.readOnly).toBe(false);
+    rerender(<DbmlEditor {...props} readOnly={true} />);
+    expect(EditorView.findFromDOM(editorElement)).toBe(view);
+    expect(view?.state.readOnly).toBe(true);
+    const destroy = vi.spyOn(view!, "destroy");
+    unmount();
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(editorElement.isConnected).toBe(false);
   });
 
   it("clamps diagnostic positions to valid CodeMirror ranges", () => {

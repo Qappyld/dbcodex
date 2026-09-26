@@ -43,11 +43,11 @@ try {
 
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map(({ name }) => name).sort(), [
-    "export_dbml", "import_dbml", "list_dbcd_revisions", "open_dbcd", "open_dbml",
+    "discard_dbcd_draft", "export_dbml", "import_dbml", "list_dbcd_revisions", "open_dbcd", "open_dbml",
     "pin_dbcd_revision", "restore_dbcd_revision", "save_dbcd", "save_dbcd_draft",
     "save_layout", "validate_dbcd_draft",
   ]);
-  for (const name of ["validate_dbcd_draft", "save_dbcd_draft", "save_dbcd",
+  for (const name of ["validate_dbcd_draft", "save_dbcd_draft", "discard_dbcd_draft", "save_dbcd",
     "list_dbcd_revisions", "restore_dbcd_revision", "pin_dbcd_revision", "save_layout"]) {
     assert.deepEqual(tools.find((tool) => tool.name === name)?._meta?.ui?.visibility, ["app"]);
   }

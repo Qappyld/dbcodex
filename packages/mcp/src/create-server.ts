@@ -90,6 +90,13 @@ export const buildToolDefinitions = () => ({
     annotations: writeOnce,
     _meta: appUi,
   },
+  discardDraft: {
+    title: "Discard DBCodex draft",
+    description: "Clear the stored draft when the editor returns to the saved revision.",
+    inputSchema: pathInput.extend({ expectedGeneration: z.number().int().positive() }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: appUi,
+  },
   saveDbcd: {
     title: "Save DBCodex revision",
     description: "Commit a new project revision.",
@@ -149,6 +156,7 @@ export function createServer(trustedFallbackRoot?: string): McpServer {
   registerAppTool(server, "export_dbml", definitions.exportDbml, handlers.exportDbml);
   registerAppTool(server, "validate_dbcd_draft", definitions.validateDraft, handlers.validateDbcdDraft);
   registerAppTool(server, "save_dbcd_draft", definitions.saveDraft, handlers.saveDbcdDraft);
+  registerAppTool(server, "discard_dbcd_draft", definitions.discardDraft, handlers.discardDbcdDraft);
   registerAppTool(server, "save_dbcd", definitions.saveDbcd, handlers.saveDbcd);
   registerAppTool(server, "list_dbcd_revisions", definitions.listRevisions, handlers.listDbcdRevisions);
   registerAppTool(server, "restore_dbcd_revision", definitions.restoreRevision, handlers.restoreDbcdRevision);

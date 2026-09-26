@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import {
   DbcdPathPolicyError, DbcdProjectStoreError, LayoutStoreError, PathPolicyError,
-  exportDbmlProject, importDbmlProject, listDbcdRevisions, loadLayout, openDbcdProject,
+  discardDbcdDraft, exportDbmlProject, importDbmlProject, listDbcdRevisions, loadLayout, openDbcdProject,
   parseDbml, resolveExistingDbcd, resolveNewDbcd, resolveWorkspaceDbml,
   restoreDbcdRevision, saveDbcdDraft, saveDbcdProject, saveNodePosition, setDbcdRevisionPinned,
   type DbcdProjectSnapshot, type DbcdRevisionSummary, type PresentationDocument,
@@ -12,6 +12,7 @@ export interface ProjectPathInput { path: string }
 export interface OpenDbcdInput extends ProjectPathInput {}
 export interface ValidateDbcdDraftInput extends ProjectPathInput { sourceText: string }
 export interface SaveDbcdDraftInput extends ValidateDbcdDraftInput { baseGeneration: number; presentation: PresentationDocument }
+export interface DiscardDbcdDraftInput extends ProjectPathInput { expectedGeneration: number }
 export interface SaveDbcdInput extends ValidateDbcdDraftInput { expectedGeneration: number; presentation: PresentationDocument; label?: string }
 export interface RestoreDbcdInput extends ProjectPathInput { expectedGeneration: number; revisionId: string }
 export interface PinDbcdRevisionInput extends ProjectPathInput { revisionId: string; pinned: boolean }
@@ -26,6 +27,7 @@ export interface ProjectOperations {
   open(input: Scoped<OpenDbcdInput>): Promise<DbcdProjectSnapshot>;
   validate(input: Scoped<ValidateDbcdDraftInput>): Promise<ValidationResult>;
   saveDraft(input: Scoped<SaveDbcdDraftInput>): Promise<void>;
+  discardDraft(input: Scoped<DiscardDbcdDraftInput>): Promise<void>;
   save(input: Scoped<SaveDbcdInput>): Promise<DbcdProjectSnapshot>;
   revisions(input: Scoped<ProjectPathInput>): Promise<DbcdRevisionSummary[]>;
   restore(input: Scoped<RestoreDbcdInput>): Promise<DbcdProjectSnapshot>;
@@ -38,6 +40,7 @@ export const defaultProjectOperations: ProjectOperations = {
   open: ({ workspaceRoot, path }) => openDbcdProject({ workspaceRoot, projectPath: path }),
   validate: async ({ sourceText, path }) => parseDbml(sourceText, path),
   saveDraft: async ({ workspaceRoot, path, ...input }) => { await saveDbcdDraft({ workspaceRoot, projectPath: path, ...input }); },
+  discardDraft: async ({ workspaceRoot, path, ...input }) => { await discardDbcdDraft({ workspaceRoot, projectPath: path, ...input }); },
   save: ({ workspaceRoot, path, ...input }) => saveDbcdProject({ workspaceRoot, projectPath: path, ...input }),
   revisions: ({ workspaceRoot, path }) => listDbcdRevisions({ workspaceRoot, projectPath: path }),
   restore: ({ workspaceRoot, path, ...input }) => restoreDbcdRevision({ workspaceRoot, projectPath: path, ...input }),
@@ -136,6 +139,13 @@ export function createHandlers(roots: WorkspaceRoots, projects: ProjectOperation
         await projects.saveDraft({ ...input, workspaceRoot: await resolveProjectRoot(roots, input.path) });
         return { structuredContent: { projectPath: input.path, saved: true },
           content: [{ type: "text" as const, text: `Saved draft in ${input.path}.` }] };
+      } catch (error) { return sanitizedError(error); }
+    },
+    discardDbcdDraft: async (input: DiscardDbcdDraftInput) => {
+      try {
+        await projects.discardDraft({ ...input, workspaceRoot: await resolveProjectRoot(roots, input.path) });
+        return { structuredContent: { projectPath: input.path, discarded: true },
+          content: [{ type: "text" as const, text: `Discarded draft in ${input.path}.` }] };
       } catch (error) { return sanitizedError(error); }
     },
     saveDbcd: async (input: SaveDbcdInput) => {
