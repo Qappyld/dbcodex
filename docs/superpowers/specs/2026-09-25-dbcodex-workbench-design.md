@@ -4,6 +4,12 @@
 **Statut :** conception validée par l’utilisateur  
 **Socle technique :** branche `codex/compatibility-spike`, commit `2389170bc8b0cc73d8c0bf2b5f63628b70553a86`
 
+> **Amendement du 26 septembre 2026 :** les sections relatives aux fichiers `.dbml`,
+> aux sidecars, aux brouillons et aux révisions sont remplacées par la
+> spécification du fichier projet unique `.dbcd` dans
+> [`2026-09-26-dbcd-work-file-design.md`](./2026-09-26-dbcd-work-file-design.md).
+> Les exigences d’interface, de diagramme et d’accessibilité restent applicables.
+
 ## 1. Objectif
 
 Transformer le prototype dbcodex en un atelier DBML local intégré à Codex. L’utilisateur doit pouvoir lire et modifier le DBML, explorer le diagramme, organiser les tables en groupes et en vues, ajuster la représentation graphique, enregistrer une version cohérente de l’ensemble et restaurer une révision antérieure.
