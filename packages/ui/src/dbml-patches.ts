@@ -1,4 +1,5 @@
 import type { GraphTable } from "@dbcodex/core";
+import { dbmlIdentifierPattern, dbmlIdentifierToken } from "./dbml-identifiers.js";
 
 export interface DbmlPatch { source: string; from: number; to: number; insert: string; diff: string; ambiguous: boolean }
 interface Token { text: string; from: number; to: number }
@@ -19,7 +20,7 @@ function tokens(source: string): { tokens: Token[]; incomplete: boolean } {
       if (i >= source.length) { incomplete = true; break; }
       i += quote.length;
     } else {
-      const word = /^[\p{L}_][\p{L}\p{N}_$]*/u.exec(source.slice(i)); i += word?.[0].length ?? 1;
+      const word = dbmlIdentifierToken.exec(source.slice(i)); i += word?.[0].length ?? 1;
     }
     result.push({ text: source.slice(from, i), from, to: i });
   }
@@ -30,7 +31,7 @@ type TableReference = Pick<GraphTable, "schema" | "name">;
 const membershipError = (): Error => new Error("Impossible de vérifier les groupes du DBML. Corrigez la déclaration avant de grouper.");
 function identifier(token: Token | undefined): string | null {
   if (!token) return null;
-  if (/^[\p{L}_][\p{L}\p{N}_$]*$/u.test(token.text)) return token.text;
+  if (dbmlIdentifierPattern.test(token.text)) return token.text;
   if (token.text.startsWith('"') && token.text.endsWith('"')) {
     return token.text.slice(1, -1).replace(/\\([\s\S])/g, (_match, char: string) => ({ n: "\n", r: "\r", t: "\t" }[char] ?? char));
   }

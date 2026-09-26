@@ -3,6 +3,7 @@ import type { DetailLevel, GraphTable, PresentationDocument, SchemaGraph } from 
 import { createView, duplicateView, renameView, deleteView, setActiveView, setViewDetail, setNodeDetail,
   groupTables, updateGroup, setNodeHidden, setNodePosition, defaultPosition, searchTables } from "./presentation-commands.js";
 import { applyDbmlPatch, assertTablesUngrouped, dbmlTableReference, previewDbmlBlock, type DbmlPatch } from "./dbml-patches.js";
+import { allocateDbmlIdentifier as nextId } from "./dbml-identifiers.js";
 
 export interface ViewInspectorProps {
   graph: SchemaGraph; presentation: PresentationDocument; source: string; selectedIds: string[]; query: string;
@@ -10,13 +11,6 @@ export interface ViewInspectorProps {
   onPresentationChange(value: PresentationDocument): void; onSourceChange(value: string): void; readOnly?: boolean;
 }
 const levels = <><option value="names">Noms</option><option value="keys">Clés</option><option value="all">Tous les champs</option></>;
-function nextId(name: string, existing: Record<string, unknown>): string {
-  const base = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_]/g, "_") || "nouveau";
-  let id = /^[a-z_]/.test(base) ? base : `g_${base}`; let index = 2;
-  while (Object.hasOwn(existing, id) || ["__proto__", "constructor", "prototype"].includes(id)) id = `${base}_${index++}`;
-  return id;
-}
-
 export function ViewInspector({ graph, presentation, source, selectedIds, query, onQueryChange, onSelectTable, onPresentationChange, onSourceChange, readOnly = false }: ViewInspectorProps) {
   const viewId = presentation.activeViewId, current = presentation.views[viewId]!;
   const [name, setName] = useState(""); const [groupName, setGroupName] = useState(""); const [color, setColor] = useState("#16a34a");
