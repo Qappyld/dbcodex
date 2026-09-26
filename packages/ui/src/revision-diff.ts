@@ -1,4 +1,5 @@
-import type { PresentationDocument } from "@dbcodex/core";
+import type { PresentationDocument, SchemaGraph } from "@dbcodex/core";
+import { defaultPosition } from "./presentation-commands.js";
 
 type Revision = { sourceText: string; presentation: PresentationDocument };
 export interface RevisionDiffSummary {
@@ -38,13 +39,20 @@ function align(a: string[], b: string[], ai = 0, bi = 0): Array<[number, number]
 
 /** Counts replacement lines per contiguous edit hunk. Presentation counts are per shared view.
  * Detail counts include changed view defaults and changed node effective detail levels.
+ * Positions use the canvas's graph table order; without a matching graph table, use
+ * the sorted union of explicit node IDs across both documents, after known tables.
+ * Thus materializing or removing an explicit default does not count as a move.
  * Routes include added/removed control-point overrides; added/removed views count separately.
  */
-export function summarizeRevisionDiff(previous: Revision, next: Revision): RevisionDiffSummary {
+export function summarizeRevisionDiff(previous: Revision, next: Revision, graph?: Pick<SchemaGraph, "tables"> | null): RevisionDiffSummary {
   const result: RevisionDiffSummary = { addedLines: 0, removedLines: 0, changedLines: 0,
     movedNodes: 0, changedDetailLevels: 0, changedRoutes: 0, addedViews: 0, removedViews: 0 };
   const a = previous.sourceText ? previous.sourceText.split(/\r?\n/) : [];
   const b = next.sourceText ? next.sourceText.split(/\r?\n/) : [];
+  const tableIndices = new Map(graph?.tables.map((table, index) => [table.id, index]));
+  const explicitIds = new Set([previous.presentation, next.presentation]
+    .flatMap((document) => Object.values(document.views).flatMap((view) => Object.keys(view.nodes))));
+  for (const id of [...explicitIds].sort()) if (!tableIndices.has(id)) tableIndices.set(id, tableIndices.size);
   let ai = 0, bi = 0;
   for (const [i, j] of [...align(a, b), [a.length, b.length]]) {
     const changed = Math.min(i! - ai, j! - bi);
@@ -57,11 +65,12 @@ export function summarizeRevisionDiff(previous: Revision, next: Revision): Revis
     const other = next.presentation.views[id];
     if (!other) { result.removedViews++; continue; }
     if (view.defaultDetail !== other.defaultDetail) result.changedDetailLevels++;
-    for (const [nodeId, node] of Object.entries(view.nodes)) {
-      const target = other.nodes[nodeId];
-      if (!target) continue;
-      if (node.x !== target.x || node.y !== target.y) result.movedNodes++;
-      if ((node.detail ?? view.defaultDetail) !== (target.detail ?? other.defaultDetail)) result.changedDetailLevels++;
+    for (const nodeId of new Set([...Object.keys(view.nodes), ...Object.keys(other.nodes)])) {
+      const node = view.nodes[nodeId], target = other.nodes[nodeId];
+      const fallback = defaultPosition(tableIndices.get(nodeId)!);
+      const from = node ?? fallback, to = target ?? fallback;
+      if (from.x !== to.x || from.y !== to.y) result.movedNodes++;
+      if ((node?.detail ?? view.defaultDetail) !== (target?.detail ?? other.defaultDetail)) result.changedDetailLevels++;
     }
     for (const edgeId of new Set([...Object.keys(view.edges), ...Object.keys(other.edges)])) {
       const oldPoints = view.edges[edgeId]?.points ?? [], newPoints = other.edges[edgeId]?.points ?? [];

@@ -29,8 +29,8 @@ export function HistoryPanel({ session, bridge, projectPath, readOnly, onClose }
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [selectedId, projectPath, bridge]);
-  const diff = useMemo(() => revision ? summarizeRevisionDiff(revision, { sourceText: session.source, presentation: session.presentation }) : null,
-    [revision, session.source, session.presentation]);
+  const diff = useMemo(() => revision ? summarizeRevisionDiff(revision, { sourceText: session.source, presentation: session.presentation }, session.graph) : null,
+    [revision, session.source, session.presentation, session.graph]);
   const revisions = [...session.revisions].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return <section role="region" aria-label="Historique des révisions" className="history-panel"
     onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }}>

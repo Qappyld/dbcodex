@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DbcdRevisionSummary } from "@dbcodex/core";
+import { emptyPresentation } from "../../core/src/presentation.js";
 import { ProjectWorkbench } from "../src/DbcdWorkbench.js";
 import { openResult } from "./workbench-fixture.js";
 import { setupFlowDom } from "./flow-dom.js";
@@ -24,6 +25,20 @@ function setup(readOnly = false) {
   return { host, ...rendered };
 }
 describe("history workflow", () => {
+  it("uses the canvas graph order when comparing the first explicit position to history", async () => {
+    const opened = openResult();
+    opened.structuredContent.presentation = emptyPresentation();
+    opened.structuredContent.presentation.views.all!.nodes["public.teams"] = { x: 320, y: 60, detail: "keys" };
+    const result = { ...opened, structuredContent: { ...opened.structuredContent, revisions: [older] } };
+    const host = { requestDisplayMode: vi.fn(), callTool: vi.fn().mockResolvedValue({
+      _meta: { dbcodex: { revision: { ...older, sourceText: opened._meta.dbcodex.sourceText, presentation: emptyPresentation() } } },
+    }) };
+    render(<ProjectWorkbench result={result} bridge={host} />);
+    fireEvent.click(screen.getByRole("button", { name: "Historique" }));
+    fireEvent.click(screen.getByRole("button", { name: "Voir la révision a1b2c3" }));
+    expect(await screen.findByText("0 table(s) déplacée(s)")).toBeTruthy();
+    expect(screen.getByText("0 niveau(x) de détail modifié(s)")).toBeTruthy();
+  });
   it("lists newest first and lazily reads a selected revision with a diff against current work", async () => {
     const { host } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Historique" }));
