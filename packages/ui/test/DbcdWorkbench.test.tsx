@@ -15,6 +15,15 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 function bridge() { return { callTool: vi.fn().mockResolvedValue({ structuredContent: { saved: true } }), requestDisplayMode: vi.fn().mockResolvedValue(undefined) }; }
 
 describe("DbcdWorkbench", () => {
+  it("search selection reveals a hidden collapsed member and centers/selects it", async () => {
+    const opened = openResult();
+    opened.structuredContent.presentation.views.all!.nodes["public.users"]!.hidden = true;
+    opened.structuredContent.presentation.views.all!.groups.people = { name: "People", color: "#16a34a", tableIds: ["public.users"], collapsed: true };
+    render(<ProjectWorkbench result={opened} bridge={bridge()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Centrer public.users" }));
+    expect(await screen.findByRole("group", { name: "Table public.users" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Centrer public.users" })).toHaveProperty("ariaPressed", "true");
+  });
   it("opens and resizes read-only panels transiently and reconciles only changed session inputs", () => {
     const opened = openResult();
     opened.structuredContent.presentation.panels.editorCollapsed = true;

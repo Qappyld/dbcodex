@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DiagramCanvas } from "../src/DiagramCanvas.js";
 import { graph, presentation } from "./workbench-fixture.js";
@@ -7,9 +7,78 @@ import { setupFlowDom } from "./flow-dom.js";
 import { parseDbml } from "../../core/src/dbml-adapter.js";
 
 beforeEach(setupFlowDom);
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(async () => { cleanup(); await act(() => new Promise((resolve) => setTimeout(resolve, 0))); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("DiagramCanvas", () => {
+  it("persists viewport changes made by zoom controls", async () => {
+    const change = vi.fn();
+    render(<DiagramCanvas graph={graph} presentation={presentation()} onPresentationChange={change} />);
+    await screen.findByRole("group", { name: "Table public.users" });
+    fireEvent.click(screen.getByRole("button", { name: "Zoom In" }));
+    await waitFor(() => expect(change).toHaveBeenCalled());
+    expect(change.mock.calls.at(-1)?.[0].views.all.viewport.zoom).toBeGreaterThan(1);
+  });
+  it("selects edges and commits keyboard routing through presentation commands", async () => {
+    const change = vi.fn();
+    render(<DiagramCanvas graph={graph} presentation={presentation()} onPresentationChange={change} />);
+    fireEvent.keyDown(await screen.findByRole("group", { name: /Edge from public.users/ }), { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("button", { name: "Point de routage 1" }), { key: "ArrowRight" });
+    expect(change.mock.calls.at(-1)?.[0].views.all.edges["ref:1"].points).toHaveLength(1);
+  });
+  it("automatically opens the minimap above 25 tables", () => {
+    const large = { ...graph, tables: Array.from({ length: 26 }, (_, index) => ({ ...graph.tables[0]!, id: `public.table_${index}` })), relations: [] };
+    const { container } = render(<DiagramCanvas graph={large} presentation={presentation()} onPresentationChange={vi.fn()} />);
+    expect(container.querySelector(".react-flow__minimap")).toBeTruthy();
+  });
+  it("opens the minimap when source edits grow the graph beyond 25 tables", () => {
+    const p = presentation(), change = vi.fn();
+    const { container, rerender } = render(<DiagramCanvas graph={graph} presentation={p} onPresentationChange={change} />);
+    const large = { ...graph, tables: Array.from({ length: 26 }, (_, index) => ({ ...graph.tables[0]!, id: `public.table_${index}` })), relations: [] };
+    rerender(<DiagramCanvas graph={large} presentation={p} onPresentationChange={change} />);
+    expect(container.querySelector(".react-flow__minimap")).toBeTruthy();
+  });
+  it("commits every selected table after a multi-table pointer drag", async () => {
+    const change = vi.fn();
+    render(<DiagramCanvas graph={graph} presentation={presentation()} onPresentationChange={change} />);
+    const user = await screen.findByRole("group", { name: "Table public.users" });
+    const team = screen.getByRole("group", { name: "Table public.teams" });
+    fireEvent.keyDown(user, { key: "Enter" });
+    fireEvent.keyUp(user, { key: "Enter" });
+    fireEvent.keyDown(window, { key: "Shift" });
+    fireEvent.keyDown(team, { key: "Enter", shiftKey: true });
+    fireEvent.keyUp(team, { key: "Enter", shiftKey: true });
+    fireEvent.keyUp(window, { key: "Shift" });
+    expect(team.className).toContain("selected");
+    expect(user.className).toContain("selected");
+    const down = createEvent.mouseDown(user, { button: 0, clientX: 20, clientY: 50 });
+    Object.defineProperty(down, "view", { value: window }); fireEvent(user, down);
+    fireEvent.mouseMove(window, { buttons: 1, clientX: 22, clientY: 52 });
+    fireEvent.mouseMove(window, { buttons: 1, clientX: 72, clientY: 92 });
+    const up = createEvent.mouseUp(window, { button: 0, clientX: 72, clientY: 92 });
+    Object.defineProperty(up, "view", { value: window }); fireEvent(window, up);
+    const next = change.mock.calls.at(-1)?.[0];
+    expect(next.views.all.nodes["public.users"]).toEqual({ x: 70, y: 90 });
+    expect(next.views.all.nodes["public.teams"]).toEqual({ x: 370, y: 100 });
+  });
+  it("attenuates search nonmatches and hides tables excluded from custom views", () => {
+    const p = presentation();
+    const { container, rerender } = render(<DiagramCanvas graph={graph} presentation={p} query="team_id" onPresentationChange={vi.fn()} />);
+    expect(container.querySelector<HTMLElement>('[data-id="public.teams"]')?.style.opacity).toBe("0.25");
+    const custom = structuredClone(p); custom.activeViewId = "crm";
+    custom.views.crm = { ...custom.views.all!, system: false };
+    rerender(<DiagramCanvas graph={graph} presentation={custom} onPresentationChange={vi.fn()} />);
+    expect(container.querySelector('[data-id="public.teams"]')).toBeNull();
+  });
+  it("collapses groups without losing saved positions and offers a minimap toggle", async () => {
+    const p = presentation();
+    p.views.all!.groups.people = { name: "Personnes", color: "#16a34a", tableIds: ["public.users"], collapsed: true };
+    const { container } = render(<DiagramCanvas graph={graph} presentation={p} onPresentationChange={vi.fn()} />);
+    expect(screen.getByText("Personnes")).toBeTruthy();
+    expect(container.querySelector('[data-id="public.users"]')).toBeNull();
+    expect(p.views.all!.nodes["public.users"]).toEqual({ x: 20, y: 50 });
+    fireEvent.click(screen.getByRole("button", { name: "Afficher la mini-carte" }));
+    await waitFor(() => expect(container.querySelector(".react-flow__minimap")).toBeTruthy());
+  });
   it.each(["child.parent_code > parent.code", "parent.code < child.parent_code", "parent.code - child.parent_code",
     "child.parent_code >? parent.code", "parent.code ?< child.parent_code"])("shows only actual foreign keys for Ref: %s", (reference) => {
     const parsed = parseDbml(`Table parent {\n parent_id int [pk]\n code int [unique]\n}\nTable child {\n child_id int [pk]\n parent_code int\n}\nRef: ${reference}`, "keys.dbml");

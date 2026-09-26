@@ -180,3 +180,29 @@ button {
 .inspector-drawer { position: absolute; inset: 0 0 0 auto; z-index: 10; max-width: 90%; border-left: 1px solid var(--dbc-border); box-shadow: -8px 0 32px #00000026; }
 .workbench[data-narrow="true"] .workbench-toolbar strong { max-width: 100%; flex-basis: 100%; }
 .workbench[data-narrow="true"] .editor-panel { min-width: 0; max-width: calc(100% - 140px); }
+
+.view-inspector { display: grid; gap: 12px; font-size: 12px; }
+.view-inspector label { display: grid; gap: 5px; }
+.view-inspector input:not([type="checkbox"]), .view-inspector select { min-width: 0; max-width: 100%; width: 100%; min-height: 30px; color: var(--dbc-text); background: var(--dbc-surface); border: 1px solid var(--dbc-border); border-radius: 4px; }
+.inspector-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.table-tree, .table-tree ul { list-style: none; padding-left: 8px; }
+.table-tree li li { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.table-tree button { text-align: left; flex: 1; }
+.table-tree button[aria-pressed="true"] { border-color: var(--dbc-accent); }
+.view-inspector fieldset { margin: 0; border: 1px solid var(--dbc-border); display: grid; gap: 8px; min-width: 0; }
+.group-control { display: grid; gap: 6px; border-top: 1px solid var(--dbc-border); padding-top: 8px; }
+.view-inspector pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; padding: 8px; background: var(--dbc-bg); }
+.flow-group { width: 100%; height: 100%; border: 2px solid; border-radius: 10px; background: color-mix(in srgb, var(--dbc-surface) 80%, transparent); }
+.flow-group button { margin: 5px; }
+.react-flow__node-tableGroup { height: 100%; }
+.relation-cardinality { fill: var(--dbc-text); font-size: 12px; paint-order: stroke; stroke: var(--dbc-bg); stroke-width: 4px; pointer-events: none; }
+.relation-direction-dot { fill: var(--dbc-accent); offset-path: none; animation: relation-travel 2s linear infinite; animation-play-state: paused; pointer-events: none; }
+.directed-relation:hover .relation-direction-dot, .directed-relation.is-selected .relation-direction-dot { animation-play-state: running; }
+.relation-static-arrow { display: none; pointer-events: none; }
+.relation-control { fill: var(--dbc-surface); stroke: var(--dbc-accent); stroke-width: 2px; cursor: move; }
+.relation-control:focus-visible { outline: none; stroke-width: 4px; }
+@keyframes relation-travel { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .relation-direction-dot { animation: none; display: none; }
+  .relation-static-arrow { display: block; }
+}

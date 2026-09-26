@@ -4,6 +4,8 @@ import { readDbcdProjectResult, type DisplayMode, type WorkbenchBridge } from ".
 import { useDocumentSession, type DocumentSession } from "./useDocumentSession.js";
 import { DbmlEditor } from "./DbmlEditor.js";
 import { DiagramCanvas } from "./DiagramCanvas.js";
+import { ViewInspector } from "./ViewInspector.js";
+import { setNodeHidden, updateGroup, setPanels as changePanels } from "./presentation-commands.js";
 
 const clamp = (width: number): number => Math.max(240, Math.min(600, width));
 type Panels = PresentationDocument["panels"];
@@ -47,6 +49,9 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
   const [displayPending, setDisplayPending] = useState(false);
   const [displayMessage, setDisplayMessage] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
+  const [focusRequest, setFocusRequest] = useState<{ id: string; nonce: number } | null>(null);
   const [panels, setPanels] = useState(session.presentation.panels);
   const savedPanels = JSON.stringify(session.presentation.panels);
   const inspectorTrigger = useRef<HTMLButtonElement>(null);
@@ -57,7 +62,7 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
   const updatePanels = (change: Partial<Panels>): void => {
     const next = { ...panels, ...change };
     setPanels(next);
-    if (!readOnly) session.setPresentation({ ...session.presentation, panels: next });
+    if (!readOnly) session.setPresentation(changePanels(session.presentation, next));
   };
   useEffect(() => { if (narrow && drawerOpen) drawerClose.current?.focus(); }, [narrow, drawerOpen]);
   const closeDrawer = (): void => {
@@ -114,7 +119,8 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
         </div>
       </section>
       {!panels.editorCollapsed && <PanelSeparator region="editor" width={clamp(panels.editor)} onChange={(editor) => updatePanels({ editor })} />}
-      {session.graph ? <DiagramCanvas graph={session.graph} presentation={session.presentation} onPresentationChange={session.setPresentation} onSelectionChange={setSelectedId} readOnly={readOnly} />
+      {session.graph ? <DiagramCanvas graph={session.graph} presentation={session.presentation} onPresentationChange={session.setPresentation} onSelectionChange={setSelectedId}
+        onSelectedTablesChange={setSelectedIds} query={query} focusRequest={focusRequest} readOnly={readOnly} />
         : <div className="flow-canvas empty-canvas">Corrigez le DBML pour afficher le diagramme.</div>}
       {inspectorVisible && <>
         {!narrow && <PanelSeparator region="inspector" width={clamp(panels.inspector)} onChange={(inspector) => updatePanels({ inspector })} />}
@@ -124,6 +130,17 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
           }}>
           <header><h2>Inspecteur</h2>{narrow && <button ref={drawerClose} type="button" onClick={closeDrawer}>Fermer l’inspecteur</button>}</header>
           {selectedTable ? <><h3>{selectedTable.id}</h3><p>{selectedTable.columns.length} champs</p></> : <p>Sélectionnez une table pour voir ses détails.</p>}
+          {session.graph && <ViewInspector graph={session.graph} presentation={session.presentation} source={session.source} selectedIds={selectedIds} query={query}
+            onQueryChange={setQuery} onSelectTable={(id) => {
+              if (!readOnly) {
+                const viewId = session.presentation.activeViewId, current = session.presentation.views[viewId]!;
+                let next = current.nodes[id]?.hidden ? setNodeHidden(session.presentation, viewId, id, false) : session.presentation;
+                for (const [groupId, group] of Object.entries(current.groups)) if (group.collapsed && group.tableIds.includes(id)) next = updateGroup(next, viewId, groupId, { collapsed: false });
+                if (next !== session.presentation) session.setPresentation(next);
+              }
+              setSelectedId(id); setSelectedIds([id]); setFocusRequest((previous) => ({ id, nonce: (previous?.nonce ?? 0) + 1 }));
+            }}
+            onPresentationChange={session.setPresentation} onSourceChange={session.setSource} readOnly={readOnly} />}
         </aside>
       </>}
     </section>
