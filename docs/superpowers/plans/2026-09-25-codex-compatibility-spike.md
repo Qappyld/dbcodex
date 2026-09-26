@@ -74,6 +74,7 @@ Use a private ESM workspace, pin exact dependency versions in `package-lock.json
   },
   "devDependencies": {
     "@types/node": "24.13.6",
+    "jsdom": "29.1.1",
     "typescript": "7.0.2",
     "vitest": "5.0.2"
   }
@@ -91,7 +92,8 @@ Use a private ESM workspace, pin exact dependency versions in `package-lock.json
     "exactOptionalPropertyTypes": true,
     "declaration": true,
     "sourceMap": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   }
 }
 ```
@@ -110,8 +112,11 @@ Use a private ESM workspace, pin exact dependency versions in `package-lock.json
   },
   "dependencies": {
     "@dbml/core": "10.2.0",
-    "write-file-atomic": "8.0.0",
+    "write-file-atomic": "7.0.1",
     "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/write-file-atomic": "4.0.3"
   }
 }
 ```
@@ -720,7 +725,7 @@ git commit -m "feat: expose DBML tools over MCP"
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "esbuild": "0.28.2",
-    "jsdom": "30.1.1"
+    "jsdom": "29.1.1"
   }
 }
 ```

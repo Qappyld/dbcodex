@@ -1,0 +1,19 @@
+Table public.users {
+  id int [pk, not null]
+  email varchar [not null, unique]
+}
+
+Table public.posts {
+  id int [pk, not null]
+  author_id int [not null]
+  title varchar [not null]
+}
+
+Table public.comments {
+  id int [pk, not null]
+  post_id int [not null]
+  body text
+}
+
+Ref: public.posts.author_id > public.users.id
+Ref: public.comments.post_id > public.posts.id

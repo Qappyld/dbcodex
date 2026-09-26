@@ -2,11 +2,11 @@
 
 ## Statut
 
-- **Phase :** découverte produit / design.
+- **Phase :** prototype de compatibilité Codex en validation.
 - **Dernière mise à jour :** 25 septembre 2026.
-- **Implémentation :** interdite tant que le périmètre et l'architecture ne sont pas validés.
+- **Implémentation :** prototype local construit, testé et installé ; la V1 reste conditionnée par la validation interactive desktop.
 - **Série active :** aucune ; les questions 8 et 10 sont différées à la demande de l'utilisateur.
-- **Conception active :** spécification écrite du prototype de compatibilité Codex approuvée ; plan d'implémentation en préparation.
+- **Conception active :** spécification et plan du prototype exécutés ; preuve desktop finale encore requise.
 
 ## Décisions acquises
 
@@ -73,6 +73,8 @@
 - Un prototype de compatibilité Codex constitue le jalon technique initial, avant le choix définitif du moteur graphique et des autres composants d'interface.
 - Si l'interface MCP Apps locale n'est pas rendue dans Codex, l'architecture devra employer une autre surface officiellement prise en charge dans Codex ; une application ouverte seulement dans un navigateur externe ne satisferait pas la V1.
 - Les sorties SVG et structurées restent utiles comme mode dégradé et pour les tests, mais ne remplacent pas le diagramme interactif dans Codex.
+- Le skill et le serveur MCP installés ont été chargés avec succès par une nouvelle session Codex CLI ; l'ouverture, la sauvegarde et la persistance passent depuis le cache du plugin.
+- La barrière interactive reste fermée tant que le widget n'a pas été observé et manipulé dans une nouvelle tâche Codex desktop.
 
 ### Stratégie de tests validée — série 5
 
@@ -85,7 +87,7 @@
 
 - `View All` est une règle propre à dbcodex ; elle ne doit pas être confondue avec la vue `Default` de DBML/dbdiagram.
 - Le déplacement des tables suppose une persistance, mais son emplacement (DBML, sidecar ou stockage Codex) reste ouvert.
-- Le parser officiel `@dbml/core` est un candidat, pas encore un choix architectural.
+- Le prototype utilise `@dbml/core` ; son adoption définitive pour la V1 reste soumise à la couverture DBML complète et à la décision de licence.
 - « Local-first » n'interdit pas de futures fonctions réseau explicites ; il interdit tout envoi implicite.
 - Le passage de `1A` à `1B` ajoute l'édition textuelle et la sauvegarde, mais pas l'édition structurelle depuis le diagramme.
 - La documentation OpenAI décrit certaines capacités comme propres à une surface et documente explicitement l'UI MCP Apps pour ChatGPT ; le prototype Codex doit donc vérifier le comportement réel sans présumer d'une parité d'interface.
