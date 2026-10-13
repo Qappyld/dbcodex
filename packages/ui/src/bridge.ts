@@ -2,6 +2,8 @@ import type { DbcdProjectSnapshot } from "@dbcodex/core";
 
 export type DisplayMode = "inline" | "fullscreen";
 export interface WorkbenchBridge {
+  readonly refreshProjects?: boolean;
+  subscribeToTeardown?(listener: () => Promise<void>): () => void;
   callTool(name: string, input: Record<string, unknown>): Promise<unknown>;
   requestDisplayMode(mode: DisplayMode): Promise<void>;
   subscribeToDisplayMode?(listener: (mode: DisplayMode) => void): () => void;
@@ -39,6 +41,7 @@ type RpcResponse = {
 
 type RpcNotification = {
   jsonrpc: "2.0";
+  id?: number;
   method: string;
   params?: unknown;
 };
@@ -49,6 +52,8 @@ interface PendingRequest {
 }
 
 export class McpAppsBridge {
+  readonly refreshProjects = true;
+  private readonly teardownListeners = new Set<() => Promise<void>>();
   private nextId = 0;
   private readonly pending = new Map<number, PendingRequest>();
   private readonly listeners = new Set<(result: unknown) => void>();
@@ -64,7 +69,15 @@ export class McpAppsBridge {
     }
 
     const message = event.data;
-    if ("id" in message) {
+    if ("method" in message && message.method === "ui/resource-teardown" && message.id !== undefined) {
+      void Promise.all([...this.teardownListeners].map((flush) => flush())).then(() => {
+        window.parent.postMessage({ jsonrpc: "2.0", id: message.id, result: {} }, "*");
+      }).catch(() => {
+        window.parent.postMessage({ jsonrpc: "2.0", id: message.id, error: { code: -32603, message: "Unable to preserve the document draft." } }, "*");
+      });
+      return;
+    }
+    if ("id" in message && !("method" in message)) {
       const pending = this.pending.get(message.id);
       if (!pending) {
         return;
@@ -107,7 +120,7 @@ export class McpAppsBridge {
         name: "dbcodex-diagram",
         version: "0.1.0-dev.0",
       },
-      appCapabilities: {},
+      appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] },
       protocolVersion: "2026-01-26",
     }).then((result) => {
       this.updateDisplayMode((result as { hostContext?: { displayMode?: unknown } } | undefined)?.hostContext?.displayMode);
@@ -126,6 +139,11 @@ export class McpAppsBridge {
   subscribeToToolResults(listener: (result: unknown) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  subscribeToTeardown(listener: () => Promise<void>): () => void {
+    this.teardownListeners.add(listener);
+    return () => this.teardownListeners.delete(listener);
   }
 
   private updateDisplayMode(mode: unknown): void {
@@ -164,5 +182,6 @@ export class McpAppsBridge {
     this.pending.clear();
     this.listeners.clear();
     this.displayListeners.clear();
+    this.teardownListeners.clear();
   }
 }

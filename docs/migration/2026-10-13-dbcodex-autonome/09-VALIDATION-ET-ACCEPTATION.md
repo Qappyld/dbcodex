@@ -1,0 +1,111 @@
+# Matrice de validation et critères d’acceptation
+
+Tous les contrôles ci-dessous sont des exigences futures, sauf les preuves historiques explicitement indiquées dans 07. La création de ce dossier n’a pas exécuté cette matrice.
+
+## Socle et migration
+
+| Cas | Résultat exigé |
+| --- | --- |
+| Ouvrir un .dbcd v1 | Modèle, présentation et historique conservés |
+| Migration interrompue | Fichier initial récupérable ou état migré cohérent |
+| Format futur | Lecture seule ou refus clair, aucune conversion destructive |
+| Fichier corrompu | Erreur assainie, pas d’écrasement |
+| Notes/commentaires/Records | Préservés lors de modifications non concernées |
+| Export modèle seul | DBML sans conversations ni brouillon non enregistré |
+| Copier le projet complet | Discussions et propositions récupérables selon format final |
+| Import d’un compagnon ancien | Pas de doublons, aucun effacement silencieux |
+
+## Chat et confidentialité
+
+| Cas | Résultat exigé |
+| --- | --- |
+| Ouvrir le logiciel | Aucun appel IA automatique |
+| Poser « peut-on ajouter… ? » | Réponse uniquement, génération inchangée |
+| Écrire « applique immédiatement » en discussion | Aucun changement sans action UI |
+| Changer de discussion | Historique et saisie isolés |
+| Changer de projet | Aucune réponse tardive injectée dans le mauvais projet |
+| Contexte structurel | Aucune note, commentaire, donnée exemple ou secret de défaut |
+| Partage complet | Option volontaire et aperçu identifiable |
+| Provider absent/non connecté | Message clair ; éditeur fonctionnel |
+| Annuler une requête | Réponse partielle marquée ; aucune proposition appliquée |
+| Quota dépassé | Pas de passage silencieux à une clé API payante |
+| Renderer recevant HTML hostile | Texte échappé ou rendu assaini |
+| Logs | Aucun token ni copie inutile du schéma complet |
+
+## Propositions
+
+| Cas | Résultat exigé |
+| --- | --- |
+| Préparer | Stockage de proposition ; schéma inchangé |
+| Patch absent/ambigu | Refus, aucune sauvegarde |
+| Patchs chevauchants | Refus ou traitement déterministe explicitement validé |
+| DBML final invalide | Appliquer désactivé, explication |
+| Source non concernée | Conservation exacte |
+| Refuser une proposition | Statut conservé ; aucune révision modèle |
+| Appliquer une fois | Une nouvelle révision cohérente |
+| Double clic/réessai | Pas de double application |
+| Fichier modifié entre préparation et clic | Refus de proposition périmée |
+| Brouillon créé entre lecture et transaction | Refus sous verrou, brouillon intact |
+| Présentation modifiée ailleurs | Aucun écrasement silencieux |
+| Réponse partielle/JSON tronqué | Jamais applicable |
+
+## Plusieurs discussions et retour arrière
+
+| Cas | Résultat exigé |
+| --- | --- |
+| A applique, B attend | B voit nouvelle base ; ancienne proposition bloquée |
+| B actualise | Nouvelle proposition traçable, pas d’application automatique |
+| Restaurer une révision | Nouvelle révision ; versions anciennes conservées |
+| Restauration avec discussions | Conversations gardées et propositions requalifiées |
+| Fermeture/réouverture | Modèle, vues, zoom, discussions, brouillons récupérés |
+| Arrêt forcé | Limite documentée au dernier état écrit |
+| Deux fenêtres | Conflits détectés ; pas de perte silencieuse |
+
+## Sécurité effective des moteurs
+
+Tester les tentatives de lancer une commande, modifier le .dbcd, utiliser un MCP hérité ou demander une élévation. Les protections doivent être observées, pas seulement supposées depuis un prompt ou une option CLI.
+
+Une discussion ne doit pas exposer d’outil d’application du projet. Le test doit montrer qu’un message hostile ne contourne pas le clic utilisateur.
+
+## Niveaux de preuve
+
+1. Tests unitaires : logique de parsing, patchs, états.
+2. Intégration : transactions, fichiers, IPC et transport de processus simulé.
+3. UI automatisée : actions explicites, contexte et affichage.
+4. Application réelle : exécutable Windows, ouvrir/enregistrer/fermer/reprendre.
+5. Provider réel : connexion et inférence consentie, compte/modèle/version précisés.
+6. Validation utilisateur : parcours complet et compréhension du avant/après.
+
+Les couches 1–3 ne remplacent pas 4–6.
+
+## Commandes existantes à relancer dans la nouvelle conversation
+
+```text
+npm ci
+npm run build
+npm run typecheck
+npm test
+npm run verify:offline-ui
+npm run verify:mcp
+```
+
+Le build/typecheck actuels ne couvrent pas le desktop. Ajouter des commandes desktop, son typecheck et son contrôle d’exécutable, puis les documenter. Ne pas supposer qu’elles existent déjà.
+
+Conserver le rapport des échecs dus au code interrompu. Écarter un test absent de la suite pour rendre le tableau vert ne constitue pas une résolution.
+
+## Parcours final proposé
+
+Sur un projet fictif :
+1. Ouvrir le logiciel autonome et le projet.
+2. Créer « Clients » avec Codex, poser une question ; vérifier zéro modification.
+3. Préparer un changement ; examiner avant/après ; rejeter.
+4. Préparer une seconde proposition et l’appliquer ; vérifier une révision.
+5. Créer une autre discussion, puis provoquer une proposition périmée.
+6. Actualiser volontairement, conserver un brouillon et vérifier le blocage.
+7. Restaurer l’état initial, garder les conversations.
+8. Fermer puis rouvrir et retrouver toutes les données prévues.
+9. Tester Claude si installé, sans changer silencieusement de fournisseur.
+10. Vérifier la consommation et la limite des données envoyées.
+
+La livraison ne peut être déclarée complète avec seulement des fichiers de code, des tests simulés ou un screenshot de maquette.
+

@@ -33,6 +33,77 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("useDocumentSession", () => {
+  it("refreshes saved external edits without overwriting local work and stops after unmount", async () => {
+    const bridge = { ...makeBridge(), refreshProjects: true };
+    let disk = openResult;
+    bridge.callTool.mockImplementation(async (name: string) => name === "open_dbcd" ? disk : { structuredContent: { saved: true } });
+    const { result, unmount } = renderHook(() => useDocumentSession(openResult, bridge));
+    disk = { ...openResult, structuredContent: { ...openResult.structuredContent, generation: 4, currentRevisionId: "r4" },
+      _meta: { dbcodex: { ...openResult._meta.dbcodex, sourceText: "Table external {}" } } };
+    await act(async () => vi.advanceTimersByTimeAsync(2000));
+    expect(result.current.source).toBe("Table external {}");
+    expect(result.current.dirty).toBe(false);
+    act(() => result.current.setSource("Table local {}"));
+    disk = { ...disk, structuredContent: { ...disk.structuredContent, generation: 5, currentRevisionId: "r5" } };
+    await act(async () => vi.advanceTimersByTimeAsync(2000));
+    expect(result.current.source).toBe("Table local {}");
+    expect(result.current.conflict?.disk?.generation).toBe(5);
+    unmount();
+    bridge.callTool.mockClear();
+    await act(async () => vi.advanceTimersByTimeAsync(4000));
+    expect(bridge.callTool).not.toHaveBeenCalled();
+  });
+  it("flushes a recent draft before orderly teardown, without creating a revision", async () => {
+    let teardown: () => Promise<void> = async () => {};
+    const bridge = { ...makeBridge(), subscribeToTeardown: (listener: typeof teardown) => { teardown = listener; return () => {}; } };
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    act(() => result.current.setSource("Table recent {}"));
+    await act(async () => teardown());
+    expect(bridge.callTool).toHaveBeenCalledWith("save_dbcd_draft", expect.objectContaining({ sourceText: "Table recent {}" }));
+    expect(bridge.callTool).not.toHaveBeenCalledWith("save_dbcd", expect.anything());
+  });
+  it("waits for an active save before flushing edits typed during that save", async () => {
+    let teardown: () => Promise<void> = async () => {};
+    let finishSave: (value: unknown) => void = () => {};
+    const bridge = { ...makeBridge(), subscribeToTeardown: (listener: typeof teardown) => { teardown = listener; return () => {}; } };
+    bridge.callTool.mockImplementation(async (name: string) => {
+      if (name === "save_dbcd") return new Promise((resolve) => { finishSave = resolve; });
+      if (name === "validate_dbcd_draft") return { structuredContent: { graph, diagnostics: [] } };
+      return { structuredContent: { saved: true } };
+    });
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    act(() => result.current.setSource("Table first {}"));
+    let save!: Promise<void>;
+    await act(async () => { save = result.current.save(); });
+    act(() => result.current.setSource("Table last {}"));
+    let closing!: Promise<void>;
+    await act(async () => { closing = teardown(); });
+    expect(bridge.callTool).not.toHaveBeenCalledWith("save_dbcd_draft", expect.anything());
+    await act(async () => {
+      finishSave({ ...openResult, structuredContent: { ...openResult.structuredContent, generation: 4, currentRevisionId: "r4" },
+        _meta: { dbcodex: { ...openResult._meta.dbcodex, sourceText: "Table first {}" } } });
+      await save; await closing;
+    });
+    expect(bridge.callTool).toHaveBeenCalledWith("save_dbcd_draft", expect.objectContaining({ sourceText: "Table last {}", expectedGeneration: 4, expectedRevisionId: "r4" }));
+  });
+  it("ignores a refresh that started before a newer explicit save completed", async () => {
+    const bridge = { ...makeBridge(), refreshProjects: true };
+    let respond: (value: unknown) => void = () => {};
+    bridge.callTool.mockImplementation(async (name: string) => {
+      if (name === "open_dbcd") return new Promise((resolve) => { respond = resolve; });
+      if (name === "validate_dbcd_draft") return { structuredContent: { graph, diagnostics: [] } };
+      return { ...openResult, structuredContent: { ...openResult.structuredContent, generation: 5, currentRevisionId: "r5" },
+        _meta: { dbcodex: { ...openResult._meta.dbcodex, sourceText: "Table saved {}" } } };
+    });
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    await act(async () => vi.advanceTimersByTimeAsync(2000));
+    act(() => result.current.setSource("Table saved {}"));
+    await act(async () => result.current.save());
+    await act(async () => respond(openResult));
+    expect(result.current.generation).toBe(5);
+    expect(result.current.source).toBe("Table saved {}");
+    expect(result.current.conflict).toBeNull();
+  });
   it("uses imported source definitions as the clean presentation baseline", () => {
     const imported = { ...openResult, structuredContent: { ...openResult.structuredContent, graph: { ...graph, views: [{ id: "empty", name: "empty", tableIds: [] }], tableGroups: [] } } };
     const { result } = renderHook(() => useDocumentSession(imported, makeBridge()));

@@ -7,6 +7,23 @@ function hostMessage(data: unknown): void {
 }
 
 describe("McpAppsBridge", () => {
+  it("acknowledges host teardown only after the document flush completes", async () => {
+    const post = vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
+    const bridge = new McpAppsBridge();
+    let finish: () => void = () => {};
+    const flush = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    bridge.subscribeToTeardown(flush);
+    const ready = bridge.start();
+    hostMessage({ jsonrpc: "2.0", id: 1, result: {} });
+    await ready;
+    hostMessage({ jsonrpc: "2.0", id: 900, method: "ui/resource-teardown", params: {} });
+    expect(flush).toHaveBeenCalledOnce();
+    expect(post).not.toHaveBeenCalledWith(expect.objectContaining({ id: 900 }), "*");
+    finish();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(post).toHaveBeenCalledWith({ jsonrpc: "2.0", id: 900, result: {} }, "*");
+    bridge.dispose(); post.mockRestore();
+  });
   it("uses the host display protocol, observes host exits, and rejects declined modes", async () => {
     const post = vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
     const bridge = new McpAppsBridge();

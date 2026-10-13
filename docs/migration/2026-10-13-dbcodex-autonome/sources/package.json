@@ -1,0 +1,27 @@
+{
+  "name": "dbcodex",
+  "version": "0.1.0-dev.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "npm run build --workspace @dbcodex/core && npm run build --workspace @dbcodex/ui && npm run build --workspace @dbcodex/mcp",
+    "test": "vitest run",
+    "typecheck": "tsc -b packages/core packages/ui packages/mcp",
+    "verify:mcp": "node scripts/check-mcp.mjs",
+    "verify:offline-ui": "node scripts/check-offline-ui.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "@types/node": "24.13.6",
+    "electron": "44.7.0",
+    "jsdom": "29.1.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}

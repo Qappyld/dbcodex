@@ -1,0 +1,26 @@
+{
+  "name": "dbcodex",
+  "version": "0.1.0-dev.0+codex.20261009",
+  "description": "Edit local .dbcd schema projects with DBML exchange and revision history in Codex.",
+  "author": {
+    "name": "Qappyld"
+  },
+  "repository": "https://github.com/Qappyld/dbcodex",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "dbcodex",
+    "shortDescription": "Edit local .dbcd schema projects in Codex",
+    "longDescription": "Edit DBML, arrange views, save revisions and restore history in local .dbcd projects without sending schema files to an external service.",
+    "developerName": "Qappyld",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Ouvre fixtures/demo-shop.dbcd avec dbcodex."
+    ],
+    "brandColor": "#6D5EF5"
+  }
+}

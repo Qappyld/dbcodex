@@ -5,6 +5,10 @@ description: Open and edit local .dbcd schema projects, import/export DBML, and 
 
 # dbcodex
 
+Native integration experiment (2026-10-09): use `open_dbcd_workbench` for the thread entrypoint and `open_dbcd_app` for the global entrypoint. Both accept `{}` and display a local project-path launcher. Host UI availability, persistence across chats and automatic restart restoration must be observed; metadata alone is not proof. File entrypoints for `.dbcd`/`.dbml` resolve via `resolve_dbcd_file` using host-owned metadata, never by guessing the resource URI as a path.
+
+For explicitly requested source modifications, `apply_dbcd_edits` applies exact unique search/replacement edits to the saved project. Obtain `expectedGeneration`, `expectedRevisionId` and `expectedSourceHash` from a fresh `open_dbcd`. It refuses recoverable drafts, invalid DBML and stale state; do not discard a draft to force an edit. Keep complete source private and changes local. Visible workbenches refresh saved changes through local MCP reads; dirty editors show a conflict. No automatic commit. This user-facing mutation is separate from app-only editor controls.
+
 Use this skill for local `.dbcd` projects and `.dbml` exchange files in the active workspace.
 
 1. Use the supplied workspace-relative path. Ask for a path only when it is missing.

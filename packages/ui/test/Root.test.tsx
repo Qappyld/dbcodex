@@ -8,6 +8,28 @@ import { setupFlowDom } from "./flow-dom.js";
 beforeEach(setupFlowDom);
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+it("opens a project from the native empty-input launcher without an external browser", async () => {
+  let notify: (result: unknown) => void = () => {};
+  const bridge = { callTool: vi.fn().mockResolvedValue(openResult()), start: vi.fn().mockResolvedValue(undefined),
+    requestDisplayMode: vi.fn(), subscribeToToolResults: (listener: typeof notify) => { notify = listener; return () => {}; } };
+  render(<Root bridge={bridge} />);
+  act(() => notify({ structuredContent: { dbcodexLauncher: true, workspaceKey: "test-workspace" } }));
+  fireEvent.change(screen.getByLabelText("Projet dans l’espace de travail"), { target: { value: "fixtures/demo-shop.dbcd" } });
+  fireEvent.click(screen.getByRole("button", { name: "Ouvrir le projet" }));
+  await screen.findByRole("textbox", { name: "DBML source" });
+  expect(bridge.callTool).toHaveBeenCalledWith("open_dbcd", { path: "fixtures/demo-shop.dbcd" });
+});
+
+it("resolves a file entrypoint through an app call so the host can inject its trusted path", async () => {
+  let notify: (result: unknown) => void = () => {};
+  const bridge = { callTool: vi.fn().mockResolvedValue(openResult()), start: vi.fn().mockResolvedValue(undefined), requestDisplayMode: vi.fn(),
+    subscribeToToolResults: (listener: typeof notify) => { notify = listener; return () => {}; } };
+  render(<Root bridge={bridge} />);
+  act(() => notify({ structuredContent: { dbcodexFile: { name: "demo-shop.dbcd", resourceUri: "opaque://host/file" } } }));
+  await screen.findByRole("textbox", { name: "DBML source" });
+  expect(bridge.callTool).toHaveBeenCalledWith("resolve_dbcd_file", {});
+});
+
 it("routes private project results to a persistent session and legacy results to DiagramApp", async () => {
   let notify: (result: unknown) => void = () => {};
   const bridge = { callTool: vi.fn().mockResolvedValue({}), start: vi.fn().mockResolvedValue(undefined),

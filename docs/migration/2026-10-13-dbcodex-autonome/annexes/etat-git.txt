@@ -1,0 +1,44 @@
+État observé avant empaquetage — 13 octobre 2026
+
+ M .codex-plugin/plugin.json
+ M README.md
+ M docs/decisions.md
+ M package-lock.json
+ M package.json
+ M packages/core/src/dbcd-project-store.ts
+ M packages/core/src/document-contract.ts
+ M packages/mcp/package.json
+ M packages/mcp/src/create-server.ts
+ M packages/mcp/src/ui-resource.ts
+ M packages/mcp/test/server.test.ts
+ M packages/ui/src/DbcdWorkbench.tsx
+ M packages/ui/src/Root.tsx
+ M packages/ui/src/bridge.ts
+ M packages/ui/src/styles.css
+ M packages/ui/src/useDocumentSession.ts
+ M packages/ui/test/Root.test.tsx
+ M packages/ui/test/bridge.test.ts
+ M packages/ui/test/useDocumentSession.test.tsx
+ M plugin.json
+ M scripts/check-mcp.mjs
+ M scripts/check-offline-ui.mjs
+ M skills/dbcodex/SKILL.md
+?? docs/evidence/native-integration.md
+?? docs/migration/
+?? docs/superpowers/plans/2026-10-09-native-integration.md
+?? docs/superpowers/plans/2026-10-13-standalone-chat.md
+?? docs/superpowers/specs/2026-10-13-standalone-chat-design.md
+?? packages/desktop/
+?? packages/mcp/src/native-integration.ts
+?? packages/mcp/test/native-integration.test.ts
+?? packages/ui/src/ProjectLauncher.tsx
+
+WORKTREES
+C:/Users/qcham/OneDrive - APPYLD/Documents/ChatGPT/dbcodex  bcd3ae2 [main]
+C:/Users/qcham/.codex/worktrees/compatibility-spike/dbcodex 2389170 [codex/compatibility-spike]
+C:/Users/qcham/.codex/worktrees/dbcodex-workbench/dbcodex   aa0f1ae [codex/dbcodex-workbench]
+
+HEAD
+aa0f1ae9f87f98742c15718c58b1e3e0fe638dff
+2026-09-27T00:56:36+02:00
+docs: record dbcd acceptance and host verification boundary

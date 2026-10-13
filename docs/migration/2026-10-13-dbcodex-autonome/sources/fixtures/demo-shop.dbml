@@ -1,0 +1,104 @@
+Project dbcodex_demo {
+  database_type: "PostgreSQL"
+  Note: "Boutique SaaS de démonstration pour tester dbcodex"
+}
+
+Table organizations {
+  id uuid [pk]
+  name varchar(160) [not null]
+  slug varchar(80) [not null, unique]
+  plan varchar(30) [not null, default: 'starter']
+  created_at timestamp [not null, default: `now()`]
+}
+
+Table users {
+  id uuid [pk]
+  organization_id uuid [not null, ref: > organizations.id]
+  email varchar(255) [not null, unique]
+  display_name varchar(120)
+  role varchar(30) [not null, default: 'member']
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    organization_id
+    (organization_id, role)
+  }
+}
+
+Table products {
+  id uuid [pk]
+  organization_id uuid [not null, ref: > organizations.id]
+  sku varchar(64) [not null]
+  name varchar(180) [not null]
+  description text
+  price_cents integer [not null]
+  active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, sku) [unique]
+  }
+}
+
+Table customers {
+  id uuid [pk]
+  organization_id uuid [not null, ref: > organizations.id]
+  email varchar(255) [not null]
+  full_name varchar(160)
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, email) [unique]
+  }
+}
+
+Table orders {
+  id uuid [pk]
+  organization_id uuid [not null, ref: > organizations.id]
+  customer_id uuid [not null, ref: > customers.id]
+  created_by uuid [ref: > users.id]
+  status varchar(30) [not null, default: 'draft']
+  total_cents integer [not null, default: 0]
+  placed_at timestamp
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    organization_id
+    customer_id
+    status
+  }
+}
+
+Table order_items {
+  id uuid [pk]
+  order_id uuid [not null, ref: > orders.id]
+  product_id uuid [not null, ref: > products.id]
+  quantity integer [not null, default: 1]
+  unit_price_cents integer [not null]
+
+  indexes {
+    (order_id, product_id) [unique]
+  }
+}
+
+Table payments {
+  id uuid [pk]
+  order_id uuid [not null, ref: > orders.id]
+  provider varchar(40) [not null]
+  provider_reference varchar(120) [unique]
+  amount_cents integer [not null]
+  status varchar(30) [not null]
+  paid_at timestamp
+  created_at timestamp [not null, default: `now()`]
+}
+
+Table audit_events {
+  id bigint [pk, increment]
+  organization_id uuid [not null, ref: > organizations.id]
+  actor_id uuid [ref: > users.id]
+  event_type varchar(100) [not null]
+  entity_type varchar(80) [not null]
+  entity_id uuid
+  payload jsonb
+  occurred_at timestamp [not null, default: `now()`]
+}

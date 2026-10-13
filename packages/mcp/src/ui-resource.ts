@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+export { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 
 export const UI_RESOURCE_URI = "ui://dbcodex/diagram-v1.html";
 

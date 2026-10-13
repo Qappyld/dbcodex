@@ -28,7 +28,7 @@ export interface DocumentSession {
   pin(revisionId: string, pinned: boolean): Promise<void>;
 }
 
-type Bridge = Pick<McpAppsBridge, "callTool">;
+type Bridge = Pick<McpAppsBridge, "callTool"> & { refreshProjects?: boolean; subscribeToTeardown?(listener: () => Promise<void>): () => void };
 type SessionState = Omit<DocumentSession, "setSource" | "setPresentation" | "save" | "restore" | "pin" | "recovery" | "conflict" | "retainedLocal" | "retainedCopies">;
 type Conflict = Pick<NonNullable<DocumentSession["conflict"]>, "baseSource" | "localSource" | "localPresentation" | "disk">;
 class ToolFailure extends Error { constructor(message: string, readonly code?: string) { super(message); } }
@@ -77,12 +77,12 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   const validationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
+  const savingWaiters = useRef(new Set<() => void>());
   const mounted = useRef(true);
 
   const update = (change: Partial<SessionState>): void => {
-    if (!mounted.current) return;
     stateRef.current = { ...stateRef.current, ...change };
-    setState(stateRef.current);
+    if (mounted.current) setState(stateRef.current);
   };
   const clearTimers = (): void => {
     if (validationTimer.current) clearTimeout(validationTimer.current);
@@ -107,6 +107,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   useEffect(() => {
     mounted.current = true;
     return () => {
+      void flushDraft().catch(() => { /* The stored draft remains recoverable; an abrupt host close cannot show an error. */ });
       mounted.current = false;
       validationId.current += 1;
       clearTimers();
@@ -166,6 +167,27 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
       }, epoch, scheduledEdit);
     }, 1000);
   };
+
+  async function flushDraft(): Promise<void> {
+    if (savingRef.current) await new Promise<void>((resolve) => savingWaiters.current.add(resolve));
+    if (draftTimer.current) { clearTimeout(draftTimer.current); draftTimer.current = null; }
+    if (!stateRef.current.dirty || initial.current.readOnly || pendingRef.current || conflictRef.current) {
+      await draftQueue.current; return;
+    }
+    const current = stateRef.current;
+    const capturedExpected = expected();
+    // Serialize with any periodic draft already in flight. Do not create a revision.
+    const operation = draftQueue.current.then(async () => {
+      toolContent(await bridge.callTool("save_dbcd_draft", {
+        path: initial.current.projectPath, ...capturedExpected, baseGeneration: current.generation,
+        sourceText: current.source, presentation: current.presentation,
+      }));
+    });
+    draftQueue.current = operation.catch(async (error: unknown) => { await reportFailure(error); });
+    await operation;
+  }
+
+  useEffect(() => bridge.subscribeToTeardown?.(flushDraft), [bridge]);
 
   const setSource = (value: string): void => {
     if (value === stateRef.current.source || initial.current.readOnly || pendingRef.current) return;
@@ -240,6 +262,8 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
       savingRef.current = false;
       update({ saving: false, ...(edit === editId.current ? { validating: false } : {}) });
       if (stateRef.current.dirty) scheduleDraft();
+      for (const resolve of savingWaiters.current) resolve();
+      savingWaiters.current.clear();
     }
   };
 
@@ -278,6 +302,8 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
         }, 300);
       }
       if (stateRef.current.dirty) scheduleDraft();
+      for (const resolve of savingWaiters.current) resolve();
+      savingWaiters.current.clear();
     }
   };
 
@@ -313,23 +339,47 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     applySnapshot(disk, false);
     if (source !== undefined) { setPresentation(presentation ?? disk.presentation); setSource(source); }
   };
-  useEffect(() => {
-    if (externalResult.current === openResult) return;
-    externalResult.current = openResult;
-    if (savingRef.current || (opened.projectId === identity.current.expectedProjectId
-      && opened.currentRevisionId === identity.current.expectedRevisionId && opened.generation === stateRef.current.generation)) return;
+  const receiveSnapshot = (snapshot: DbcdProjectSnapshot): void => {
+    if (savingRef.current || (snapshot.projectId === identity.current.expectedProjectId
+      && snapshot.currentRevisionId === identity.current.expectedRevisionId && snapshot.generation === stateRef.current.generation)) return;
     clearTimers(); ++draftEpoch.current; ++validationId.current;
     update({ validating: false });
     if (stateRef.current.dirty || pendingRef.current || conflictRef.current) {
       const value: Conflict = { baseSource: loaded.current.source, localSource: stateRef.current.source,
-        localPresentation: stateRef.current.presentation, disk: opened };
+        localPresentation: stateRef.current.presentation, disk: snapshot };
       conflictRef.current = value; setConflict(value);
     } else {
-      initial.current = opened;
-      applySnapshot(opened, false);
-      pendingRef.current = opened.draft; setPendingDraft(opened.draft);
+      initial.current = snapshot;
+      applySnapshot(snapshot, false);
+      pendingRef.current = snapshot.draft; setPendingDraft(snapshot.draft);
     }
+  };
+  useEffect(() => {
+    if (externalResult.current === openResult) return;
+    externalResult.current = openResult;
+    receiveSnapshot(opened);
   }, [openResult]);
+
+  useEffect(() => {
+    if (!bridge.refreshProjects) return;
+    let active = true, reading = false;
+    const refresh = async (): Promise<void> => {
+      if (!active || reading || savingRef.current || document.visibilityState === "hidden") return;
+      const before = JSON.stringify(expected());
+      reading = true;
+      try {
+        const value = await bridge.callTool("open_dbcd", { path: initial.current.projectPath });
+        if (!active || savingRef.current || before !== JSON.stringify(expected())) return;
+        const snapshot = readDbcdProjectResult(value);
+        if (!snapshot) { toolContent(value); throw new Error("Unable to refresh the project."); }
+        receiveSnapshot(snapshot);
+      } catch (error) { if (active) update({ error: message(error) }); }
+      finally { reading = false; }
+    };
+    const timer = setInterval(() => { void refresh(); }, 2000);
+    window.addEventListener("focus", refresh);
+    return () => { active = false; clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, [bridge]);
   function rememberLocal(copy: LocalCopy): void {
     setLocalCopies((copies) => copies.some((previous) => previous.sourceText === copy.sourceText
       && JSON.stringify(previous.presentation) === JSON.stringify(copy.presentation)) ? copies : [...copies, copy]);

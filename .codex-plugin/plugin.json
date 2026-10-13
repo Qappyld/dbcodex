@@ -1,6 +1,6 @@
 {
   "name": "dbcodex",
-  "version": "0.1.0-dev.0+codex.20260927",
+  "version": "0.1.0-dev.0+codex.20261009",
   "description": "Edit local .dbcd schema projects with DBML exchange and revision history in Codex.",
   "author": {
     "name": "Qappyld"

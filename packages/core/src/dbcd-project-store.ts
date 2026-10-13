@@ -583,6 +583,9 @@ async function saveProject(
   const presentationGzip = compressPayload(presentationJson, DBCD_MAX_PRESENTATION_BYTES);
   const save = (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => {
     assertExpectedState(snapshot, input);
+    if (input.rejectDraft && snapshot.draft) {
+      throw new DbcdProjectStoreError("CONFLICT", "The project has a recoverable draft. Resolve it before editing externally.");
+    }
     const createdAt = timestamp.parse(input.now?.() ?? new Date().toISOString());
     const id = revisionId(createdAt, sourceHash, presentationHash, snapshot.currentRevisionId);
     db.prepare(`INSERT INTO revisions

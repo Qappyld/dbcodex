@@ -46,6 +46,8 @@ export interface DbcdExpectedState {
 }
 
 export interface SaveDbcdInput extends DbcdExpectedState {
+  /** Internal external-editor guard, checked inside the write transaction. */
+  rejectDraft?: boolean;
   workspaceRoot: string;
   projectPath: string;
   sourceText: string;

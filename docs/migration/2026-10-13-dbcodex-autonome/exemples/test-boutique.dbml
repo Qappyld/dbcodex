@@ -1,0 +1,46 @@
+// Projet de test dbcodex : boutique fictive.
+// Vous pouvez modifier ce commentaire pour tester la synchronisation.
+Project boutique_test {
+  database_type: 'PostgreSQL'
+  Note: 'Demonstration locale : clients, produits et commandes.'
+}
+
+Table clients {
+  id integer [pk, increment]
+  nom varchar(120) [not null]
+  email varchar(255) [not null, unique]
+  cree_le timestamp [default: `now()`]
+}
+
+Table produits {
+  id integer [pk, increment]
+  reference varchar(40) [not null, unique]
+  nom varchar(160) [not null]
+  prix_centimes integer [not null]
+  actif boolean [not null, default: true]
+}
+
+Table commandes {
+  id integer [pk, increment]
+  client_id integer [not null, ref: > clients.id]
+  statut varchar(30) [not null, default: 'nouvelle']
+  cree_le timestamp [default: `now()`]
+}
+
+Table lignes_commandes {
+  id integer [pk, increment]
+  commande_id integer [not null, ref: > commandes.id]
+  produit_id integer [not null, ref: > produits.id]
+  quantite integer [not null, default: 1]
+  prix_unitaire_centimes integer [not null]
+
+  indexes {
+    (commande_id, produit_id) [unique]
+  }
+}
+
+TableGroup ventes {
+  clients
+  commandes
+  lignes_commandes
+}

@@ -10,6 +10,12 @@
 
 ## Décisions de l’atelier `.dbcd` — 26 septembre 2026
 
+### Expérimentation d’intégration native — 9 octobre 2026
+
+Le plugin déclare désormais des entrées `thread`, `global` et `file` d’après le SDK OpenAI et Bits & Bolts, réutilisant l’atelier existant. `apply_dbcd_edits` permet les modifications textuelles exactes explicitement demandées à Codex, avec contrôles de révision et refus des brouillons dans la transaction. L’interface détecte les versions enregistrées externes et préserve le brouillon au teardown ordonné. Aucun changement du format SQLite ni de l’historique.
+
+Les 334 tests et le protocole du bundle installé passent. Le panneau natif, l’association fichier, la persistance entre conversations et le redémarrage ne sont pas déclarés validés : voir [preuves et procédure](evidence/native-integration.md). Chaque entrée de conversation possède son instance ; une session d’édition globale partagée n’est pas promise.
+
 Ces décisions du chantier approuvé remplacent les choix historiques de persistance et de versioning ci-dessous pour le nouvel atelier. L’ancien prototype `.dbml` conserve sa compatibilité.
 
 - `.dbcd` est un fichier projet SQLite local contenant source DBML exacte, présentation, brouillon et révisions ; `.dbml` est le format d’échange.

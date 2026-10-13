@@ -223,3 +223,7 @@ button {
   .relation-direction-dot { animation: none; display: none; }
   .relation-static-arrow { display: block; }
 }
+:root .project-launcher { padding: 24px; max-width: 640px; }
+.project-launcher form { display: flex; flex-wrap: wrap; gap: 12px; }
+.project-launcher label { width: 100%; }
+.project-launcher input { flex: 1; min-width: 200px; padding: 8px; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 4px; }

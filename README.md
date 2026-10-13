@@ -18,7 +18,17 @@ Dans **Historique**, les révisions apparaissent de la plus récente à la plus 
 
 L’application peut demander le plein écran au client MCP Apps et revenir au mode intégré en conservant sa session. Le client peut refuser cette demande. Une association personnalisée de fichiers `.dbcd` au système d’exploitation, à l’éditeur ou au panneau latéral de Codex **n’est pas garantie**. L’ouverture prise en charge passe par l’outil du plugin et son composant MCP Apps.
 
-## Développement local
+## Intégration native — expérimentation du 9 octobre
+
+Le plugin déclare une entrée de conversation **Atelier DBML**, une entrée globale **dbcodex** et un visualiseur pour `.dbcd` et `.dbml`, selon les extensions officielles utilisées par Bits & Bolts. Leur présence et leur persistance dans votre version de Codex Desktop doivent être validées : voir [rapport et procédure](docs/evidence/native-integration.md).
+
+L’écran d’ouverture accepte un chemin relatif à l’espace de travail. Le projet ouvert réutilise l’éditeur existant. Les versions enregistrées ailleurs sont détectées par lectures MCP locales toutes les deux secondes lorsque le composant est visible ; un brouillon local provoque un conflit au lieu d’être remplacé. Les brouillons sont préservés lors d’une fermeture ordonnée si l’hôte attend la réponse `ui/resource-teardown`. Un arrêt brutal reste soumis à la dernière persistance périodique.
+
+Codex peut appliquer une modification explicitement demandée avec `apply_dbcd_edits` : génération, révision et empreinte attendues, puis remplacements textuels correspondant exactement une fois. Le serveur refuse les brouillons récupérables et conserve la présentation. Les outils de sauvegarde de l’éditeur restent réservés au composant.
+
+L’entrée de conversation possède une instance par chat. Le fichier `.dbcd` partage l’état enregistré ; il ne partage pas une session d’édition en mémoire. Ne travaillez pas sur plusieurs brouillons simultanément : le format existant contient un seul emplacement de brouillon. Le dernier chemin peut être mémorisé si le stockage local de l’hôte est disponible ; la réouverture automatique de l’onglet au redémarrage n’est pas garantie.
+
+## Installation et contrôles locaux
 
 Prérequis : **Node.js 22.13.0 ou plus récent**, npm et une version de Codex prenant en charge les plugins et MCP Apps. `node:sqlite` peut émettre un avertissement expérimental selon la version de Node.
 

@@ -36,14 +36,18 @@ function PanelSeparator({ region, width, onChange }: { region: "editor" | "inspe
     onPointerCancel={() => { drag.current = null; }} />;
 }
 
-export function ProjectWorkbench({ result, bridge }: { result: unknown; bridge: WorkbenchBridge }) {
+export function ProjectWorkbench({ result, bridge, onSessionChange, onSelectionChange }: {
+  result: unknown; bridge: WorkbenchBridge; onSessionChange?(session: DocumentSession): void; onSelectionChange?(ids: string[]): void;
+}) {
   const snapshot = readDbcdProjectResult(result)!;
   const session = useDocumentSession(result, bridge);
-  return <DbcdWorkbench session={session} bridge={bridge} projectPath={snapshot.projectPath} readOnly={snapshot.readOnly} />;
+  return <DbcdWorkbench session={session} bridge={bridge} projectPath={snapshot.projectPath} readOnly={snapshot.readOnly}
+    onSessionChange={onSessionChange} onSelectionChange={onSelectionChange} />;
 }
 
-export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }: {
+export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, onSessionChange, onSelectionChange }: {
   session: DocumentSession; bridge: WorkbenchBridge; projectPath: string; readOnly?: boolean;
+  onSessionChange?(session: DocumentSession): void; onSelectionChange?(ids: string[]): void;
 }) {
   readOnly ||= !!session.recovery;
   const root = useRef<HTMLElement>(null);
@@ -56,6 +60,8 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false }
   const [displayMessage, setDisplayMessage] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  useEffect(() => { onSessionChange?.(session); }, [session, onSessionChange]);
+  useEffect(() => { onSelectionChange?.(selectedIds); }, [selectedIds, onSelectionChange]);
   const [query, setQuery] = useState("");
   const [focusRequest, setFocusRequest] = useState<(EntitySelection & { nonce: number }) | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<EntitySelection | null>(null);

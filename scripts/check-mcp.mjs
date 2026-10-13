@@ -44,10 +44,22 @@ try {
 
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map(({ name }) => name).sort(), [
+    "apply_dbcd_edits",
     "discard_dbcd_draft", "export_dbml", "import_dbml", "list_dbcd_revisions", "open_dbcd", "open_dbml",
-    "pin_dbcd_revision", "read_dbcd_revision", "restore_dbcd_revision", "save_dbcd", "save_dbcd_draft",
+    "open_dbcd_app", "open_dbcd_file", "open_dbcd_workbench", "pin_dbcd_revision", "read_dbcd_revision", "resolve_dbcd_file", "restore_dbcd_revision", "save_dbcd", "save_dbcd_draft",
     "save_layout", "validate_dbcd_draft",
-  ]);
+  ].sort());
+  for (const [name, type] of [["open_dbcd_app", "global"], ["open_dbcd_workbench", "thread"], ["open_dbcd_file", "file"]]) {
+    assert.equal(tools.find((tool) => tool.name === name)?._meta?.["openai/ui"]?.entrypoints[0].type, type);
+  }
+  const launcher = await client.callTool({ name: "open_dbcd_workbench", arguments: {} });
+  assert.equal(launcher.structuredContent.dbcodexLauncher, true);
+  assert.ok(!JSON.stringify(launcher).includes(workspace));
+  const fileEntry = await client.callTool({ name: "open_dbcd_file", arguments: { file: { name: "demo-shop.dbcd", resourceUri: "opaque://demo" } } });
+  assert.equal(fileEntry.structuredContent.dbcodexFile.resourceUri, "opaque://demo");
+  const fileView = await client.callTool({ name: "resolve_dbcd_file", arguments: {},
+    _meta: { "openai/resource": { path: path.join(workspace, "fixtures/demo-shop.dbcd") } } });
+  assert.equal(fileView.isError, undefined);
   for (const name of ["validate_dbcd_draft", "save_dbcd_draft", "discard_dbcd_draft", "save_dbcd",
     "list_dbcd_revisions", "read_dbcd_revision", "restore_dbcd_revision", "pin_dbcd_revision", "save_layout"]) {
     assert.deepEqual(tools.find((tool) => tool.name === name)?._meta?.ui?.visibility, ["app"]);
@@ -86,6 +98,7 @@ try {
     name: "import_dbml",
     arguments: { sourcePath: "fixtures/basic.dbml", projectPath: "fixtures/basic.dbcd" },
   });
+  assert.deepEqual(resource.contents[0]?._meta?.["openai/ui"], { preferredDisplayMode: "inline", availableDisplayModes: ["inline", "fullscreen"] });
   assert.equal(imported.isError, undefined);
   assert.ok(imported._meta?.dbcodex?.sourceText?.includes("Table"));
   assert.ok(!JSON.stringify(imported.content).includes("Table users"));
@@ -130,6 +143,15 @@ try {
   assert.equal(revision._meta.dbcodex.revision.sourceText, sourceText);
   assert.equal(revision.structuredContent.revision.sourceText, undefined);
   assert.equal(revision.structuredContent.revision.presentation, undefined);
+  const exactArgs = { path: demoPath, expectedGeneration: reopenedDemo.structuredContent.generation,
+    expectedRevisionId: reopenedDemo.structuredContent.currentRevisionId, expectedSourceHash: reopenedDemo.structuredContent.sourceHash,
+    edits: [{ search: "// MCP acceptance edit", replacement: "// Codex exact edit" }] };
+  const exact = await client.callTool({ name: "apply_dbcd_edits", arguments: exactArgs });
+  assert.equal(exact.isError, undefined);
+  assert.equal(exact.structuredContent.generation, generation + 2);
+  assert.deepEqual(exact.structuredContent.presentation, presentation);
+  assert.equal(exact._meta.dbcodex.sourceText, sourceText.replace("// MCP acceptance edit", "// Codex exact edit"));
+  assert.equal((await client.callTool({ name: "apply_dbcd_edits", arguments: exactArgs })).isError, true);
 
   const unknownTable = await client.callTool({
     name: "save_layout",

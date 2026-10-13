@@ -28,6 +28,7 @@ describe("MCP tool definitions", () => {
     const definitions = buildToolDefinitions();
 
     expect(Object.keys(definitions).sort()).toEqual([
+      "threadWorkbench", "globalWorkbench", "fileWorkbench", "resolveFile", "editDbcd",
       "openDbcd", "openDbml", "importDbml", "exportDbml", "validateDraft", "saveDraft", "discardDraft",
       "saveDbcd", "listRevisions", "readRevision", "restoreRevision", "pinRevision", "saveLayout",
     ].sort());
@@ -35,7 +36,7 @@ describe("MCP tool definitions", () => {
       expect(definition.annotations.openWorldHint, name).toBe(false);
       expect(definition._meta.ui.resourceUri, name).toBe(UI_RESOURCE_URI);
     }
-    for (const name of ["validateDraft", "saveDraft", "discardDraft", "saveDbcd", "listRevisions", "readRevision", "restoreRevision", "pinRevision", "saveLayout"] as const) {
+    for (const name of ["resolveFile", "validateDraft", "saveDraft", "discardDraft", "saveDbcd", "listRevisions", "readRevision", "restoreRevision", "pinRevision", "saveLayout"] as const) {
       expect(definitions[name]._meta.ui.visibility).toEqual(["app"]);
     }
     for (const name of ["openDbcd", "openDbml", "importDbml", "exportDbml"] as const) {
@@ -47,6 +48,16 @@ describe("MCP tool definitions", () => {
     for (const name of ["importDbml", "exportDbml", "saveDbcd", "restoreRevision"] as const) {
       expect(definitions[name].annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
     }
+  });
+
+  it("advertises distinct native entrypoints that accept host launch arguments", () => {
+    const definitions = buildToolDefinitions();
+    expect(definitions.threadWorkbench.inputSchema.parse({})).toEqual({});
+    expect(definitions.globalWorkbench.inputSchema.parse({})).toEqual({});
+    expect(definitions.threadWorkbench._meta["openai/ui"].entrypoints).toEqual([{ type: "thread" }]);
+    expect(definitions.globalWorkbench._meta["openai/ui"].entrypoints).toEqual([{ type: "global" }]);
+    expect(definitions.fileWorkbench._meta["openai/ui"].entrypoints).toEqual([{ type: "file", extensions: [".dbcd", ".dbml"] }]);
+    expect(definitions.fileWorkbench.inputSchema.parse({ file: { name: "demo.dbcd", resourceUri: "opaque://file" } })).toBeTruthy();
   });
 
   it("uses file roots advertised by the MCP client", async () => {

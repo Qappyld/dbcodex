@@ -5,6 +5,8 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
+import { OpenAIFileEntrypointInputSchema, type OpenAIFileEntrypointInput, type OpenAIUiToolMetadata } from "@openai/mcp-extensions/server";
+import { createNativeIntegration } from "./native-integration.js";
 import { fileURLToPath } from "node:url";
 import { presentationSchema, assertJsonByteLimit, boundedUtf8Length, DBCD_MAX_PRESENTATION_BYTES, DBCD_MAX_SOURCE_BYTES } from "@dbcodex/core";
 import { createHandlers } from "./handlers.js";
@@ -41,6 +43,11 @@ export function createWorkspaceRootProvider(
 }
 
 const publicUi = { ui: { resourceUri: UI_RESOURCE_URI } };
+const entryUi = (type: "thread" | "global" | "file") => ({
+  ...publicUi,
+  "openai/ui": { entrypoints: [type === "file" ? { type, extensions: [".dbcd", ".dbml"] } : { type }] } satisfies OpenAIUiToolMetadata,
+});
+const icons = [{ src: "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.33"><rect x="2" y="2" width="6" height="7" rx="1"/><rect x="12" y="11" width="6" height="7" rx="1"/><path d="M8 5h7v6M3 5h4m6 9h4"/></svg>'), mimeType: "image/svg+xml", sizes: ["any"] }];
 const appUi = { ui: { resourceUri: UI_RESOURCE_URI, visibility: ["app"] as ["app"] } };
 const readOnly = { readOnlyHint: true, openWorldHint: false };
 const writeOnce = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
@@ -54,6 +61,14 @@ const projectDraftInput = pathInput.extend({ sourceText: boundedSource });
 const expectedState = { expectedProjectId: z.string().min(1), expectedRevisionId: z.string().min(1), expectedGeneration: z.number().int().positive() };
 
 export const buildToolDefinitions = () => ({
+  threadWorkbench: { title: "Atelier DBML", description: "Open the local DBML workbench beside the conversation.", inputSchema: z.object({}), annotations: readOnly, icons, _meta: entryUi("thread") },
+  globalWorkbench: { title: "dbcodex", description: "Open the local DBCodex app.", inputSchema: z.object({}), annotations: readOnly, icons, _meta: entryUi("global") },
+  fileWorkbench: { title: "Atelier dbcodex", description: "Open a host-provided workspace .dbcd or .dbml file.", inputSchema: z.object({ file: z.object({ name: z.string().min(1), resourceUri: z.string().trim().min(1) }) }), annotations: readOnly, icons, _meta: entryUi("file") },
+  resolveFile: { title: "Resolve opened workspace file", description: "Resolve a file entrypoint using host-owned resource metadata.", inputSchema: z.object({}), annotations: readOnly, _meta: appUi },
+  editDbcd: { title: "Apply exact DBML edits", description: "Apply user-requested exact text replacements to a saved .dbcd project. Refuses stale generations, ambiguous matches, invalid DBML and recoverable drafts; creates a revision without changing presentation.",
+    inputSchema: pathInput.extend({ expectedGeneration: z.number().int().positive(), expectedRevisionId: z.string().min(1), expectedSourceHash: z.string().regex(/^[a-f0-9]{64}$/),
+      edits: z.array(z.object({ search: boundedSource.refine((value) => value.length > 0), replacement: boundedSource })).min(1).max(100) }),
+    annotations: { ...writeOnce, destructiveHint: true }, _meta: publicUi },
   openDbcd: {
     title: "Open DBCodex project",
     description: "Open a workspace-relative .dbcd project.",
@@ -158,10 +173,18 @@ export function createServer(trustedFallbackRoot?: string): McpServer {
     name: "dbcodex",
     version: "0.1.0-dev.0",
   });
-  const handlers = createHandlers(
-    createWorkspaceRootProvider(server.server, trustedFallbackRoot),
-  );
+  const roots = createWorkspaceRootProvider(server.server, trustedFallbackRoot);
+  const handlers = createHandlers(roots);
+  const native = createNativeIntegration(roots, handlers);
   const definitions = buildToolDefinitions();
+
+  registerAppTool(server, "open_dbcd_workbench", definitions.threadWorkbench, native.launch);
+  registerAppTool(server, "open_dbcd_app", definitions.globalWorkbench, native.launch);
+  registerAppTool(server, "open_dbcd_file", definitions.fileWorkbench, async (input: OpenAIFileEntrypointInput) => ({
+    content: [], structuredContent: { dbcodexFile: OpenAIFileEntrypointInputSchema.parse(input).file },
+  }));
+  registerAppTool(server, "resolve_dbcd_file", definitions.resolveFile, (_input: Record<string, never>, extra: { _meta?: Record<string, unknown> }) => native.openFile({ file: { name: "", resourceUri: "" } }, extra._meta));
+  registerAppTool(server, "apply_dbcd_edits", definitions.editDbcd, native.edit);
 
   registerAppTool(server, "open_dbcd", definitions.openDbcd, handlers.openDbcd);
   registerAppTool(server, "open_dbml", definitions.openDbml, handlers.openDbml);
@@ -187,6 +210,7 @@ export function createServer(trustedFallbackRoot?: string): McpServer {
         mimeType: RESOURCE_MIME_TYPE,
         text: await loadUiHtml(),
         _meta: {
+          "openai/ui": { preferredDisplayMode: "inline", availableDisplayModes: ["inline", "fullscreen"] },
           ui: {
             prefersBorder: false,
             csp: { connectDomains: [], resourceDomains: [] },

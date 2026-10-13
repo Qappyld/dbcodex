@@ -1,5 +1,4 @@
-import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
-import { loadUiHtml, UI_RESOURCE_URI } from "../packages/mcp/dist/ui-resource.js";
+import { loadUiHtml, UI_RESOURCE_URI, RESOURCE_MIME_TYPE } from "../packages/mcp/dist/ui-resource.js";
 
 const html = await loadUiHtml();
 const forbidden = [
