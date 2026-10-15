@@ -1,0 +1,106 @@
+Clôture du contenu : 2026-10-15
+HEAD observé : 782ce0bbb49728473efd8a2776a2c7e4819bbe6b
+
+État observé pendant la collecte
+ M .codex-plugin/plugin.json
+ M .github/workflows/publish-portable.yml
+ M README.md
+ M docs/PORTABLE-WINDOWS.md
+ M docs/UPDATES.md
+ M docs/migration/2026-10-13-dbcodex-autonome/01-SPECIFICATION-PRODUIT.md
+ M docs/migration/2026-10-13-dbcodex-autonome/02-DECISIONS-ET-PRIORITES.md
+ M docs/migration/2026-10-13-dbcodex-autonome/03-ARCHITECTURE-CIBLE.md
+ M docs/migration/2026-10-13-dbcodex-autonome/04-DONNEES-ET-MIGRATION.md
+ M docs/migration/2026-10-13-dbcodex-autonome/05-INTERFACE-ET-PARCOURS.md
+ M docs/migration/2026-10-13-dbcodex-autonome/06-CODEX-CLAUDE-AUTHENTIFICATION.md
+ M docs/migration/2026-10-13-dbcodex-autonome/08-PLAN-DE-DEVELOPPEMENT.md
+ M docs/migration/2026-10-13-dbcodex-autonome/09-VALIDATION-ET-ACCEPTATION.md
+ M docs/migration/2026-10-13-dbcodex-autonome/10-RISQUES-ET-POINTS-OUVERTS.md
+ M docs/migration/2026-10-13-dbcodex-autonome/11-PROMPT-NOUVELLE-CONVERSATION.md
+ M docs/migration/2026-10-13-dbcodex-autonome/DOSSIER-COMPLET.md
+ M docs/migration/DBCodex-migration-2026-10-13.zip
+ M package-lock.json
+ M package.json
+ M packages/core/src/dbcd-project-store.ts
+ M packages/core/src/dbml-adapter.ts
+ M packages/core/src/index.ts
+ M packages/core/src/presentation.ts
+ M packages/core/src/schema-graph.ts
+ M packages/desktop/src/apply-update.ps1
+ M packages/desktop/src/main.ts
+ M packages/desktop/src/renderer/PortableApp.tsx
+ M packages/desktop/src/renderer/portable.css
+ M packages/desktop/src/update-manifest.ts
+ M packages/desktop/src/updater.ts
+ M packages/desktop/test/apply-update.test.ts
+ M packages/desktop/test/chat-service.test.ts
+ M packages/desktop/test/desktop-service.test.ts
+ M packages/desktop/test/renderer.test.tsx
+ M packages/desktop/test/update-manifest.test.ts
+ M packages/desktop/test/updater.test.ts
+ M packages/mcp/src/create-server.ts
+ M packages/mcp/src/handlers.ts
+ M packages/mcp/test/server.test.ts
+ M packages/ui/src/DbcdWorkbench.tsx
+ M packages/ui/src/DiagramCanvas.tsx
+ M packages/ui/src/HistoryPanel.tsx
+ M packages/ui/src/ProjectLauncher.tsx
+ M packages/ui/src/TableNode.tsx
+ M packages/ui/src/dbml-patches.ts
+ M packages/ui/src/presentation-commands.ts
+ M packages/ui/src/revision-diff.ts
+ M packages/ui/src/styles.css
+ M packages/ui/src/useDocumentSession.ts
+ M packages/ui/test/HistoryPanel.test.tsx
+ M packages/ui/test/presentation-commands.test.ts
+ M plugin.json
+ M release-config.json
+ M scripts/audit-portable-release.mjs
+ M scripts/check-mcp.mjs
+ M scripts/package-desktop.mjs
+ M scripts/sign-update.mjs
+ M skills/dbcodex/SKILL.md
+?? "UX dbcd/"
+?? dbdiagram-vues-observation.jpg
+?? docs/assistant-mcp.md
+?? docs/evidence/consolidation-2026-10-15.md
+?? docs/evidence/construction-modes-2026-10-14.md
+?? docs/evidence/construction-panel-2026-10-15.md
+?? docs/evidence/dbdiagram-routing-study-2026-10-14.md
+?? docs/evidence/history-2026-10-15.md
+?? docs/evidence/performance-2026-10-13.md
+?? docs/evidence/performance-2026-10-15.md
+?? docs/evidence/relation-routing-2026-10-13.md
+?? docs/evidence/routing-spikes-2026-10-14.md
+?? docs/evidence/views-2026-10-14.md
+?? docs/evidence/windows-ui-2026-10-13.md
+?? docs/superpowers/specs/2026-10-13-relation-routing-design.md
+?? "fixtures/Compliance Solution.dbcd"
+?? "fixtures/Compliance Solution.dbml"
+?? fixtures/commerce-7-tables.dbcd
+?? fixtures/commerce-7-tables.dbml
+?? packages/core/src/project-model.ts
+?? packages/core/src/project-template.ts
+?? packages/core/test/dbml-cache.test.ts
+?? packages/core/test/model-indexes.test.ts
+?? packages/core/test/project-model.test.ts
+?? packages/mcp/src/assistant-changes.ts
+?? packages/mcp/src/assistant-handlers.ts
+?? packages/mcp/test/assistant.test.ts
+?? packages/ui/src/ProjectTypeForm.tsx
+?? packages/ui/src/SchemaBuilder.tsx
+?? packages/ui/src/SchemaTree.tsx
+?? packages/ui/src/history-changes.ts
+?? packages/ui/src/model-commands.ts
+?? packages/ui/test/SchemaBuilder.test.tsx
+?? packages/ui/test/history-changes.test.ts
+?? packages/ui/test/model-commands.test.ts
+?? scripts/cleanup-old-portables.ps1
+?? scripts/consolidate-portable.mjs
+?? scripts/measure-core-performance.mjs
+?? scripts/measure-presentation-performance.mjs
+?? scripts/review-construction-ui.mjs
+?? scripts/review-history-ui.mjs
+?? scripts/verify-single-exe.mjs
+
+Les fichiers copiés représentent le travail courant. Les chemins du nouveau dossier peuvent apparaître dans la collecte ; aucune modification de produit n’est effectuée par le générateur.

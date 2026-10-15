@@ -1,0 +1,30 @@
+BRIEF DE SURFACE
+Projet en mots simples :
+Utilisateur principal :
+Objet métier et identité :
+Tâche principale :
+Point d’entrée et étape précédente :
+Première décision :
+Critère de réussite :
+Action principale en fenêtre compacte :
+États et récupération :
+Vocabulaire métier et détails techniques utiles :
+Contraintes existantes à préserver :
+Profondeur de changement nécessaire :
+Composants existants à réutiliser :
+Choix visuels et raison de leur adéquation :
+Plan de vérification proportionné :
+
+REVUE DU RÉSULTAT
+Comportement réellement obtenu :
+Parcours essayé et résultat :
+Hiérarchie et portée des actions :
+État vide erreur lecture seule conflit et récupération :
+Clavier focus et fermeture :
+Largeurs et contenus difficiles :
+Mesures si la performance est concernée :
+Captures et fichiers de preuve :
+Différence entre code testé et version livrée :
+Limites connues :
+Leçons répétables à conserver :
+Exceptions locales à ne pas généraliser :

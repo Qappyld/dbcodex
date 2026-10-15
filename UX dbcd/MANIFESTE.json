@@ -1,0 +1,817 @@
+{
+  "title": "UX dbcd",
+  "content_cutoff": "2026-10-15",
+  "git_head": "782ce0bbb49728473efd8a2776a2c7e4819bbe6b",
+  "working_tree_snapshot": true,
+  "note": "Les horodatages sont des dates de modification de fichiers, pas des dates de fonctionnalité. Contrôles et captures réutilisés, non réexécutés pour la collecte.",
+  "items": [
+    {
+      "type": "document projet",
+      "original": "README.md",
+      "file": "sources/projet/README.md",
+      "sha256": "df28db1587b6a23b52f2ee3625160eddb20c4492dae325ec85784cb2928e2109",
+      "bytes": 11914,
+      "source_modified_local": "2026-10-15T13:23:37"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/decisions.md",
+      "file": "sources/projet/docs/decisions.md",
+      "sha256": "16d8e8bb5467e2ce077ce16a45bc2ffe2497a0e884e68aeaf644bbc0f107e2a3",
+      "bytes": 20934,
+      "source_modified_local": "2026-10-13T14:04:29"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/feature-inventory.md",
+      "file": "sources/projet/docs/feature-inventory.md",
+      "sha256": "0ad3315de12f241bba439ae2e7d3d8550131512681c825a691bdc9263b6797e9",
+      "bytes": 22815,
+      "source_modified_local": "2026-10-13T14:04:29"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/dbcd-workbench.md",
+      "file": "sources/projet/docs/evidence/dbcd-workbench.md",
+      "sha256": "4e0519fa415f247ae339a3c148aa8793e8d71c0e87fcf997f764fdfc7e71b09b",
+      "bytes": 2278,
+      "source_modified_local": "2026-10-13T14:04:29"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/windows-ui-2026-10-13.md",
+      "file": "sources/projet/docs/evidence/windows-ui-2026-10-13.md",
+      "sha256": "91bcf61384b65aae5256377fba0e1e1869cf6a71cb317f5bfadd6e1745dafb90",
+      "bytes": 5650,
+      "source_modified_local": "2026-10-13T18:38:45"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/relation-routing-2026-10-13.md",
+      "file": "sources/projet/docs/evidence/relation-routing-2026-10-13.md",
+      "sha256": "13fca0079b7b740b26ac88bc302f154e3dd5b2553c05380f1d00f7f7df1b087d",
+      "bytes": 4862,
+      "source_modified_local": "2026-10-13T19:11:58"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/routing-spikes-2026-10-14.md",
+      "file": "sources/projet/docs/evidence/routing-spikes-2026-10-14.md",
+      "sha256": "94559deff3bafd3e501db4fc48bbb77fe23f14e28a6943de7100dc0f3bdfde83",
+      "bytes": 2446,
+      "source_modified_local": "2026-10-14T11:10:04"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/dbdiagram-routing-study-2026-10-14.md",
+      "file": "sources/projet/docs/evidence/dbdiagram-routing-study-2026-10-14.md",
+      "sha256": "f5b1c00e420ab600dc758e73ae1e4555b17b0dcee9ba8aaaf3b25d77d221110c",
+      "bytes": 4144,
+      "source_modified_local": "2026-10-14T10:00:33"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/views-2026-10-14.md",
+      "file": "sources/projet/docs/evidence/views-2026-10-14.md",
+      "sha256": "27c6d7aa61e261ecb5ec2fa660629213e6dbdfa8c7729ebfad50d61d4976118b",
+      "bytes": 3228,
+      "source_modified_local": "2026-10-14T09:49:07"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/construction-modes-2026-10-14.md",
+      "file": "sources/projet/docs/evidence/construction-modes-2026-10-14.md",
+      "sha256": "b79ed6b50fee0991f9e894180c643a9b3b6e0d71aef639c222e78c9290730868",
+      "bytes": 4456,
+      "source_modified_local": "2026-10-14T13:53:12"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/construction-panel-2026-10-15.md",
+      "file": "sources/projet/docs/evidence/construction-panel-2026-10-15.md",
+      "sha256": "c4f3c7c8f586cea44f742b5902e0ccbf0a41e252c255fcb8adce26f64e2b8bb2",
+      "bytes": 1628,
+      "source_modified_local": "2026-10-15T10:01:24"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/history-2026-10-15.md",
+      "file": "sources/projet/docs/evidence/history-2026-10-15.md",
+      "sha256": "71b7b4b34142bf19406c4b231c0be43518843bcb55bb4110c6e2efc376bd5778",
+      "bytes": 2118,
+      "source_modified_local": "2026-10-15T13:23:38"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/performance-2026-10-13.md",
+      "file": "sources/projet/docs/evidence/performance-2026-10-13.md",
+      "sha256": "0c1521667923c2ef3a3d75d4da8bfa2e812b39116b4fa190263519354fd84d5f",
+      "bytes": 5511,
+      "source_modified_local": "2026-10-13T19:49:56"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/performance-2026-10-15.md",
+      "file": "sources/projet/docs/evidence/performance-2026-10-15.md",
+      "sha256": "b135b0e242238fe1529a1c435a67453be27127f5caab3d8bff43c4c4085b1646",
+      "bytes": 9873,
+      "source_modified_local": "2026-10-15T13:05:35"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/portable-updates-2026-10-14.md",
+      "file": "sources/projet/docs/evidence/portable-updates-2026-10-14.md",
+      "sha256": "748c17bbeeabf3fae14ca645d215e97c8a58a8f1fb2ac653a8df10cd0d2d8c27",
+      "bytes": 4359,
+      "source_modified_local": "2026-10-14T12:33:10"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/native-integration.md",
+      "file": "sources/projet/docs/evidence/native-integration.md",
+      "sha256": "5d9b3c5fbe928940d4541c1a65190d55d4bd602d9843f93dc8b7a7f8321bc45a",
+      "bytes": 16099,
+      "source_modified_local": "2026-10-13T14:04:29"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/evidence/consolidation-2026-10-15.md",
+      "file": "sources/projet/docs/evidence/consolidation-2026-10-15.md",
+      "sha256": "ba26b47f85f5be759c845c4cdf0188cacae9a7a2b08904ff4cbfa283f3360081",
+      "bytes": 2342,
+      "source_modified_local": "2026-10-15T09:33:50"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/superpowers/specs/2026-09-25-dbcodex-workbench-design.md",
+      "file": "sources/projet/docs/superpowers/specs/2026-09-25-dbcodex-workbench-design.md",
+      "sha256": "a250c8892c76f70df6ef96d7cb31631e635cd169dae072464fdb244302ac153e",
+      "bytes": 19440,
+      "source_modified_local": "2026-10-13T14:04:30"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/superpowers/specs/2026-09-26-dbcd-work-file-design.md",
+      "file": "sources/projet/docs/superpowers/specs/2026-09-26-dbcd-work-file-design.md",
+      "sha256": "0f7bafbaa978f33e270811734e56b91cb79ddd4c238fd44039c79979d7e74a2c",
+      "bytes": 12423,
+      "source_modified_local": "2026-10-13T14:04:30"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/superpowers/specs/2026-10-13-relation-routing-design.md",
+      "file": "sources/projet/docs/superpowers/specs/2026-10-13-relation-routing-design.md",
+      "sha256": "37e6a09a87675455311169e54a6e30ab198f4f4d42d3548f558c4fe5a995cc6f",
+      "bytes": 9271,
+      "source_modified_local": "2026-10-13T19:11:58"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/migration/2026-10-13-dbcodex-autonome/05-INTERFACE-ET-PARCOURS.md",
+      "file": "sources/projet/docs/migration/2026-10-13-dbcodex-autonome/05-INTERFACE-ET-PARCOURS.md",
+      "sha256": "13e3bfa28f2846dc0e00fd0495fa4f84ab1ea0ff68c8a09ac3b90f5bcc24ff25",
+      "bytes": 10764,
+      "source_modified_local": "2026-10-13T15:03:14"
+    },
+    {
+      "type": "document projet",
+      "original": "docs/migration/2026-10-13-dbcodex-autonome/07-ETAT-REEL-DU-CODE.md",
+      "file": "sources/projet/docs/migration/2026-10-13-dbcodex-autonome/07-ETAT-REEL-DU-CODE.md",
+      "sha256": "a89bd158b2ef73e6fac97b969fbf2bb18d19fc48fa468e15de5ec55c63038cbd",
+      "bytes": 6042,
+      "source_modified_local": "2026-10-13T14:04:29"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/desktop/src/renderer/PortableApp.tsx",
+      "file": "sources/code/packages/desktop/src/renderer/PortableApp.tsx",
+      "sha256": "e406faf361897ecb21f65d7f29afb82dca8326cb7d16aed1ee6beadb2f57ba79",
+      "bytes": 6803,
+      "source_modified_local": "2026-10-14T13:40:12"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/desktop/src/renderer/UpdatePanel.tsx",
+      "file": "sources/code/packages/desktop/src/renderer/UpdatePanel.tsx",
+      "sha256": "959abd4bf25ab2c9b172f027e5c39246ee3c9bbb47248743cf5a1c3897db12fc",
+      "bytes": 3188,
+      "source_modified_local": "2026-10-14T12:01:32"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/desktop/src/renderer/portable.css",
+      "file": "sources/code/packages/desktop/src/renderer/portable.css",
+      "sha256": "b56aa9e568b4f03514d2b6ef9fd3f868e50fc67a07474c84061c68bb86d54793",
+      "bytes": 15360,
+      "source_modified_local": "2026-10-14T13:49:25"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/ActionIcon.tsx",
+      "file": "sources/code/packages/ui/src/ActionIcon.tsx",
+      "sha256": "9cd70a831867ffaf43a1428289a000fb11e68022a47a2e766395397f03862d60",
+      "bytes": 1825,
+      "source_modified_local": "2026-10-14T10:57:23"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/DbcdWorkbench.tsx",
+      "file": "sources/code/packages/ui/src/DbcdWorkbench.tsx",
+      "sha256": "3e345d2d2d20539ba0f22b2fdd49d69de033523be488109ea1f9286681536ece",
+      "bytes": 26204,
+      "source_modified_local": "2026-10-15T12:47:05"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/DiagramCanvas.tsx",
+      "file": "sources/code/packages/ui/src/DiagramCanvas.tsx",
+      "sha256": "0271b298df9d46f8c07d5bd34f5ab28193679ab7438b17a6365db881b44aaf73",
+      "bytes": 39786,
+      "source_modified_local": "2026-10-15T12:52:24"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/DirectedRelationEdge.tsx",
+      "file": "sources/code/packages/ui/src/DirectedRelationEdge.tsx",
+      "sha256": "d6120267ea6029f11a0375b2985ed2d0a3c7419e86559cf5c0bf423c5becde9b",
+      "bytes": 12158,
+      "source_modified_local": "2026-10-14T09:54:02"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/HistoryPanel.tsx",
+      "file": "sources/code/packages/ui/src/HistoryPanel.tsx",
+      "sha256": "70e080c02fbe67b7291f574b7a0b520a1ad7663c82d6ef4dde83e0e72f4850b1",
+      "bytes": 9671,
+      "source_modified_local": "2026-10-15T13:12:45"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/ProjectTypeForm.tsx",
+      "file": "sources/code/packages/ui/src/ProjectTypeForm.tsx",
+      "sha256": "a981d16060ead12584453d6711b1d8588f6f60c9bd8d3f3d06760f251d87ae6f",
+      "bytes": 3346,
+      "source_modified_local": "2026-10-14T13:27:32"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/SchemaBuilder.tsx",
+      "file": "sources/code/packages/ui/src/SchemaBuilder.tsx",
+      "sha256": "4def223c2a7bb69f5bf4463b699229519e1055707aeb26bea6bd3ed84cfc2204",
+      "bytes": 27454,
+      "source_modified_local": "2026-10-15T09:58:28"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/SchemaTree.tsx",
+      "file": "sources/code/packages/ui/src/SchemaTree.tsx",
+      "sha256": "c88fe53a5e8246cb2a9403f3fd8f834f4aeba1bdbd5b7364ef2a7b2612041e26",
+      "bytes": 3878,
+      "source_modified_local": "2026-10-15T09:58:44"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/TableNode.tsx",
+      "file": "sources/code/packages/ui/src/TableNode.tsx",
+      "sha256": "1fab30eb3c1cc171584be8c58d3415620a203c21d446fd2654ed5136ccf9df0b",
+      "bytes": 5391,
+      "source_modified_local": "2026-10-14T13:44:45"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/TableVisibilityTree.tsx",
+      "file": "sources/code/packages/ui/src/TableVisibilityTree.tsx",
+      "sha256": "db3e6d886b1f30f1ea18e1aa90dbb4e41b2c9355a85fe4e4e99c1583d911f31c",
+      "bytes": 4195,
+      "source_modified_local": "2026-10-14T09:35:39"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/ViewManager.tsx",
+      "file": "sources/code/packages/ui/src/ViewManager.tsx",
+      "sha256": "a98f49480b100e9a521aa1a4aab8507402d1357a3d05dab4613578eeea5d0365",
+      "bytes": 13337,
+      "source_modified_local": "2026-10-14T10:57:23"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/history-changes.ts",
+      "file": "sources/code/packages/ui/src/history-changes.ts",
+      "sha256": "14ff52ff86fffa5a57969583c68132db917f5737cba5c4fb2fa72c9f69c74273",
+      "bytes": 2578,
+      "source_modified_local": "2026-10-15T13:11:59"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/model-commands.ts",
+      "file": "sources/code/packages/ui/src/model-commands.ts",
+      "sha256": "ab0ce69343629960e0186b052e31a59829470904958378f50e279329fb59d6eb",
+      "bytes": 19473,
+      "source_modified_local": "2026-10-14T13:47:01"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/relation-routing.ts",
+      "file": "sources/code/packages/ui/src/relation-routing.ts",
+      "sha256": "daa3656a2e0b6959236d2485f22db6fbc373be1ab78ae8679a797b5ba5ca17ea",
+      "bytes": 15836,
+      "source_modified_local": "2026-10-14T10:57:02"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/revision-diff.ts",
+      "file": "sources/code/packages/ui/src/revision-diff.ts",
+      "sha256": "27c7ec784ded61282361fa29c0836cf24de0dd1cae6cae0f8cd7cd2429d195d8",
+      "bytes": 5884,
+      "source_modified_local": "2026-10-14T13:21:05"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/styles.css",
+      "file": "sources/code/packages/ui/src/styles.css",
+      "sha256": "419d683bb5730b7dda291f3a9b96fffa31bcab04450f458fbb75712e0187f4ba",
+      "bytes": 31481,
+      "source_modified_local": "2026-10-15T13:13:09"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/useDocumentSession.ts",
+      "file": "sources/code/packages/ui/src/useDocumentSession.ts",
+      "sha256": "74fbb1ad6c0f2ed789683efa436af0a43e9a1e0eca48555401cf107f2c229aac",
+      "bytes": 22298,
+      "source_modified_local": "2026-10-15T12:43:43"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/src/view-visibility.ts",
+      "file": "sources/code/packages/ui/src/view-visibility.ts",
+      "sha256": "bb7a351722770fc0a1e298e6d2dd56352588ee76f37044992b7c25d90ff0c132",
+      "bytes": 1913,
+      "source_modified_local": "2026-10-14T09:44:34"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/review-construction-ui.mjs",
+      "file": "sources/code/scripts/review-construction-ui.mjs",
+      "sha256": "e84d9fe076660a89a83f5969c72fd155cde7f451acccb685e51da471a5a6e876",
+      "bytes": 11238,
+      "source_modified_local": "2026-10-15T09:58:28"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/review-history-ui.mjs",
+      "file": "sources/code/scripts/review-history-ui.mjs",
+      "sha256": "494ece258df7b178ba4fd1c5fd92685566dbd6801e12b2e2817f90308a5e808f",
+      "bytes": 3082,
+      "source_modified_local": "2026-10-15T13:21:47"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/review-routing-ui.mjs",
+      "file": "sources/code/scripts/review-routing-ui.mjs",
+      "sha256": "a635b8fcc62c1b3038e8608106136871e6b1adb3e6fc78005fd397511288cd60",
+      "bytes": 7569,
+      "source_modified_local": "2026-10-13T19:46:01"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/review-views-ui.mjs",
+      "file": "sources/code/scripts/review-views-ui.mjs",
+      "sha256": "d071eefec96855e70d89c163f0d32cee6ea1068263ae74d0ff720e3c3f9dbec2",
+      "bytes": 7515,
+      "source_modified_local": "2026-10-14T09:42:47"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/review-windows-ui.mjs",
+      "file": "sources/code/scripts/review-windows-ui.mjs",
+      "sha256": "c2e3e7bc2243201e9619747d253a78f221ab67ff3d45be997b3ae5437f16fbf6",
+      "bytes": 6253,
+      "source_modified_local": "2026-10-14T13:06:02"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/measure-diagram-performance.mjs",
+      "file": "sources/code/scripts/measure-diagram-performance.mjs",
+      "sha256": "c8997c6afb32331581af3dce9be82f2a94e506bbb22c96698ab69ff596b6642c",
+      "bytes": 5221,
+      "source_modified_local": "2026-10-14T09:48:47"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/measure-core-performance.mjs",
+      "file": "sources/code/scripts/measure-core-performance.mjs",
+      "sha256": "26de0ccbb3d037feed6063e64b19ffe51d569a140dafea36177f223d2153021a",
+      "bytes": 2657,
+      "source_modified_local": "2026-10-15T12:42:33"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "scripts/measure-presentation-performance.mjs",
+      "file": "sources/code/scripts/measure-presentation-performance.mjs",
+      "sha256": "dc350a3d4ad75630cb69789ec023c39ddb3466d904135562ed5aa74b3a42035c",
+      "bytes": 2005,
+      "source_modified_local": "2026-10-15T12:49:10"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/test/HistoryPanel.test.tsx",
+      "file": "sources/code/packages/ui/test/HistoryPanel.test.tsx",
+      "sha256": "48481ec92fe808e4ef37f50d8c836c6f5ce75c359888d460f7dc01746ed9b55b",
+      "bytes": 9949,
+      "source_modified_local": "2026-10-15T13:14:27"
+    },
+    {
+      "type": "code et contrôle",
+      "original": "packages/ui/test/SchemaBuilder.test.tsx",
+      "file": "sources/code/packages/ui/test/SchemaBuilder.test.tsx",
+      "sha256": "b7e71ec43e962c1615570017d2eebd2433831014566d53c0c305d9866546ea30",
+      "bytes": 5258,
+      "source_modified_local": "2026-10-15T09:57:40"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\SKILL.md",
+      "file": "sources/skills/ui-ux/SKILL.md",
+      "sha256": "fc7911710d9b692b1655edf2499344c6001cfba03c5147a5e7daf1ddd8005e27",
+      "bytes": 15518,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\references\\anti-patterns.md",
+      "file": "sources/skills/ui-ux/references/anti-patterns.md",
+      "sha256": "2f37ae4077d63c866abc57bbab9626e9a0b1b4def1f74a4f63231fbda459f391",
+      "bytes": 8681,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\references\\design-reference-packs.md",
+      "file": "sources/skills/ui-ux/references/design-reference-packs.md",
+      "sha256": "a1d4ff60bf2fad5e85256f4c25b9981af650e3c3bf715d4365b99bea395dceb9",
+      "bytes": 3732,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\references\\development-guardrails.md",
+      "file": "sources/skills/ui-ux/references/development-guardrails.md",
+      "sha256": "753af5b4eb7c0bd2d218db66fe1b36bf663a7dd100b405bf9567d931a42ea94b",
+      "bytes": 6848,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\references\\project-cognition.md",
+      "file": "sources/skills/ui-ux/references/project-cognition.md",
+      "sha256": "cbc0f9da94891754e7f0b2b2c0700297510d7aa5bdbb1ff319871024590af298",
+      "bytes": 6410,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\references\\tool-selection.md",
+      "file": "sources/skills/ui-ux/references/tool-selection.md",
+      "sha256": "5f121e8bdf2950fcca9ac5dbf0645e5cdde582138475dfc207c6e84c00ebb44c",
+      "bytes": 4019,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\references\\ux-evaluation.md",
+      "file": "sources/skills/ui-ux/references/ux-evaluation.md",
+      "sha256": "5ce66d2ddf34fd944755e2b76f6812ab31a43af758e31b5a678a1d3de6b5499d",
+      "bytes": 7146,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\references\\workflow.md",
+      "file": "sources/skills/ui-ux/references/workflow.md",
+      "sha256": "4fbd7bf848c03ed128f34ce7ad77ff7787dadf3263951e19eb89168366c10803",
+      "bytes": 4290,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\templates\\DESIGN.md",
+      "file": "sources/skills/ui-ux/templates/DESIGN.md",
+      "sha256": "7837b1d13a261f53675d920bbdbdfccb3ac94e2b2ed47b49ab84c6bbc9394675",
+      "bytes": 4805,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\templates\\FRONTEND_CONTRACT.md",
+      "file": "sources/skills/ui-ux/templates/FRONTEND_CONTRACT.md",
+      "sha256": "fbfcb8ab761fd18c1793eaa7fd3e0aa6697bc3a05ae207f3128b88bc3fb849cc",
+      "bytes": 5018,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\templates\\FRONTEND_REVIEW.md",
+      "file": "sources/skills/ui-ux/templates/FRONTEND_REVIEW.md",
+      "sha256": "7547ffedd33a12740563546959a53275f6a67d64ff3607d4ccb0f9928b3bd195",
+      "bytes": 3814,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "C:\\Users\\quentin\\.codex\\skills\\ui-ux\\templates\\PAGE_BRIEF.md",
+      "file": "sources/skills/ui-ux/templates/PAGE_BRIEF.md",
+      "sha256": "cc4259a0c2097529dd80207f524f7ca81bcfaa29088c8211e34f54bf8379cf3f",
+      "bytes": 3456,
+      "source_modified_local": "2026-09-26T20:37:15"
+    },
+    {
+      "type": "skill existant",
+      "original": "skills/dbcodex/SKILL.md",
+      "file": "sources/skills/dbcodex/SKILL.md",
+      "sha256": "31fabceefc18811cd46023c5f496d1762a17b98b135d1d5dc1eb05aa47c75b17",
+      "bytes": 5740,
+      "source_modified_local": "2026-10-15T13:14:00"
+    },
+    {
+      "type": "exemple DBML",
+      "original": "fixtures/commerce-7-tables.dbml",
+      "file": "exemples/commerce-7-tables.dbml",
+      "sha256": "b05eb0db8207483ac2c3dfa87ec7ca930b2d434fb36a8870948642cd7a1e3d62",
+      "bytes": 2065,
+      "source_modified_local": "2026-10-13T18:15:44"
+    },
+    {
+      "type": "exemple DBML",
+      "original": "fixtures/demo-shop.dbml",
+      "file": "exemples/demo-shop.dbml",
+      "sha256": "5e4e5a9ace7b91329d99f1f35b405383e30cbe0036b0b0c80d7442b07163e7a7",
+      "bytes": 2543,
+      "source_modified_local": "2026-10-13T14:04:30"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/construction-review/checks.json",
+      "file": "sources/controles/construction-review/checks.json",
+      "sha256": "9a486b897d1336515443707f0eb952b97dbd6f09358664d048c231d778d5e82e",
+      "bytes": 769,
+      "source_modified_local": "2026-10-15T10:00:59"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/history-review/checks.json",
+      "file": "sources/controles/history-review/checks.json",
+      "sha256": "54d6ef227ba4a0a0d8d24731efc42e908fc263c904299963b990f47acd412962",
+      "bytes": 217,
+      "source_modified_local": "2026-10-15T13:22:41"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/ui-review/views-interactions.json",
+      "file": "sources/controles/ui-review/views-interactions.json",
+      "sha256": "94a7d1c404927e4d61281337e79f28d4beef8188a96a04cb25f889ef3067b9a4",
+      "bytes": 412,
+      "source_modified_local": "2026-10-14T09:46:17"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/ui-review/compliance-interactions.json",
+      "file": "sources/controles/ui-review/compliance-interactions.json",
+      "sha256": "e8682c5ae922c1091152edb88eda5eb5e88f68d2a583325e04202a836b6a8550",
+      "bytes": 291,
+      "source_modified_local": "2026-10-13T18:38:32"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/ui-review/result.json",
+      "file": "sources/controles/ui-review/result.json",
+      "sha256": "57d8563fa5e4caaddd7987ae36c74e2a20da745c59f92f001fb66d428c305084",
+      "bytes": 362,
+      "source_modified_local": "2026-10-13T18:19:19"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/routing-review/result.json",
+      "file": "sources/controles/routing-review/result.json",
+      "sha256": "4ccd9a97acd1880db7e435dc60bafaa40abfbc160248d8085ae101a67232c448",
+      "bytes": 458,
+      "source_modified_local": "2026-10-14T11:09:52"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/performance/core-before-rationalisation.json",
+      "file": "sources/controles/performance/core-before-rationalisation.json",
+      "sha256": "06115104d97dcbe31775bff3f5c236fd3335960c487e0b9bc7d614cfc7060c0b",
+      "bytes": 984,
+      "source_modified_local": "2026-10-15T12:43:12"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/performance/core-after-rationalisation.json",
+      "file": "sources/controles/performance/core-after-rationalisation.json",
+      "sha256": "7b9d5ce303c4f16c5c309e384024708f29ecdfcf4fb2e57c11bd00e482846897",
+      "bytes": 971,
+      "source_modified_local": "2026-10-15T12:46:07"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/performance/presentation-batch.json",
+      "file": "sources/controles/performance/presentation-batch.json",
+      "sha256": "9613714444e5bf6582dbec0c1557e9364314256cf3f38e134f467a11e3145d72",
+      "bytes": 221,
+      "source_modified_local": "2026-10-15T12:50:05"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/performance/before.json",
+      "file": "sources/controles/performance/before.json",
+      "sha256": "5305c7c8140b540dd1d0f291a7082bfea959e6487ffc21434d58a42e7c893215",
+      "bytes": 2454,
+      "source_modified_local": "2026-10-13T19:27:02"
+    },
+    {
+      "type": "résultat de contrôle historique",
+      "original": "build/performance/delivered-stable.json",
+      "file": "sources/controles/performance/delivered-stable.json",
+      "sha256": "12a5092098ee552ed32cbf331b2aa937d9050c552784356f355ad09c6db0ac7e",
+      "bytes": 2358,
+      "source_modified_local": "2026-10-13T19:47:35"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/file-menu.png",
+      "file": "captures/01-file-menu.png",
+      "sha256": "88a15799aac46f313081a7b6c944d0074c02e7bf277e88a0cd554cd0aaa1023e",
+      "bytes": 98928,
+      "source_modified_local": "2026-10-13T18:19:17"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/construction-review/sharepoint-desktop.png",
+      "file": "captures/02-sharepoint-desktop.png",
+      "sha256": "e4b0e49096ea7cb7662d8475b03e03351f1996b563629b07cb118b603cdd9a34",
+      "bytes": 77183,
+      "source_modified_local": "2026-10-15T10:00:51"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/compliance-overview.png",
+      "file": "captures/03-compliance-overview.png",
+      "sha256": "c220544fb1411651ea2337549500cc3f3832ec2a2c4f488773aaa055427e2807",
+      "bytes": 108468,
+      "source_modified_local": "2026-10-13T18:38:26"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/construction-review/sharepoint-dark.png",
+      "file": "captures/04-sharepoint-dark.png",
+      "sha256": "b1f5f09c88e9d71f01c61691680a41b93e1abfaba986b74e5261bf8d75f532cc",
+      "bytes": 84047,
+      "source_modified_local": "2026-10-15T10:00:51"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/selection-box.png",
+      "file": "captures/05-selection-box.png",
+      "sha256": "2dbd3a892244ccc2fa5b8fde6fa72cead325c68c161dbd07967f8666386b4096",
+      "bytes": 116196,
+      "source_modified_local": "2026-10-13T18:38:28"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/compliance-partial-group.png",
+      "file": "captures/06-compliance-partial-group.png",
+      "sha256": "48470e018b74a660b2916f5671da1d30b5b4f851375b73c511a93fcbef1b8e57",
+      "bytes": 116417,
+      "source_modified_local": "2026-10-13T18:38:32"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/routing-review/overview-light.png",
+      "file": "captures/07-overview-light.png",
+      "sha256": "e735d9cbf80dcfbdd27ede96740c71645e8b9b1d23218c5534471613d2fea79e",
+      "bytes": 136018,
+      "source_modified_local": "2026-10-14T11:09:52"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/routing-review/manual-selected.png",
+      "file": "captures/08-manual-selected.png",
+      "sha256": "3501c2cbcc1e8ac5b05efac77581e84992e7d98a58db3e79cb64bd32bd9054cd",
+      "bytes": 112948,
+      "source_modified_local": "2026-10-14T11:09:49"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/routing-review/pointer-detour-light.png",
+      "file": "captures/09-pointer-detour-light.png",
+      "sha256": "3418f06af98a08dc142c15e7c2331c5b62e55785f2fe6918011e47902fd63438",
+      "bytes": 128920,
+      "source_modified_local": "2026-10-14T11:09:52"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/workspace-1440.png",
+      "file": "captures/10-workspace-1440.png",
+      "sha256": "9e483a0cde499e5e236a7f48a676e64bf14c4fafe45d1f9615c9c748f8a305d3",
+      "bytes": 45594,
+      "source_modified_local": "2026-10-13T18:19:19"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/views-final.png",
+      "file": "captures/11-views-final.png",
+      "sha256": "3af7952758b32f15ef6c6722d09392aecb08a84c1e9a1bcae3f91ca5524bf3ab",
+      "bytes": 107435,
+      "source_modified_local": "2026-10-14T09:46:16"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/views-unsaved.png",
+      "file": "captures/12-views-unsaved.png",
+      "sha256": "c974944195033c1128e13c59ea61d6668d8809bdfc0442b1fab449936fff037c",
+      "bytes": 111002,
+      "source_modified_local": "2026-10-14T09:46:10"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/ui-review/views-delete.png",
+      "file": "captures/13-views-delete.png",
+      "sha256": "666359902b7b76e6d49b83caa167d9c9828904612e8f768ca40fb97a9fe3fa5c",
+      "bytes": 110162,
+      "source_modified_local": "2026-10-14T09:46:12"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/construction-review/new-project.png",
+      "file": "captures/14-new-project.png",
+      "sha256": "4479878e9047ada967204eb2234ef7f968314d896c3305f7b4e1e8a1c59da64d",
+      "bytes": 71988,
+      "source_modified_local": "2026-10-15T10:00:58"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/construction-review/dataverse-desktop.png",
+      "file": "captures/15-dataverse-desktop.png",
+      "sha256": "9cb807794c5425b5df30fb2fe613713cd2ab26f901fcf2e081d39b420f373352",
+      "bytes": 69362,
+      "source_modified_local": "2026-10-15T10:00:55"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/construction-review/sql-desktop.png",
+      "file": "captures/16-sql-desktop.png",
+      "sha256": "48a36789eb8f96740a7ea1d4a116a19087cad6435039fe7d9aa01edb90d95876",
+      "bytes": 59654,
+      "source_modified_local": "2026-10-15T10:00:58"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/history-review/desktop.png",
+      "file": "captures/17-desktop.png",
+      "sha256": "0b53b45f7d6fee76c3676edfffd07efc99b325caa40a128742bc033d4ec1eaa1",
+      "bytes": 82255,
+      "source_modified_local": "2026-10-15T13:22:40"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/history-review/comparison.png",
+      "file": "captures/18-comparison.png",
+      "sha256": "f8360d22b99056668d954b4ce17cd194c16a9e2a211909272f79339f19fa72fe",
+      "bytes": 36707,
+      "source_modified_local": "2026-10-15T13:22:40"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/history-review/narrow.png",
+      "file": "captures/19-narrow.png",
+      "sha256": "ab5ce5ad7b3fb235bf88fbd7427f3293c8286078c501acfa854cf79598f90557",
+      "bytes": 40508,
+      "source_modified_local": "2026-10-15T13:22:41"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/construction-review/sharepoint-compact.png",
+      "file": "captures/20-sharepoint-compact.png",
+      "sha256": "6550cfef58cb03f9951ea15a1c714a929360770e49cd86255f1d0254978f9c20",
+      "bytes": 49466,
+      "source_modified_local": "2026-10-15T10:00:51"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/update-available.png",
+      "file": "captures/21-update-available.png",
+      "sha256": "2f1db314c9dea7d666d6ff638fcd61471304c3c4022fdda16d806505c4168076",
+      "bytes": 129473,
+      "source_modified_local": "2026-10-14T12:27:42"
+    },
+    {
+      "type": "capture de contrôle",
+      "original": "build/update-ready.png",
+      "file": "captures/22-update-ready.png",
+      "sha256": "247fc9b172eec28c240ef24a91a816a9fa7bf1ae2152240f9ad05ccd2063b071",
+      "bytes": 129813,
+      "source_modified_local": "2026-10-14T12:27:43"
+    }
+  ]
+}

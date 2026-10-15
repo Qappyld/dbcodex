@@ -1,0 +1,75 @@
+// Schéma de test : commerce, 7 tables, 9 relations.
+// Les références vont des clés étrangères vers les clés référencées.
+
+Enum statut_commande {
+  brouillon
+  confirmee
+  expediee
+  annulee
+}
+
+Table clients {
+  id integer [pk, increment]
+  parrain_id integer [ref: > clients.id, note: 'Un client peut parrainer plusieurs clients']
+  nom varchar(120) [not null]
+  email varchar(180) [not null, unique]
+  cree_le timestamp [not null]
+}
+
+Table adresses {
+  id integer [pk, increment]
+  client_id integer [not null, ref: > clients.id]
+  rue varchar(200) [not null]
+  code_postal varchar(12) [not null]
+  ville varchar(100) [not null]
+  pays char(2) [not null]
+}
+
+Table categories {
+  id integer [pk, increment]
+  parent_id integer [ref: > categories.id, note: 'Hiérarchie des catégories']
+  nom varchar(100) [not null]
+  slug varchar(120) [not null, unique]
+}
+
+Table produits {
+  id integer [pk, increment]
+  categorie_id integer [not null, ref: > categories.id]
+  reference varchar(40) [not null, unique]
+  nom varchar(160) [not null]
+  prix decimal(10,2) [not null]
+  stock integer [not null, default: 0]
+  actif boolean [not null, default: true]
+}
+
+Table commandes {
+  id integer [pk, increment]
+  client_id integer [not null, ref: > clients.id]
+  adresse_livraison_id integer [not null, ref: > adresses.id]
+  numero varchar(30) [not null, unique]
+  statut statut_commande [not null, default: 'brouillon']
+  total decimal(10,2) [not null]
+  cree_le timestamp [not null]
+}
+
+Table lignes_commande {
+  commande_id integer [not null, ref: > commandes.id]
+  produit_id integer [not null, ref: > produits.id]
+  quantite integer [not null]
+  prix_unitaire decimal(10,2) [not null]
+  remise decimal(5,2) [not null, default: 0]
+
+  indexes {
+    (commande_id, produit_id) [pk]
+  }
+}
+
+Table paiements {
+  id integer [pk, increment]
+  commande_id integer [not null, ref: > commandes.id]
+  reference_transaction varchar(100) [not null, unique]
+  montant decimal(10,2) [not null]
+  moyen varchar(30) [not null]
+  statut varchar(30) [not null]
+  paye_le timestamp
+}

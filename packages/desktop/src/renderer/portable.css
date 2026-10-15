@@ -37,6 +37,7 @@ button,input,select,textarea { font:inherit; } button { cursor:pointer; }button:
 .update-menu-content { position:absolute; right:0; top:calc(100% + 4px); z-index:110; width:min(330px,calc(100vw - 36px)); padding:14px; color:var(--dbc-text); background:var(--dbc-surface); border:1px solid var(--dbc-border); border-radius:6px; box-shadow:0 8px 24px #0003; }
 .update-menu-content > strong { font-size:13px; }
 .update-menu-content p { line-height:1.5; overflow-wrap:anywhere; }
+.update-menu-content { max-height:calc(100vh - 80px); overflow-y:auto; }
 .update-menu-content > button { width:100%; margin-top:8px; }
 .update-menu-content progress { width:100%; accent-color:var(--dbc-accent); }
 .update-menu-content [role=alert] { color:#bf3b37; }
@@ -64,6 +65,9 @@ button,input,select,textarea { font:inherit; } button { cursor:pointer; }button:
 .home-actions { display:flex; gap:8px; margin:20px 0 28px; }
 .home-actions button { display:flex; align-items:center; gap:8px; }
 .portable-app .workbench-toolbar { flex-wrap:nowrap; min-height:40px; padding:4px 12px; gap:8px; flex-shrink:0; }
+.portable-app .workbench-toolbar .project-mode { flex-shrink:0; max-width:none; overflow:visible; color:var(--dbc-accent); }
+.portable-app .workbench-toolbar .name-display { flex-shrink:0; }
+.portable-app .workbench[data-narrow="true"] .workbench-toolbar { flex-wrap:wrap; }
 .portable-app .workbench-toolbar > strong { min-width:60px; max-width:180px; flex-basis:auto; }
 .portable-app .workbench-toolbar > span { white-space:nowrap; font-size:11px; }
 .portable-app .workbench-toolbar button { min-height:30px; padding:5px 7px; flex-shrink:0; }

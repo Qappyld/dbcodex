@@ -1,0 +1,20 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createDbcdProject, openDbcdProject, saveDbcdDraft, saveDbcdProject, restoreDbcdRevision } from "../src/dbcd-project-store.js";
+import { newProjectTemplate } from "../src/project-template.js";
+import { columnTypes, technicalName } from "../src/project-model.js";
+import { emptyPresentation } from "../src/presentation.js";
+describe("fixed project profiles",()=>{
+  const roots:string[]=[];afterEach(async()=>{await Promise.all(roots.splice(0).map(root=>rm(root,{recursive:true,force:true})));});
+  const workspace=async()=>{const root=await mkdtemp(join(tmpdir(),"dbc-profile-"));roots.push(root);return {workspaceRoot:root,projectPath:"project.dbcd"};};
+  const expected=(s:Awaited<ReturnType<typeof openDbcdProject>>)=>({expectedProjectId:s.projectId,expectedRevisionId:s.currentRevisionId,expectedGeneration:s.generation});
+  it.each([{mode:"sharepoint" as const},{mode:"dataverse" as const,publisherPrefix:"app"},{mode:"sql" as const,dialect:"postgresql" as const}])("creates and reopens $mode with no example table",async profile=>{const path=await workspace(),s=await createDbcdProject({...path,...newProjectTemplate(profile)});expect(s.graph?.tables).toEqual([]);expect((await openDbcdProject(path)).presentation.model?.profile).toEqual(profile);});
+  it("round-trips options in a draft, save and restored revision",async()=>{const path=await workspace();let s=await createDbcdProject({...path,...newProjectTemplate({mode:"sharepoint"})});const initialId=s.currentRevisionId,p=structuredClone(s.presentation);p.model!.tables["public.Tasks"]={displayName:"Tâches",kind:"list",columns:{Status:{displayName:"Statut",type:"Choice",options:{choices:["Ouvert","Clos"],defaultValue:"Ouvert"}}}};const sourceText="Table Tasks { Status Choice }";
+    await saveDbcdDraft({...path,...expected(s),baseGeneration:s.generation,sourceText,presentation:p});expect((await openDbcdProject(path)).draft?.presentation.model?.tables["public.Tasks"]?.columns.Status?.options?.choices).toEqual(["Ouvert","Clos"]);
+    s=await saveDbcdProject({...path,...expected(s),sourceText,presentation:p});expect(s.presentation.model?.tables["public.Tasks"]?.columns.Status?.displayName).toBe("Statut");s=await restoreDbcdRevision({...path,...expected(s),revisionId:initialId});expect(s.presentation.model?.tables).toEqual({});expect(s.presentation.model?.profile.mode).toBe("sharepoint");});
+  it("refuses changing or dropping the profile in both drafts and saves",async()=>{const path=await workspace(),s=await createDbcdProject({...path,...newProjectTemplate({mode:"sharepoint"})});for(const p of [emptyPresentation(),newProjectTemplate({mode:"dataverse",publisherPrefix:"app"}).presentation]){await expect(saveDbcdProject({...path,...expected(s),sourceText:s.sourceText,presentation:p})).rejects.toMatchObject({code:"INVALID_PRESENTATION"});await expect(saveDbcdDraft({...path,...expected(s),baseGeneration:s.generation,sourceText:s.sourceText,presentation:p})).rejects.toMatchObject({code:"INVALID_PRESENTATION"});}expect((await openDbcdProject(path)).generation).toBe(1);});
+  it("opens old projects as generic without changing their stored presentation",async()=>{const path=await workspace(),s=await createDbcdProject({...path,sourceText:"Table t { id int }"});expect(s.presentation).toEqual(emptyPresentation());expect(s.presentation.model).toBeUndefined();});
+  it("generates safe names and offers different SQL catalogs",()=>{expect(technicalName("Date de livraison",{mode:"sharepoint"})).toBe("Datedelivraison");expect(technicalName("Client",{mode:"dataverse",publisherPrefix:"app"})).toBe("app_client");expect(columnTypes({mode:"sql",dialect:"sqlserver"}).some(t=>t.id==="nvarchar(255)")).toBe(true);});
+});

@@ -63,8 +63,39 @@ function canonicalTableId(schemaName: string | null, tableName: string): string 
   return `${schemaName ?? "public"}.${tableName}`;
 }
 
+// Cache only parsing, never file state or authorization. Bound both retained source
+// and graph data; callers receive independent mutable results, including on misses.
+const parseCache = new Map<string, { result: ParseResult; weight: number }>();
+const MAX_CACHE_CHARACTERS = 2_000_000;
+let cacheCharacters = 0;
+
 export function parseDbml(source: string, sourcePath: string): ParseResult {
   boundedUtf8Length(source, DBCD_MAX_SOURCE_BYTES);
+  const cached = parseCache.get(source);
+  if (cached) {
+    parseCache.delete(source);
+    parseCache.set(source, cached);
+    const result = structuredClone(cached.result);
+    if (result.graph) result.graph.sourcePath = sourcePath;
+    return result;
+  }
+  const result = parseUncached(source, sourcePath);
+  if (source.length <= MAX_CACHE_CHARACTERS / 4) {
+    const weight = source.length + JSON.stringify(result).length;
+    if (weight <= MAX_CACHE_CHARACTERS) {
+      while (parseCache.size >= 4 || cacheCharacters + weight > MAX_CACHE_CHARACTERS) {
+        const oldest = parseCache.keys().next().value!;
+        cacheCharacters -= parseCache.get(oldest)!.weight;
+        parseCache.delete(oldest);
+      }
+      parseCache.set(source, { result: structuredClone(result), weight });
+      cacheCharacters += weight;
+    }
+  }
+  return result;
+}
+
+function parseUncached(source: string, sourcePath: string): ParseResult {
   try {
     const parsed = new Parser().parse(source, "dbmlv2");
     const model = parsed.normalize();
@@ -92,6 +123,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
         }
 
         const tableId = canonicalTableId(schema.name, table.name);
+        const fieldTokens = new Map(tableTokens.get(table.id)?.fields.map((field) => [field.id, field.token]));
         const columns = table.fieldIds
           .map((fieldId: number): GraphColumn => {
             const field = model.fields[fieldId];
@@ -105,7 +137,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
               type: field.type.type_name,
               primaryKey: field.pk,
               nullable: !field.not_null,
-              sourceRange: range(tableTokens.get(table.id)?.fields.find((item) => item.id === fieldId)?.token),
+              sourceRange: range(fieldTokens.get(fieldId)),
             };
           })
           .sort((left: GraphColumn, right: GraphColumn) => compareText(left.id, right.id));

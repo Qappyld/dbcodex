@@ -9,7 +9,7 @@
       "interface": {
         "displayName": "dbcodex",
         "shortDescription": "Edit local .dbcd schema projects in Codex",
-        "longDescription": "Edit DBML, arrange views, save revisions and restore history in local .dbcd projects without sending schema files to an external service.",
+        "longDescription": "Create and edit local .dbcd projects, arrange views and keep revision history. Explicit assistant reads share the requested schema with your assistant provider.",
         "developerName": "Qappyld",
         "category": "Developer Tools",
         "capabilities": ["Read", "Write"],

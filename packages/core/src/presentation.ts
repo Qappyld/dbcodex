@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectModelSchema } from "./project-model.js";
 import { assertJsonByteLimit, boundedUtf8Length, DBCD_MAX_PRESENTATION_BYTES } from "./dbcd-resource-limits.js";
 
 const nonEmpty = z.string().min(1).refine((value) => value.trim().length > 0);
@@ -38,6 +39,8 @@ const viewSchema = z.strictObject({
 
 export const presentationSchema = z.strictObject({
   version: z.literal(1),
+  model: projectModelSchema.optional(),
+  nameDisplay: z.enum(["display", "technical", "both"]).optional(),
   activeViewId: nonEmpty,
   views: z.record(nonEmpty, viewSchema),
   panels: z.strictObject({

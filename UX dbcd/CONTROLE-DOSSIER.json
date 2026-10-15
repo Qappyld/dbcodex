@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "images": 22,
+  "patterns": 39,
+  "localLinksChecked": 74,
+  "widths": [
+    {
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "width": 850,
+      "overflow": false
+    },
+    {
+      "width": 480,
+      "overflow": false
+    }
+  ],
+  "zoomEscapeAndFocus": true,
+  "networkRequests": [],
+  "errors": [],
+  "note": "Contrôles du dossier HTML uniquement. Les contrôles fonctionnels du produit sont des sources historiques."
+}

@@ -1,0 +1,129 @@
+[
+  {
+    "id": "E01",
+    "title": "Passer d’une vue provisoire à une autre",
+    "steps": [
+      "Créer une vue vide puis rendre quelques tables visibles.",
+      "Tenter de choisir une autre vue.",
+      "Essayer séparément Annuler, Abandonner et Enregistrer.",
+      "Déplacer une table pendant un autre aperçu puis réinitialiser la visibilité."
+    ],
+    "expected": "Annuler garde l’aperçu ; Abandonner quitte sans le valider ; Enregistrer le valide avant navigation. Réinitialiser la visibilité ne supprime pas la disposition.",
+    "lesson": "Séparer navigation, aperçu et engagement.",
+    "refs": [
+      "UX18",
+      "UX19"
+    ]
+  },
+  {
+    "id": "E02",
+    "title": "Créer un Lookup sans ressaisie inutile",
+    "steps": [
+      "Créer Clients puis Commandes en SharePoint.",
+      "Ajouter Client secondaire dans Commandes.",
+      "Glisser cette colonne vers Clients.",
+      "Valider les options puis enregistrer et rouvrir le projet."
+    ],
+    "expected": "Le formulaire connaît la cible et réutilise la colonne. Le type Lookup et les options sont conservés dans le .dbcd.",
+    "lesson": "Le contexte d’un geste doit alimenter son formulaire.",
+    "refs": [
+      "UX24",
+      "UX25"
+    ]
+  },
+  {
+    "id": "E03",
+    "title": "Se remettre d’une erreur DBML",
+    "steps": [
+      "Partir d’une structure valide.",
+      "Saisir une déclaration DBML incomplète.",
+      "Ouvrir Construction puis utiliser Corriger le DBML.",
+      "Corriger la source et enregistrer."
+    ],
+    "expected": "Le dernier graphe valide reste consultable ; l’erreur bloque l’enregistrement ; la correction retourne vers la source sans effacer la saisie.",
+    "lesson": "Maintenir un repère utile et un chemin de correction.",
+    "refs": [
+      "UX27",
+      "UX28"
+    ]
+  },
+  {
+    "id": "E04",
+    "title": "Corriger un seul lien et conserver les autres",
+    "steps": [
+      "Créer un détour manuel sur une relation.",
+      "Recalculer les routes automatiques.",
+      "Sélectionner un autre lien et le réinitialiser.",
+      "Annuler puis enregistrer et rouvrir."
+    ],
+    "expected": "Le recalcul par défaut préserve le détour manuel ; le recalcul local a une portée limitée ; annulation et persistance conservent la géométrie attendue.",
+    "lesson": "Préserver l’intention de l’utilisateur dans les automatismes.",
+    "refs": [
+      "UX12",
+      "UX14"
+    ]
+  },
+  {
+    "id": "E05",
+    "title": "Comprendre une ancienne version",
+    "steps": [
+      "Enregistrer une version avec Clients.",
+      "Ajouter clients.email et Commandes puis enregistrer.",
+      "Sélectionner la première version dans Historique.",
+      "Ouvrir le détail DBML et examiner Restaurer sans le déclencher sur un fichier réel."
+    ],
+    "expected": "Le résumé nomme les ajouts ; le sens Version sélectionnée vers travail courant est visible ; la conséquence de Restaurer est expliquée.",
+    "lesson": "Montrer le sens de la comparaison avant le texte.",
+    "refs": [
+      "UX31",
+      "UX32",
+      "UX33"
+    ]
+  },
+  {
+    "id": "E06",
+    "title": "Retrouver un objet après une recherche infructueuse",
+    "steps": [
+      "Rechercher le nom interne d’une colonne connue.",
+      "Rechercher une chaîne absente.",
+      "Effacer avec Échap puis choisir l’objet retrouvé."
+    ],
+    "expected": "Le nom interne retrouve le libellé ; aucun résultat est distingué de l’absence de données ; Échap restaure l’arbre.",
+    "lesson": "Une recherche doit toujours offrir une récupération.",
+    "refs": [
+      "UX23"
+    ]
+  },
+  {
+    "id": "E07",
+    "title": "Contrôler le clavier et la fenêtre compacte",
+    "steps": [
+      "Ouvrir Fichier au clavier puis fermer par Échap.",
+      "Ouvrir Nouveau projet et parcourir les champs avec Tab et Maj+Tab.",
+      "Annuler puis réduire la fenêtre à 850 px.",
+      "Ouvrir Construction et contrôler le panneau Historique à 480 px."
+    ],
+    "expected": "Le focus revient au bon déclencheur, ne se perd pas dans le fond du dialogue et la mise en page ciblée ne déborde pas horizontalement.",
+    "lesson": "L’adaptation se vérifie sur un parcours, pas uniquement sur une capture.",
+    "refs": [
+      "UX34",
+      "UX35"
+    ]
+  },
+  {
+    "id": "E08",
+    "title": "Mesurer une interaction dense",
+    "steps": [
+      "Copier le jeu Compliance dans un emplacement temporaire.",
+      "Mesurer déplacement, survol, recalcul et panoramique.",
+      "Répéter dans les mêmes conditions après une optimisation.",
+      "Contrôler routes, annulation, sauvegarde et absence d’erreur JavaScript."
+    ],
+    "expected": "Les mesures indiquent machine, jeu, état du build et phase ; un gain de commande ne devient pas une promesse générale de fluidité.",
+    "lesson": "Mesurer les gains avec leur périmètre et leur coût.",
+    "refs": [
+      "UX36",
+      "UX37"
+    ]
+  }
+]

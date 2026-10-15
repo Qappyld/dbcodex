@@ -11,6 +11,20 @@ DBCodex est un logiciel local pour comprendre, éditer et organiser des schémas
 
 L’utilisateur garde la maîtrise de ses fichiers. Le logiciel fonctionne comme éditeur sans assistant installé ou sans Internet. L’assistance IA utilise un service en ligne, après un envoi volontaire.
 
+## Distribution portable Windows — validée le 13 octobre 2026
+
+DBCodex doit fonctionner depuis un dossier décompressé, sous un compte Windows standard, sans installation ni élévation de privilèges. La distribution de référence est une archive ZIP contenant DBCodex.exe et ses composants nécessaires ; Node.js et les outils de développement ne doivent pas être installés sur le poste utilisateur.
+
+Les projets .dbcd sont enregistrés dans un emplacement choisi par l’utilisateur. Les préférences personnelles (notamment thème et projets récents) sont enregistrées par défaut dans un sous-dossier de données du répertoire portable, distinct des fichiers applicatifs remplaçables. Les caches propres au poste et les identifiants IA restent séparés des données portables ; les identifiants sont hors de l’archive distribuée et des projets. Le remplacement du dossier applicatif doit préserver les projets et préférences.
+
+Le dossier portable et les projets peuvent être placés dans un répertoire synchronisé, notamment OneDrive. Les références aux projets récents utilisent des chemins relatifs à la racine du dossier portable lorsque c’est possible, afin de supporter un déplacement ou une racine OneDrive différente sur un autre PC. Un projet extérieur peut conserver un chemin absolu et être relocalisé explicitement. Il s’agit de chemins de fichiers, pas d’URL de partage OneDrive.
+
+Des préférences absentes ou illisibles ne doivent pas empêcher le démarrage : utiliser les valeurs par défaut. Un dossier de préférences non accessible en écriture conduit à un repli local au compte utilisateur, annoncé discrètement ; si aucun emplacement n’est accessible, les préférences restent en mémoire pour la session. Un projet récent introuvable ou non disponible localement reste marqué indisponible, avec possibilité de réessayer, retrouver le fichier ou retirer l’entrée. Ne pas créer un projet vide à sa place, supprimer son fichier ni afficher une erreur bloquant tout le logiciel.
+
+L’éditeur, le diagramme et l’historique doivent fonctionner hors ligne. Le chat utilise les moteurs Codex/Claude disponibles sur le poste ; leur présence n’est pas un prérequis au lancement de DBCodex. Les moteurs et leur authentification doivent être qualifiés séparément sans droits administrateur. Si un moteur est absent, son chat est indisponible ; l’application explique la limite et conserve l’éditeur utilisable. Aucun embarquement ou installation automatique de ces moteurs n’est requis pour la version portable.
+
+Les politiques d’entreprise peuvent interdire les exécutables portables ou les connexions IA ; la portabilité ne contourne pas ces restrictions. L’association Windows de .dbcd n’est pas un prérequis au lancement.
+
 ## Objectifs de la première version autonome
 
 1. Ouvrir, créer ou importer un projet par un dialogue de fichier Windows.
@@ -49,6 +63,10 @@ Une discussion n’est pas une branche de schéma. La V1 ne gère pas plusieurs 
 ## Portée fonctionnelle à préserver
 
 Le socle actuel comprend des vues, groupes, positions, niveaux de détail, recherches, historique et brouillons. La migration doit les conserver. Toute modification du texte doit préserver le reste du DBML et ses commentaires.
+
+Les commandes graphiques existantes restent disponibles. Plusieurs projets peuvent être ouverts simultanément dans des fenêtres ou instances distinctes, avec une seule fenêtre éditable par projet. Les ouvertures supplémentaires du même projet sont en lecture seule.
+
+Le fichier .dbcd contient toutes les données du projet : modèle, présentation, vues, historique, brouillons de projet, discussions et propositions. L’archivage des discussions est l’action par défaut ; leur suppression est explicite et conserve les traces des modifications déjà appliquées.
 
 Les noms, notes ou données d’exemple d’un projet peuvent être sensibles. Le partage vers l’IA doit être explicitement défini et visible. Le diagramme ne provoque aucun appel IA lorsqu’une table est simplement sélectionnée ou déplacée.
 

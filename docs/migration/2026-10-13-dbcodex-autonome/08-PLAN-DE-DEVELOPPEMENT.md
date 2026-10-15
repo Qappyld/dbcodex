@@ -30,8 +30,14 @@ Sortie : contrat documenté ; aucun assistant ne détient l’écriture du proje
 - [ ] Dialogue natif ouvrir/créer/importer.
 - [ ] Chargement du fichier utilisateur avec confinement.
 - [ ] Réutilisation du ProjectWorkbench.
+- [ ] Réorganiser le panneau droit en onglets Vues / IA et ajouter la commande Couleur à la barre flottante du bas pour la table ou le groupe sélectionné, sans inspecteur Propriétés complet.
+- [ ] Séparer clic simple et double-clic ; ce dernier ouvre le DBML, défile et sélectionne la définition exacte d’une table, relation ou groupe dans le texte courant.
 - [ ] Sauvegarde, brouillon, historique et restauration.
 - [ ] Projets récents et fermeture ordonnée.
+- [ ] Sauvegarder thème et projets récents dans le répertoire portable ; chemins relatifs basés sur sa racine, chemins absolus extérieurs et relocalisation explicite.
+- [ ] Gérer préférences absentes, illisibles, de version future ou non inscriptibles : valeurs par défaut, original préservé, repli local ou session et information discrète.
+- [ ] Gérer les fichiers récents indisponibles et la perte d’accès pendant l’édition sans blocage global ni perte du travail en mémoire.
+- [ ] Ouvrir plusieurs projets simultanément ; garantir entre instances une seule fenêtre éditable par projet et afficher les ouvertures supplémentaires en lecture seule.
 - [ ] Test réel de lancement et réouverture.
 
 Sortie : le logiciel est utile sans Codex ni Claude installés.
@@ -42,6 +48,7 @@ Sortie : le logiciel est utile sans Codex ni Claude installés.
 - [ ] Protéger sauvegarde préalable et migration transactionnelle.
 - [ ] Tester la préservation des projets v1 et la lecture des formats futurs.
 - [ ] Ajouter discussions, messages, paramètres et brouillons de chat.
+- [ ] Ajouter l’archivage par défaut et la suppression explicite des discussions ; préserver les révisions et traces des modifications appliquées.
 - [ ] Revoir ou migrer le compagnon partiel existant.
 - [ ] Garantir que les messages ne font pas avancer la génération de modèle.
 
@@ -105,6 +112,11 @@ Sortie : reprise compréhensible et vérifiable.
 ## Jalon 9 — Packaging et acceptation Windows
 
 - [ ] Build reproductible et exécutable local.
+- [ ] Produire une archive ZIP portable contenant l’exécutable et ses dépendances, sans installation de Node.js ni d’outils de développement sur le poste cible.
+- [ ] Tester extraction et lancement sous compte Windows standard sur un poste sans dépendances de développement ; aucune demande d’élévation.
+- [ ] Vérifier les emplacements accessibles pour paramètres, caches et projets ; préserver les données lors du remplacement du dossier applicatif.
+- [ ] Tester le dossier portable dans OneDrive : déplacement et changement de racine entre postes, fichier disponible/non disponible localement, conflit ou remplacement externe ; pas de fusion automatique de .dbcd.
+- [ ] Qualifier séparément les moteurs Codex/Claude et l’authentification sans droits administrateur ; documenter les restrictions du poste et conserver le mode éditeur sans IA.
 - [ ] Tester SQLite et les CLI avec les versions embarquées.
 - [ ] Vérifier lancement sans terminal et absence de navigateur externe.
 - [ ] Associer .dbcd seulement si testé et documenté.
@@ -112,7 +124,7 @@ Sortie : reprise compréhensible et vérifiable.
 - [ ] Démonstration sur copie de projet, pas sur une fixture originale.
 - [ ] Documenter l’installation, la désinstallation et les limites.
 
-Sortie : version locale réellement utilisable, preuves séparées des simulations.
+Sortie : version portable réellement utilisable sans installation ni droits administrateur, preuves séparées des simulations.
 
 ## Livraison et hors périmètre
 

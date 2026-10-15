@@ -2,11 +2,11 @@ import type { GraphTable } from "@dbcodex/core";
 import { dbmlIdentifierPattern, dbmlIdentifierToken } from "./dbml-identifiers.js";
 
 export interface DbmlPatch { source: string; from: number; to: number; insert: string; diff: string; ambiguous: boolean }
-interface Token { text: string; from: number; to: number }
+export interface Token { text: string; from: number; to: number }
 
 // A lossless declaration-range parser. Comments and quoted strings are atomic
 // tokens so their braces and declaration-like contents never define source ranges.
-function tokens(source: string): { tokens: Token[]; incomplete: boolean } {
+export function dbmlTokens(source: string): { tokens: Token[]; incomplete: boolean } {
   const result: Token[] = []; let incomplete = false;
   for (let i = 0; i < source.length;) {
     if (/\s/.test(source[i]!)) { i++; continue; }
@@ -26,6 +26,7 @@ function tokens(source: string): { tokens: Token[]; incomplete: boolean } {
   }
   return { tokens: result, incomplete };
 }
+const tokens = dbmlTokens;
 
 type TableReference = Pick<GraphTable, "schema" | "name">;
 const membershipError = (): Error => new Error("Impossible de vérifier les groupes du DBML. Corrigez la déclaration avant de grouper.");

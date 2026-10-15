@@ -1,0 +1,141 @@
+{
+  "label": "delivered-stable",
+  "openMs": 2014,
+  "measurements": {
+    "recalculate": {
+      "wallMs": 422,
+      "cpuMs": 238,
+      "scriptMs": 34,
+      "layoutMs": 4,
+      "longTasks": 0,
+      "maxLongTaskMs": 0,
+      "frameP95Ms": 31
+    },
+    "hover": {
+      "wallMs": 555,
+      "cpuMs": 282,
+      "scriptMs": 166,
+      "layoutMs": 6,
+      "longTasks": 0,
+      "maxLongTaskMs": 0,
+      "frameP95Ms": 31
+    },
+    "drag": {
+      "wallMs": 1313,
+      "cpuMs": 678,
+      "scriptMs": 423,
+      "layoutMs": 19,
+      "longTasks": 1,
+      "maxLongTaskMs": 109,
+      "frameP95Ms": 31
+    },
+    "pan": {
+      "wallMs": 1150,
+      "cpuMs": 209,
+      "scriptMs": 36,
+      "layoutMs": 8,
+      "longTasks": 0,
+      "maxLongTaskMs": 0,
+      "frameP95Ms": 31
+    }
+  },
+  "dom": {
+    "elements": 1461,
+    "handles": 176,
+    "relations": 37,
+    "animatedDots": 111
+  },
+  "hot": [
+    {
+      "name": "(idle)",
+      "samples": 1307,
+      "percent": 58.7
+    },
+    {
+      "name": "(program)",
+      "samples": 367,
+      "percent": 16.5
+    },
+    {
+      "name": "(anonymous)",
+      "samples": 142,
+      "percent": 6.4
+    },
+    {
+      "name": "aae",
+      "samples": 61,
+      "percent": 2.7
+    },
+    {
+      "name": "Uf",
+      "samples": 34,
+      "percent": 1.5
+    },
+    {
+      "name": "(garbage collector)",
+      "samples": 22,
+      "percent": 1
+    },
+    {
+      "name": "set webkitSpeechRecognitionEvent",
+      "samples": 21,
+      "percent": 0.9
+    },
+    {
+      "name": "B7",
+      "samples": 17,
+      "percent": 0.8
+    },
+    {
+      "name": "$4",
+      "samples": 12,
+      "percent": 0.5
+    },
+    {
+      "name": "m5",
+      "samples": 9,
+      "percent": 0.4
+    },
+    {
+      "name": "l",
+      "samples": 9,
+      "percent": 0.4
+    },
+    {
+      "name": "J2",
+      "samples": 8,
+      "percent": 0.4
+    },
+    {
+      "name": "xS",
+      "samples": 7,
+      "percent": 0.3
+    },
+    {
+      "name": "Ht",
+      "samples": 7,
+      "percent": 0.3
+    },
+    {
+      "name": "Ol",
+      "samples": 7,
+      "percent": 0.3
+    },
+    {
+      "name": "removeChild",
+      "samples": 6,
+      "percent": 0.3
+    },
+    {
+      "name": "en",
+      "samples": 5,
+      "percent": 0.2
+    },
+    {
+      "name": "setAttribute",
+      "samples": 5,
+      "percent": 0.2
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": [
+    "Actual dbcd revision loads parsed schema",
+    "Table, column and relation changes",
+    "DBML before / after",
+    "480px panel has no horizontal overflow"
+  ],
+  "errors": []
+}

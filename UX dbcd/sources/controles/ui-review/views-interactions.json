@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "Empty creation, all tables available, preview, reset, saved membership, independent detail and positions",
+    "Cancel, discard and save when changing view",
+    "Inline rename, save as new, copied layout, deletion confirmation, system view protection",
+    "Project save and reopen preserve custom view and detail",
+    "Compact drawer and view list"
+  ],
+  "errors": []
+}

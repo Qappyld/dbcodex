@@ -5,7 +5,9 @@ import {
   restoreDbcdRevision, saveDbcdDraft, saveDbcdProject, saveNodePosition, setDbcdRevisionPinned,
   type DbcdProjectSnapshot, type DbcdRevisionSnapshot, type DbcdRevisionSummary, type PresentationDocument,
   DbcdResourceLimitError, readBoundedDbmlFile,
+  createDbcdProject, newProjectTemplate, type ProjectProfile,
 } from "@dbcodex/core";
+import { prepareChanges, type ProjectChanges } from "./assistant-changes.js";
 
 export interface OpenDbmlInput { path: string }
 export interface ProjectPathInput { path: string }
@@ -56,7 +58,7 @@ export const defaultProjectOperations: ProjectOperations = {
 function toolError(message: string) {
   return { isError: true as const, content: [{ type: "text" as const, text: message }] };
 }
-function sanitizedError(error: unknown) {
+export function sanitizedError(error: unknown) {
   if (error instanceof DbcdProjectStoreError || error instanceof DbcdResourceLimitError) return { ...toolError(error.message), structuredContent: { errorCode: error.code } };
   if (error instanceof PathPolicyError || error instanceof LayoutStoreError
     || error instanceof DbcdPathPolicyError || error instanceof DbcdProjectStoreError) return toolError(error.message);
@@ -77,7 +79,7 @@ async function resolveDbmlRoot(roots: WorkspaceRoots, path: string) {
   }
   throw notFound ?? new PathPolicyError("NOT_FOUND", "The DBML file does not exist.");
 }
-async function resolveProjectRoot(roots: WorkspaceRoots, path: string): Promise<string> {
+export async function resolveProjectRoot(roots: WorkspaceRoots, path: string): Promise<string> {
   let notFound: DbcdPathPolicyError | undefined;
   for (const workspaceRoot of await workspaceRoots(roots)) {
     try { await resolveExistingDbcd(workspaceRoot, path); return workspaceRoot; }
@@ -99,6 +101,15 @@ function projectResult(snapshot: DbcdProjectSnapshot, verb: string) {
 
 export function createHandlers(roots: WorkspaceRoots, projects: ProjectOperations = defaultProjectOperations) {
   return {
+    createDbcd: async (input: {path:string;profile:ProjectProfile} & ProjectChanges) => {
+      try {
+        const root=(await workspaceRoots(roots))[0];if(!root)throw new Error("No workspace root.");
+        const template = newProjectTemplate(input.profile);
+        const candidate = prepareChanges(input.path, template.sourceText, template.presentation, input, input.profile);
+        if (!candidate.valid) return { ...toolError("The project definition is invalid."), structuredContent: { valid: false, diagnostics: candidate.diagnostics } };
+        return projectResult(await createDbcdProject({workspaceRoot:root,projectPath:input.path,sourceText:candidate.sourceText,presentation:candidate.presentation}),"Created");
+      }catch(error){return sanitizedError(error);}
+    },
     openDbml: async ({ path }: OpenDbmlInput) => {
       try {
         const { workspaceRoot, resolved } = await resolveDbmlRoot(roots, path);
@@ -163,7 +174,7 @@ export function createHandlers(roots: WorkspaceRoots, projects: ProjectOperation
         const { sourceText, presentation, ...summary } = revision;
         return { structuredContent: { projectPath: input.path, revision: summary },
           content: [{ type: "text" as const, text: `Read revision ${revision.id.slice(0, 8)} in ${input.path}.` }],
-          _meta: { dbcodex: { revision } } };
+          _meta: { dbcodex: { revision, graph: parseDbml(sourceText, input.path).graph } } };
       } catch (error) { return sanitizedError(error); }
     },
     listDbcdRevisions: async (input: ProjectPathInput) => {

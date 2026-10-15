@@ -1,0 +1,10 @@
+Table clients {
+  id int [pk]
+  nom varchar(80) [not null]
+  email text
+}
+
+Table commandes {
+  id int [pk]
+  client_id int [ref: > clients.id]
+}

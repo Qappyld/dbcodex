@@ -14,6 +14,10 @@ export interface SourceRange {
 }
 
 export interface GraphColumn {
+  displayName?: string;
+  semanticType?: string;
+  system?: boolean;
+  lookup?: import("./project-model.js").ColumnModel["lookup"] | undefined;
   sourceRange?: SourceRange | undefined;
   id: string;
   name: string;
@@ -23,6 +27,8 @@ export interface GraphColumn {
 }
 
 export interface GraphTable {
+  displayName?: string;
+  kind?: string;
   headerColor?: string;
   sourceRange?: SourceRange | undefined;
   id: string;
@@ -38,6 +44,8 @@ export interface GraphRelationEnd {
 }
 
 export interface GraphRelation {
+  kind?: "lookup" | "many-to-many";
+  ownerColumnId?: string;
   sourceRange?: SourceRange | undefined;
   id: string;
   source: GraphRelationEnd;

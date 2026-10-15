@@ -24,7 +24,7 @@ function fixture() {
 it("discusses by default with structural context, never applying from chat text", async () => {
   const { api } = fixture(); render(<DesktopApp api={api} />);
   await screen.findByText("Atelier");
-  expect(screen.getByLabelText("Partager le DBML source complet")).toHaveProperty("checked", false);
+  expect(await screen.findByLabelText("Partager le DBML source complet")).toHaveProperty("checked", false);
   fireEvent.change(screen.getByLabelText("Votre message"), { target: { value: "Applique cette modification" } });
   fireEvent.click(screen.getByRole("button", { name: "Envoyer" }));
   await act(async () => {});
@@ -52,7 +52,7 @@ it("disables stale proposals and unavailable assistants, preserving isolated thr
   expect(screen.getByText("Autre discussion")).toBeTruthy();
   expect(screen.getByLabelText("Votre message")).toHaveProperty("value", "");
   f.emit({ ...f.state });
-  expect(screen.getByRole("tab", { name: /Relations/ })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("tab", { name: /Relations/ }).getAttribute("aria-selected")).toBe("true");
   fireEvent.click(screen.getByRole("tab", { name: /Modèle/ }));
   expect(screen.getByLabelText("Votre message")).toHaveProperty("value", "Brouillon A");
 });

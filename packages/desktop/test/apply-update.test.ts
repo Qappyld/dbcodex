@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -26,7 +26,81 @@ function apply(job: string, command?: string) {
   const helper = resolve('packages/desktop/src/apply-update.ps1');
   return spawnSync('powershell.exe', command ? ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command.replaceAll('{helper}', psQuote(helper)).replaceAll('{job}', psQuote(job))] : ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', helper, '-JobPath', job], { windowsHide: true, encoding: 'utf8', timeout: 30000 });
 }
+
+async function prepareSingle() {
+  const value = await prepare();
+  const executable = 'Mon DBCodex portable.exe';
+  const previous = await readFile(join(value.root, 'DBCodex.exe'));
+  const next = Buffer.concat([value.exe, Buffer.from('single new')]);
+  await writeFile(join(value.root, executable), previous);
+  const archive = join(value.root, 'update.exe'); await writeFile(archive, next);
+  const attemptId = randomUUID(); await mkdir(join(value.root, 'data/logs'));
+  await writeFile(value.job, JSON.stringify({ root: value.root, archive, executable, parentPid: 2147483647,
+    attemptId, logPath: join(value.root, 'data/logs', `update-${attemptId}.jsonl`),
+    manifest: { schema: 2, version: '0.1.2', size: next.length, sha256: hash(next) } }));
+  return { ...value, executable, previous, next, archive };
+}
 describe.skipIf(!windows)('remplacement Windows réel', () => {
+  it('accepte uniquement les tags Cloud Files connus et inspecte les chemins sans redirection', async () => {
+    const { root } = await prepareSingle();
+    const helper = resolve('packages/desktop/src/apply-update.ps1');
+    const command = `$source = Get-Content -LiteralPath ${psQuote(helper)} -Raw; $match = [Regex]::Match($source, "(?s)Add-Type -TypeDefinition @'\\r?\\n(.*?)\\r?\\n'@"); Add-Type -TypeDefinition $match.Groups[1].Value; for ($index = 0; $index -lt 16; $index++) { $tag = [uint32](2415919130 + 4096 * $index); if (-not [DbcodexUpdatePaths]::IsCloudTag($tag)) { throw 'Cloud tag rejected' } }; foreach ($tag in @([uint32]2684354563, [uint32]2684354572, [uint32]2147483681, [uint32]0)) { if ([DbcodexUpdatePaths]::IsCloudTag($tag)) { throw 'Unsafe tag accepted' } }; if ([DbcodexUpdatePaths]::ReadTag(${psQuote(root)}) -ne 0) { throw 'Unexpected local tag' }`;
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-Command', command], { windowsHide: true, encoding: 'utf8', timeout: 30000 });
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+  }, 30000);
+  it('refuse toujours une vraie jonction Windows sans modifier sa cible', async () => {
+    const { root, job, executable, previous } = await prepareSingle();
+    const junction = join(root, 'linked');
+    const created = spawnSync('powershell.exe', ['-NoProfile', '-Command', `New-Item -ItemType Junction -Path ${psQuote(junction)} -Target ${psQuote(root)} | Out-Null`], { windowsHide: true, encoding: 'utf8', timeout: 10000 });
+    expect(created.status, created.stderr).toBe(0);
+    const data = JSON.parse(await readFile(job, 'utf8')); data.root = junction;
+    await writeFile(job, JSON.stringify(data));
+    expect(apply(job).status).toBe(1);
+    expect(await readFile(join(root, executable))).toEqual(previous);
+    const failure = JSON.parse(await readFile(join(root, '.dbcodex-update-result.json'), 'utf8'));
+    expect(failure.stage).toBe('verification-dossiers'); expect(failure.detail).toMatch(/junctions|reparse|different location/i);
+  }, 30000);
+  it('remplace uniquement le portable renommé et sauvegarde son ancienne version', async () => {
+    const { root, job, executable, next, previous } = await prepareSingle();
+    const result = apply(job); expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(await readFile(join(root, executable))).toEqual(next);
+    const backup = (await readdir(root)).find(name => name.startsWith('.dbcodex-update-previous-'))!;
+    expect(await readFile(join(root, backup, executable))).toEqual(previous);
+    expect(await readFile(join(root, 'data/preferences.json'), 'utf8')).toBe('preferences');
+    expect(await readFile(join(root, 'project.dbcd'), 'utf8')).toBe('project');
+    expect(await readFile(join(root, 'resources/app.asar'), 'utf8')).toBe('old app');
+  }, 30000);
+  it('refuse un EXE altéré avant tout remplacement', async () => {
+    const { root, job, executable, previous, archive } = await prepareSingle();
+    await writeFile(archive, 'corrupted'); expect(apply(job).status).toBe(1);
+    expect(await readFile(join(root, executable))).toEqual(previous);
+    const result = JSON.parse(await readFile(join(root, '.dbcodex-update-result.json'), 'utf8'));
+    expect(result).toMatchObject({ detail: 'Archive integrity check failed.', stage: 'verification-telechargement' });
+    const jobData = JSON.parse(await readFile(job, 'utf8'));
+    const persistent = (await readFile(jobData.logPath, 'utf8')).trim().split(/\r?\n/).map(line => JSON.parse(line));
+    expect(persistent).toContainEqual(expect.objectContaining({ event: 'update.failed', attemptId: jobData.attemptId, detail: result.detail, stage: result.stage }));
+    expect(await readFile(join(root, 'update-helper.jsonl'), 'utf8')).toContain('Archive integrity check failed.');
+  }, 30000);
+  it('conserve un diagnostic temporaire même si le job ne peut pas être lu', async () => {
+    const { root, job } = await prepareSingle(); await writeFile(job, '{invalid');
+    expect(apply(job).status).toBe(1);
+    const records = (await readFile(join(root, 'update-helper.jsonl'), 'utf8')).trim().split(/\r?\n/).map(line => JSON.parse(line));
+    expect(records).toContainEqual(expect.objectContaining({ event: 'update.bootstrap.failed', stage: 'initialisation' }));
+  }, 30000);
+  it('préserve l’EXE occupé et restaure après échec', async () => {
+    const { root, job, executable, previous } = await prepareSingle();
+    const target = psQuote(join(root, executable));
+    const result = apply(job, `$stream=[IO.File]::Open(${target},'Open','Read','Read'); try { & {helper} -JobPath {job} } finally { $stream.Dispose() }; exit $LASTEXITCODE`);
+    expect(result.status).toBe(1); expect(await readFile(join(root, executable))).toEqual(previous);
+  }, 30000);
+  it('récupère le portable seul depuis son journal après interruption', async () => {
+    const { root, job, executable, previous, next } = await prepareSingle();
+    const backup = join(root, '.dbcodex-update-backup'); await mkdir(backup);
+    await writeFile(join(backup, executable), previous); await writeFile(join(root, executable), next);
+    await writeFile(join(backup, 'journal.json'), JSON.stringify({ root, job, changes: [{ path: executable, existed: true }] }));
+    expect(apply(job, '& {helper} -JobPath {job} -Recover').status).toBe(0);
+    expect(await readFile(join(root, executable))).toEqual(previous);
+  }, 30000);
   it('remplace les fichiers applicatifs, préserve les projets et sauvegarde la version précédente', async () => {
     const { root, job } = await prepare(); const result = apply(job);
     expect(result.status, result.stderr || result.stdout).toBe(0);

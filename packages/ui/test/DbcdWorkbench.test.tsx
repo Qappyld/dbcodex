@@ -15,6 +15,77 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 function bridge() { return { callTool: vi.fn().mockResolvedValue({ structuredContent: { saved: true } }), requestDisplayMode: vi.fn().mockResolvedValue(undefined) }; }
 
 describe("DbcdWorkbench", () => {
+  it("reads current unsaved memory and navigates without saving or changing presentation", () => {
+    const opened = openResult();
+    const session: DocumentSession = { source: "// unsaved é\n" + opened._meta.dbcodex.sourceText,
+      presentation: opened.structuredContent.presentation, graph: opened.structuredContent.graph,
+      diagnostics: [], generation: 3, revisions: [], dirty: true, validating: false, saving: false, error: null,
+      setSource: vi.fn(), setPresentation: vi.fn(), save: vi.fn(), restore: vi.fn(), pin: vi.fn() };
+    let request!: (input: { action: "read" | "navigate"; kind?: "table" | "column" | "relation"; id?: string }) => unknown;
+    const host = { ...bridge(), subscribeToLiveRequest: (listener: typeof request) => { request = listener; return () => {}; } };
+    const { rerender } = render(<DbcdWorkbench session={session} bridge={host} projectPath="demo.dbcd" />);
+    expect(request({ action: "read" })).toMatchObject({ sourceText: session.source, dirty: true, generation: 3 });
+    act(() => { expect(request({ action: "navigate", kind: "table", id: "public.users" })).toMatchObject({ accepted: true }); });
+    expect(request({ action: "read" })).toMatchObject({ selectedIds: ["public.users"] });
+    act(() => { expect(request({ action: "navigate", kind: "column", id: "public.users.name" })).toMatchObject({ accepted: true }); });
+    expect(request({ action: "read" })).toMatchObject({ selectedEntity: { kind: "column", id: "public.users.name" } });
+    act(() => { expect(request({ action: "navigate", kind: "relation", id: "ref:1" })).toMatchObject({ accepted: true }); });
+    expect(request({ action: "read" })).toMatchObject({ selectedEntity: { kind: "relation", id: "ref:1" } });
+    expect(() => request({ action: "navigate", kind: "table", id: "missing" })).toThrow("introuvable");
+    expect(session.setSource).not.toHaveBeenCalled(); expect(session.setPresentation).not.toHaveBeenCalled();
+    expect(session.save).not.toHaveBeenCalled(); expect(host.callTool).not.toHaveBeenCalled();
+    const presentation = structuredClone(session.presentation);
+    presentation.views.all!.nodes["public.users"]!.hidden = true;
+    rerender(<DbcdWorkbench session={{ ...session, source: "// latest", presentation }} bridge={host} projectPath="demo.dbcd" />);
+    expect(request({ action: "read" })).toMatchObject({ sourceText: "// latest" });
+    expect(() => request({ action: "navigate", kind: "table", id: "public.users" })).toThrow("masquée");
+    expect(session.setPresentation).not.toHaveBeenCalled();
+    expect(session.save).not.toHaveBeenCalled(); expect(host.callTool).not.toHaveBeenCalled();
+  });
+  it("saves globally from the diagram, editor and file menu, including pending validation, without duplicate shortcuts", async () => {
+    const opened = openResult();
+    const session: DocumentSession = { source: opened._meta.dbcodex.sourceText,
+      presentation: opened.structuredContent.presentation, graph: opened.structuredContent.graph,
+      diagnostics: [], generation: 3, revisions: [], dirty: true, validating: true, saving: false, error: null,
+      setSource: vi.fn(), setPresentation: vi.fn(), save: vi.fn(), restore: vi.fn(), pin: vi.fn() };
+    let request = (_as: boolean) => {};
+    const host = { ...bridge(), saveAs: vi.fn().mockResolvedValue(undefined),
+      subscribeToSaveRequest: (listener: typeof request) => { request = listener; return vi.fn(); } };
+    const { container, rerender, unmount } = render(<DbcdWorkbench session={session} bridge={host} projectPath="demo.dbcd" />);
+    expect(fireEvent.keyDown(window, { key: "s", ctrlKey: true })).toBe(false);
+    expect(session.save).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(container.querySelector(".cm-content")!, { key: "s", ctrlKey: true });
+    expect(session.save).toHaveBeenCalledTimes(2);
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true, repeat: true });
+    expect(session.save).toHaveBeenCalledTimes(2);
+    act(() => request(false));
+    expect(session.save).toHaveBeenCalledTimes(3);
+    fireEvent.keyDown(window, { key: "S", ctrlKey: true, shiftKey: true });
+    await waitFor(() => expect(host.saveAs).toHaveBeenCalledWith({ sourceText: session.source, presentation: session.presentation }));
+    expect(session.save).toHaveBeenCalledTimes(3);
+    rerender(<DbcdWorkbench session={{ ...session, saving: true }} bridge={host} projectPath="demo.dbcd" />);
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+    expect(session.save).toHaveBeenCalledTimes(3);
+    rerender(<DbcdWorkbench session={session} bridge={host} projectPath="demo.dbcd" readOnly />);
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+    expect(session.save).toHaveBeenCalledTimes(3);
+    unmount();
+    expect(fireEvent.keyDown(window, { key: "s", ctrlKey: true })).toBe(true);
+  });
+
+  it("keeps the current document on save-as failure and prevents repeated dialogs", async () => {
+    let fail!: (error: Error) => void;
+    const saveAs = vi.fn(() => new Promise<void>((_resolve, reject) => { fail = reject; }));
+    render(<ProjectWorkbench result={openResult()} bridge={{ ...bridge(), saveAs }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer sous" }));
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true, shiftKey: true });
+    expect(saveAs).toHaveBeenCalledTimes(1);
+    await act(async () => fail(new Error("Destination indisponible")));
+    expect(screen.getByText("Destination indisponible")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "DBML source" }).textContent).toContain("Table users");
+    expect(screen.getByRole("button", { name: "Enregistrer sous" })).toHaveProperty("disabled", false);
+  });
+
   it("search selection reveals a hidden collapsed member and centers/selects it", async () => {
     const opened = openResult();
     opened.structuredContent.presentation.views.all!.nodes["public.users"]!.hidden = true;

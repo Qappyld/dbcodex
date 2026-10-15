@@ -17,7 +17,6 @@
 - 10-RISQUES-ET-POINTS-OUVERTS.md
 - 11-PROMPT-NOUVELLE-CONVERSATION.md
 
-
 ---
 
 # Dossier de migration — DBCodex autonome
@@ -79,8 +78,6 @@ La copie source exclut Git, node_modules, dist, les caches, les identifiants de 
 
 Sur le même poste, travailler dans le checkout existant. Sur un autre poste, reconstruire à partir de `sources/`, lire le manifeste puis installer les dépendances. Ne pas appliquer le patch par-dessus la copie source : elle contient déjà ces changements.
 
-
-
 ---
 
 # Spécification produit — DBCodex autonome
@@ -95,6 +92,20 @@ DBCodex est un logiciel local pour comprendre, éditer et organiser des schémas
 - des propositions de modification examinables avant application.
 
 L’utilisateur garde la maîtrise de ses fichiers. Le logiciel fonctionne comme éditeur sans assistant installé ou sans Internet. L’assistance IA utilise un service en ligne, après un envoi volontaire.
+
+## Distribution portable Windows — validée le 13 octobre 2026
+
+DBCodex doit fonctionner depuis un dossier décompressé, sous un compte Windows standard, sans installation ni élévation de privilèges. La distribution de référence est une archive ZIP contenant DBCodex.exe et ses composants nécessaires ; Node.js et les outils de développement ne doivent pas être installés sur le poste utilisateur.
+
+Les projets .dbcd sont enregistrés dans un emplacement choisi par l’utilisateur. Les préférences personnelles (notamment thème et projets récents) sont enregistrées par défaut dans un sous-dossier de données du répertoire portable, distinct des fichiers applicatifs remplaçables. Les caches propres au poste et les identifiants IA restent séparés des données portables ; les identifiants sont hors de l’archive distribuée et des projets. Le remplacement du dossier applicatif doit préserver les projets et préférences.
+
+Le dossier portable et les projets peuvent être placés dans un répertoire synchronisé, notamment OneDrive. Les références aux projets récents utilisent des chemins relatifs à la racine du dossier portable lorsque c’est possible, afin de supporter un déplacement ou une racine OneDrive différente sur un autre PC. Un projet extérieur peut conserver un chemin absolu et être relocalisé explicitement. Il s’agit de chemins de fichiers, pas d’URL de partage OneDrive.
+
+Des préférences absentes ou illisibles ne doivent pas empêcher le démarrage : utiliser les valeurs par défaut. Un dossier de préférences non accessible en écriture conduit à un repli local au compte utilisateur, annoncé discrètement ; si aucun emplacement n’est accessible, les préférences restent en mémoire pour la session. Un projet récent introuvable ou non disponible localement reste marqué indisponible, avec possibilité de réessayer, retrouver le fichier ou retirer l’entrée. Ne pas créer un projet vide à sa place, supprimer son fichier ni afficher une erreur bloquant tout le logiciel.
+
+L’éditeur, le diagramme et l’historique doivent fonctionner hors ligne. Le chat utilise les moteurs Codex/Claude disponibles sur le poste ; leur présence n’est pas un prérequis au lancement de DBCodex. Les moteurs et leur authentification doivent être qualifiés séparément sans droits administrateur. Si un moteur est absent, son chat est indisponible ; l’application explique la limite et conserve l’éditeur utilisable. Aucun embarquement ou installation automatique de ces moteurs n’est requis pour la version portable.
+
+Les politiques d’entreprise peuvent interdire les exécutables portables ou les connexions IA ; la portabilité ne contourne pas ces restrictions. L’association Windows de .dbcd n’est pas un prérequis au lancement.
 
 ## Objectifs de la première version autonome
 
@@ -135,6 +146,10 @@ Une discussion n’est pas une branche de schéma. La V1 ne gère pas plusieurs 
 
 Le socle actuel comprend des vues, groupes, positions, niveaux de détail, recherches, historique et brouillons. La migration doit les conserver. Toute modification du texte doit préserver le reste du DBML et ses commentaires.
 
+Les commandes graphiques existantes restent disponibles. Plusieurs projets peuvent être ouverts simultanément dans des fenêtres ou instances distinctes, avec une seule fenêtre éditable par projet. Les ouvertures supplémentaires du même projet sont en lecture seule.
+
+Le fichier .dbcd contient toutes les données du projet : modèle, présentation, vues, historique, brouillons de projet, discussions et propositions. L’archivage des discussions est l’action par défaut ; leur suppression est explicite et conserve les traces des modifications déjà appliquées.
+
 Les noms, notes ou données d’exemple d’un projet peuvent être sensibles. Le partage vers l’IA doit être explicitement défini et visible. Le diagramme ne provoque aucun appel IA lorsqu’une table est simplement sélectionnée ou déplacée.
 
 ## Hors périmètre de cette migration
@@ -151,8 +166,6 @@ Les noms, notes ou données d’exemple d’un projet peuvent être sensibles. L
 ## Critère de réussite
 
 L’utilisateur ouvre DBCodex, charge un .dbcd, discute avec l’assistant choisi, prépare puis applique une proposition après inspection, observe le diagramme actualisé et peut restaurer l’état antérieur. La fermeture puis la réouverture conservent les discussions, le projet et l’historique.
-
-
 
 ---
 
@@ -175,9 +188,14 @@ Le dossier ne transforme pas une hypothèse technique en capacité vérifiée.
 | Nom | DBCodex ; ne pas employer TB Codex | Confirmé explicitement |
 | Produit | Application indépendante, avec sa fenêtre | Nouvelle direction retenue |
 | Cible initiale | Windows | Recommandation adaptée au poste actuel |
+| Distribution locale | Archive ZIP portable ; lancement sous compte standard, sans installation ni élévation | Validé par l’utilisateur le 13 octobre 2026 |
+| Préférences personnelles | Thème et projets récents dans le répertoire portable ; valeurs par défaut et repli local si indisponible | Demande utilisateur du 13 octobre 2026 ; repli détaillé dans la spécification |
+| Projets récents et OneDrive | Chemins relatifs au dossier portable lorsque possible ; projets indisponibles gérés sans blocage global | Validé par l’utilisateur le 13 octobre 2026 |
 | Éditeur/diagramme | Réutiliser CodeMirror et React Flow | Contrainte de continuité |
 | Stockage du modèle | DBML exact comme vérité fonctionnelle ; projet SQLite .dbcd | Décision existante |
-| UI générale | Éditeur gauche repliable, diagramme centre, discussions droite | Recommandation retenue pour spécifier |
+| UI générale | Éditeur gauche repliable, diagramme centre, un seul panneau droit repliable avec onglets Vues / IA ; pas d’inspecteur Propriétés complet | Simplification demandée le 13 octobre 2026 |
+| Couleurs des tables et groupes | Commande Couleur dans la barre flottante du bas, ouvrant palette et couleur personnalisée pour la table ou le groupe sélectionné | Emplacement corrigé par l’utilisateur le 13 octobre 2026 |
+| Navigation diagramme vers DBML | Double-clic sur table, relation ou groupe : ouvrir le panneau gauche, faire défiler et sélectionner la définition exacte ; clic simple : sélection graphique | Demandé par l’utilisateur le 13 octobre 2026 |
 | Discussions | Plusieurs discussions nommées par projet | Accord de principe utilisateur |
 | Fournisseur | Assistant fixé par discussion | Recommandation présentée |
 | Changer d’assistant | Nouvelle discussion ; pas de transfert implicite de l’historique | Recommandation présentée |
@@ -191,10 +209,15 @@ Le dossier ne transforme pas une hypothèse technique en capacité vérifiée.
 | Proposition périmée | Bloquer, puis actualiser volontairement | Exigence de cohérence |
 | Versions | Chaque application crée une révision | Décision de continuité |
 | Restauration | Créer une nouvelle version ; conserver l’historique | Décision existante |
-| Discussions portables | Avec le projet, idéalement dans le même .dbcd | Dernière recommandation fonctionnelle |
+| Discussions portables | Toutes les données du projet, discussions et propositions comprises, dans un seul .dbcd | Validé par l’utilisateur le 13 octobre 2026 |
+| Commandes graphiques | Conserver les commandes graphiques existantes | Confirmé par l’utilisateur le 13 octobre 2026 |
+| Projets simultanés | Plusieurs projets ouverts dans des fenêtres ou instances distinctes | Validé par l’utilisateur le 13 octobre 2026 |
+| Fenêtres du même projet | Une seule fenêtre éditable ; ouvertures supplémentaires en lecture seule | Validé par l’utilisateur le 13 octobre 2026 |
+| Gestion des discussions | Archivage par défaut, suppression explicite, traces des modifications appliquées conservées | Validé par l’utilisateur le 13 octobre 2026 |
 | Discussions lors d’une restauration | Conservées ; seul modèle+présentation sont restaurés | Recommandation de cohérence |
 | Contexte IA lors d’un redémarrage | Reconstituer depuis les messages locaux et le projet actuel | Recommandation |
 | Absence d’IA | L’éditeur reste utilisable | Exigence produit |
+| Moteur Codex/Claude absent | Chat correspondant indisponible ; aucun embarquement ou installation automatique requis | Validé par l’utilisateur le 13 octobre 2026 |
 | Git | Aucun commit automatique | Contrainte utilisateur persistante |
 | Licence et distribution | Toujours à décider avant publication | Décisions historiquement différées |
 
@@ -202,7 +225,7 @@ Le dossier ne transforme pas une hypothèse technique en capacité vérifiée.
 
 Le code desktop partiel et le brouillon `2026-10-13-standalone-chat-design.md` supposent un compagnon `.dbcd.chat.sqlite`. Cette hypothèse a été choisie pendant le développement interrompu pour éviter de migrer le format.
 
-**La dernière recommandation présentée à l’utilisateur privilégie un fichier projet unique.** La reprise doit donc étudier une évolution du .dbcd conservant les discussions dans le même conteneur. Cette préférence fonctionnelle n’autorise pas une migration destructive.
+**L’utilisateur a confirmé le fichier projet unique le 13 octobre 2026.** La reprise doit faire évoluer le .dbcd pour conserver toutes les données du projet, dont les discussions et propositions, dans le même conteneur. Cette décision n’autorise pas une migration destructive.
 
 Si le fichier compagnon est conservé provisoirement, le mot « provisoire » et la procédure d’import ultérieure doivent être explicites. Ne pas simplement conserver l’architecture du brouillon parce qu’elle a déjà du code.
 
@@ -215,8 +238,6 @@ Comparer brièvement Electron avec une enveloppe Tauri et une application web lo
 ## Ne pas rouvrir sans raison
 
 Ne pas refaire les QCM de périmètre initial, proposer une réécriture du parser ou remettre le produit dans Codex Desktop. La migration peut conserver le plugin comme adaptateur secondaire, mais le parcours principal doit devenir l’application autonome.
-
-
 
 ---
 
@@ -297,11 +318,9 @@ Le modèle parle au fournisseur sur Internet. L’éditeur et la base restent lo
 
 Le fichier a une identité et une génération. Les discussions, propositions et sessions d’éditeur gardent leur version de base.
 
-La V1 peut sérialiser les requêtes IA par projet, tout en permettant de changer d’onglet de discussion. Les écritures de projet restent sérialisées et transactionnelles. Une seconde fenêtre peut lire le projet ; les modifications concurrentes doivent être détectées, pas fusionnées silencieusement.
+La V1 peut sérialiser les requêtes IA par projet, tout en permettant de changer d’onglet de discussion. Plusieurs projets peuvent être ouverts simultanément dans des fenêtres ou instances distinctes. Une seule fenêtre possède le droit d’éditer un même projet ; les ouvertures supplémentaires sont en lecture seule. Ce droit doit être contrôlé entre processus, pas seulement dans l’interface. Les écritures de projet restent sérialisées et transactionnelles ; les modifications externes doivent être détectées, pas fusionnées silencieusement.
 
 Le format existant contient un seul brouillon. Ne pas annoncer une isolation de brouillons par discussion ou par fenêtre tant qu’elle n’est pas conçue et testée.
-
-
 
 ---
 
@@ -319,7 +338,7 @@ Les révisions actuelles ne contiennent pas de conversations. Les stores vérifi
 
 ## Cible fonctionnelle
 
-Un projet portable devrait regrouper modèle, présentation, historique, discussions et propositions dans un seul .dbcd. Ne pas inventer un schéma v2 définitif sans analyser les stores et la compatibilité v1.
+Un projet portable doit regrouper toutes ses données, dont modèle, présentation, vues, historique, brouillons de projet, discussions et propositions, dans un seul .dbcd. Ce choix a été confirmé par l’utilisateur le 13 octobre 2026. Ne pas inventer un schéma v2 définitif sans analyser les stores et la compatibilité v1.
 
 Un schéma logique pourrait introduire :
 - discussions : id, titre, fournisseur, dates, archivage, préférences de contexte ;
@@ -328,6 +347,20 @@ Un schéma logique pourrait introduire :
 - paramètres de projet spécifiques au chat, sans identifiants de connexion.
 
 Les comptes et tokens restent gérés par les mécanismes officiels des fournisseurs, hors du projet portable.
+
+## Préférences personnelles et chemins portables
+
+Le fichier .dbcd contient les données propres au projet. Le thème général et la liste des projets récents appartiennent aux préférences de l’application, sauvegardées par défaut dans un sous-dossier de données du répertoire portable. Elles ne contiennent aucun token fournisseur. Leur nom de fichier et leur schéma versionné seront définis pendant la conception technique.
+
+Les chemins récents sont typés comme relatifs ou absolus. La base des chemins relatifs est la racine du dossier portable, et non le répertoire courant du processus. Privilégier les chemins relatifs pour les projets dans ce dossier ou sa même arborescence transportable ; conserver un chemin absolu pour un emplacement extérieur lorsque le relatif ne serait pas pertinent ou possible. Un chemin relatif ne donne aucun droit d’accès : les vérifications de fichier et d’autorisation restent nécessaires.
+
+À l’ouverture, résoudre puis vérifier le fichier demandé. Si le dossier a été déplacé ou si la racine OneDrive change entre deux postes, une arborescence relative identique doit continuer de fonctionner. Les chemins absolus devenus invalides proposent une relocalisation volontaire ; vérifier le projet sélectionné avant d’actualiser l’entrée et ne pas confondre deux projets de même nom.
+
+Préférences absentes : utiliser les valeurs par défaut et une liste récente vide ; créer la configuration lors d’une sauvegarde si l’emplacement est accessible. Préférences malformées ou de version future inconnue : valeurs par défaut, information discrète et conservation du fichier original ; ne pas l’écraser automatiquement. Écriture des préférences : remplacement atomique après validation. Un dossier non accessible en écriture entraîne un repli dans les données locales du compte utilisateur, indiqué dans l’interface ; à défaut, mode session sans persistance des préférences. Le choix de repli ne doit pas déplacer les projets ni recopier leurs données.
+
+Les entrées indisponibles restent dans la liste récente jusqu’à retrait explicite ou relocalisation. Une entrée récente n’est ni une preuve d’existence ni une autorisation de créer un fichier. Un problème de préférences n’altère pas les .dbcd.
+
+La reprise depuis un dossier synchronisé doit être testée. Les fichiers non disponibles localement, erreurs de synchronisation, copies en conflit et remplacements externes sont des états à traiter ; aucune fusion silencieuse de bases .dbcd n’est prévue. Les caches, verrous actifs et identifiants propres au poste ne sont pas des préférences à transporter.
 
 ## Ce qui change de version, et ce qui n’en change pas
 
@@ -389,7 +422,8 @@ Un fichier projet partagé contenant le chat peut révéler des intentions méti
 - export DBML du modèle seul ;
 - export de projet sans conversations ;
 - explication claire lors d’un partage de projet complet ;
-- suppression/archivage volontaire d’une discussion, avec règles explicites pour ses propositions ;
+- archivage par défaut d’une discussion, réversible et sans suppression de ses messages ou propositions ;
+- suppression uniquement sur une action explicite indiquant les éléments supprimés ; elle ne supprime ni les révisions du modèle ni les traces des modifications appliquées (identité de proposition, opérations appliquées, date et révision résultante) ;
 - aucune clé API ou session fournisseur dans le fichier.
 
 ## Brouillons et stockage de message interrompu
@@ -397,8 +431,6 @@ Un fichier projet partagé contenant le chat peut révéler des intentions méti
 Les brouillons de l’éditeur, de la saisie de chat et les réponses partielles sont distincts. La fermeture ordonnée doit les préserver selon les règles prévues. Une réponse partielle ne doit jamais devenir une proposition applicable.
 
 À la reprise, le logiciel indique « interrompu », « échoué » ou « prêt à réessayer ». Il ne relance pas de requête IA facturable sans une nouvelle action de l’utilisateur.
-
-
 
 ---
 
@@ -409,10 +441,32 @@ Les brouillons de l’éditeur, de la saisie de chat et les réponses partielles
 - Barre supérieure : projet, état enregistré/modifié, ouvrir/créer/importer, enregistrer.
 - Éditeur DBML à gauche : repliable, diagnostics et sélection synchronisés.
 - Diagramme au centre : vues, groupes, recherche, zoom et dispositions existants.
-- Espace droit : liste des discussions, messages, champ de saisie et propositions.
+- Un seul panneau droit, redimensionnable et repliable, avec deux onglets : **Vues**, **IA**. Un seul contenu d’onglet est affiché à la fois ; aucun panneau de discussion adjacent séparé ni inspecteur Propriétés complet.
 - Historique de projet accessible depuis la barre supérieure.
 
 Prévoir redimensionnement, focus clavier, thème et adaptation à une petite fenêtre. Éviter d’empiler plusieurs éditeurs ou d’ouvrir un navigateur externe.
+
+## Panneau droit et outils du diagramme — direction révisée le 13 octobre 2026
+
+- **Vues** : choix et gestion des vues, recherche et visibilité des tables, organisation par schéma ou groupe.
+- L’onglet **Propriétés** est retiré : les informations de structure ne sont pas répétées dans un inspecteur. La commande **Couleur** se trouve dans la barre flottante du bas ; elle ouvre une palette et une couleur personnalisée pour la table ou le groupe sélectionné. Elle est désactivée sans sélection compatible ou si le projet est en lecture seule.
+- **IA** : liste des discussions du projet, messages, contexte partagé, saisie et propositions examinables avant application. Changer d’onglet conserve la discussion active, les messages, la saisie et l’état d’une requête en cours ; aucun message n’est envoyé par ce changement.
+
+La barre flottante du diagramme propose notamment **Créer un groupe** à partir des tables sélectionnées et **Couleur** pour la table ou le groupe sélectionné. Les commandes qui dépendent de la sélection sont désactivées sans sélection compatible ou si le projet est en lecture seule. Le fonctionnement exact de création continue de respecter les patchs DBML et les validations existants.
+
+Sur petite fenêtre, conserver ce même panneau à onglets, repliable, afin de préserver l’espace du diagramme. Les commandes graphiques restent utilisables pendant qu’une discussion est affichée.
+
+## Double-clic : retrouver la définition dans le DBML
+
+Un clic simple sélectionne l’objet dans le diagramme et affiche ses commandes contextuelles, sans déplacer le focus ni faire défiler l’éditeur. Un double-clic sur une table, une relation ou un groupe ouvre le panneau DBML à gauche s’il est replié, fait défiler jusqu’à sa définition et sélectionne le texte correspondant :
+
+- table : bloc `Table` entier, accolades comprises ;
+- groupe : bloc `TableGroup` entier, accolades comprises ;
+- relation : déclaration `Ref` correspondante, ou clause `ref` inline lorsque la relation est déclarée dans un champ.
+
+L’éditeur reçoit le focus pour permettre la modification directe du texte. Cette navigation ne modifie pas le DBML, ne déclenche aucun appel IA et ne remplace pas un brouillon. Le panneau droit garde son onglet et son contenu. Les commandes contextuelles et poignées de routage ne doivent pas déclencher accidentellement cette navigation.
+
+Retrouver la plage exacte dans le texte courant, en distinguant les schémas et les relations entre mêmes tables ; éviter une recherche approximative par nom. Si le DBML a changé ou est invalide et qu’aucune plage fiable ne peut être retrouvée, conserver le texte et expliquer discrètement que la définition ne peut pas être localisée. Un groupe purement visuel sans définition DBML ne doit pas conduire vers un bloc inventé. La navigation reste disponible en lecture seule, sans permettre d’écriture.
 
 ## Accueil
 
@@ -425,11 +479,25 @@ L’utilisateur peut :
 
 Si Codex/Claude est absent ou non connecté, afficher l’état et les étapes de connexion. L’éditeur doit tout de même fonctionner. Détecter une installation sans lancer d’inférence.
 
+## Préférences et projets récents indisponibles
+
+Le thème et les projets récents sont conservés dans le dossier portable. Un premier lancement sans préférences ouvre normalement l’accueil avec les valeurs par défaut. Une configuration illisible affiche une information discrète, sans boîte d’erreur technique ni blocage ; le fichier original est conservé. Si le dossier ne permet pas la sauvegarde, indiquer le repli local ou « Préférences conservées pour cette session uniquement ».
+
+Une entrée récente dont le fichier est absent, inaccessible ou pas encore disponible localement affiche **Indisponible**. Proposer **Réessayer**, **Retrouver le fichier** et **Retirer de la liste** ; retirer une entrée ne supprime aucun fichier. Si le fichier dépend de OneDrive, inviter à vérifier sa disponibilité locale et la synchronisation. La liste ne déclenche pas en boucle des tentatives d’ouverture ou des demandes de connexion.
+
+Un problème affectant un projet laisse les autres projets et les actions ouvrir/créer accessibles. Si un fichier devient indisponible pendant l’édition, préserver le travail en mémoire, suspendre les écritures vers ce fichier et proposer une récupération vers une nouvelle copie validée. Ne pas remplacer automatiquement le fichier manquant par un projet vide ni présenter une sauvegarde échouée comme réussie.
+
+## Projets simultanés
+
+Plusieurs projets peuvent être ouverts en parallèle dans des fenêtres ou instances distinctes. Une seule fenêtre est éditable pour un projet donné ; une ouverture supplémentaire affiche clairement son état en lecture seule. Aucune opération d’écriture de projet, y compris chat, brouillon ou application de proposition, n’est disponible dans cette fenêtre. Les commandes graphiques existantes restent disponibles dans la fenêtre éditable.
+
 ## Nouvelle discussion
 
 Choisir un titre et un assistant. L’assistant reste attaché à cette discussion. L’utilisateur retrouve les discussions en revenant au projet.
 
 La saisie non envoyée est propre à chaque discussion. Un changement d’onglet ne doit pas effacer un message en préparation.
+
+L’action par défaut pour retirer une discussion de la liste active est **Archiver**. Les discussions archivées restent consultables et peuvent être réactivées. **Supprimer** est une action explicite distincte ; son aperçu indique ce qui sera supprimé et rappelle que les versions du projet et les traces des modifications appliquées sont conservées.
 
 ## Contexte visible
 
@@ -503,8 +571,6 @@ Réponses incomplètes, perte de connexion, quotas atteints, CLI absent et login
 
 Fermer pendant une sauvegarde attend sa fin puis conserve le brouillon restant. Un arrêt forcé reste soumis au dernier état effectivement écrit ; ne pas promettre une récupération magique de données jamais persistées.
 
-
-
 ---
 
 # Codex, Claude Code et authentification
@@ -516,6 +582,8 @@ DBCodex possède sa propre interface de chat. Elle échange avec un moteur local
 - Claude Code programmatique ou Agent SDK pour Claude.
 
 Les moteurs peuvent être démarrés par DBCodex. Leur fenêtre desktop n’a pas besoin de rester ouverte. Installation, connexion authentifiée et accès Internet aux modèles sont nécessaires. L’éditeur doit rester utilisable hors ligne sans assistant.
+
+Décision confirmée le 13 octobre 2026 : si le moteur Codex ou Claude est absent du poste, le chat correspondant est indisponible. DBCodex affiche cet état et conserve les données de discussion existantes et l’éditeur utilisables ; il ne bascule pas silencieusement vers un autre fournisseur. Fournir ou installer automatiquement les moteurs IA n’est pas une exigence de l’archive portable.
 
 MCP peut fournir des outils contrôlés ; il ne remplace pas le transport de conversation.
 
@@ -574,8 +642,6 @@ Ne stocker aucun token fournisseur dans le .dbcd, dans les messages ou dans les 
 - [Claude Agent SDK et abonnement](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)
 
 La disponibilité technique, les conditions d’utilisation et la facturation sont trois vérifications distinctes. Ne pas interpréter ce dossier comme une garantie permanente de gratuité ou de compatibilité.
-
-
 
 ---
 
@@ -664,8 +730,6 @@ Deux alertes npm de sévérité haute avaient été observées ; elles sont docu
 
 Préserver l’état local et les données, séparer le socle des ajouts interrompus, établir une baseline actuelle et un plan de réparation. Toute réutilisation du code partial doit être revue et testée ; aucune fonctionnalité ne doit être marquée livrée parce qu’un fichier ou un test existe.
 
-
-
 ---
 
 # Plan de migration et développement
@@ -700,8 +764,14 @@ Sortie : contrat documenté ; aucun assistant ne détient l’écriture du proje
 - [ ] Dialogue natif ouvrir/créer/importer.
 - [ ] Chargement du fichier utilisateur avec confinement.
 - [ ] Réutilisation du ProjectWorkbench.
+- [ ] Réorganiser le panneau droit en onglets Vues / IA et ajouter la commande Couleur à la barre flottante du bas pour la table ou le groupe sélectionné, sans inspecteur Propriétés complet.
+- [ ] Séparer clic simple et double-clic ; ce dernier ouvre le DBML, défile et sélectionne la définition exacte d’une table, relation ou groupe dans le texte courant.
 - [ ] Sauvegarde, brouillon, historique et restauration.
 - [ ] Projets récents et fermeture ordonnée.
+- [ ] Sauvegarder thème et projets récents dans le répertoire portable ; chemins relatifs basés sur sa racine, chemins absolus extérieurs et relocalisation explicite.
+- [ ] Gérer préférences absentes, illisibles, de version future ou non inscriptibles : valeurs par défaut, original préservé, repli local ou session et information discrète.
+- [ ] Gérer les fichiers récents indisponibles et la perte d’accès pendant l’édition sans blocage global ni perte du travail en mémoire.
+- [ ] Ouvrir plusieurs projets simultanément ; garantir entre instances une seule fenêtre éditable par projet et afficher les ouvertures supplémentaires en lecture seule.
 - [ ] Test réel de lancement et réouverture.
 
 Sortie : le logiciel est utile sans Codex ni Claude installés.
@@ -712,6 +782,7 @@ Sortie : le logiciel est utile sans Codex ni Claude installés.
 - [ ] Protéger sauvegarde préalable et migration transactionnelle.
 - [ ] Tester la préservation des projets v1 et la lecture des formats futurs.
 - [ ] Ajouter discussions, messages, paramètres et brouillons de chat.
+- [ ] Ajouter l’archivage par défaut et la suppression explicite des discussions ; préserver les révisions et traces des modifications appliquées.
 - [ ] Revoir ou migrer le compagnon partiel existant.
 - [ ] Garantir que les messages ne font pas avancer la génération de modèle.
 
@@ -775,6 +846,11 @@ Sortie : reprise compréhensible et vérifiable.
 ## Jalon 9 — Packaging et acceptation Windows
 
 - [ ] Build reproductible et exécutable local.
+- [ ] Produire une archive ZIP portable contenant l’exécutable et ses dépendances, sans installation de Node.js ni d’outils de développement sur le poste cible.
+- [ ] Tester extraction et lancement sous compte Windows standard sur un poste sans dépendances de développement ; aucune demande d’élévation.
+- [ ] Vérifier les emplacements accessibles pour paramètres, caches et projets ; préserver les données lors du remplacement du dossier applicatif.
+- [ ] Tester le dossier portable dans OneDrive : déplacement et changement de racine entre postes, fichier disponible/non disponible localement, conflit ou remplacement externe ; pas de fusion automatique de .dbcd.
+- [ ] Qualifier séparément les moteurs Codex/Claude et l’authentification sans droits administrateur ; documenter les restrictions du poste et conserver le mode éditeur sans IA.
 - [ ] Tester SQLite et les CLI avec les versions embarquées.
 - [ ] Vérifier lancement sans terminal et absence de navigateur externe.
 - [ ] Associer .dbcd seulement si testé et documenté.
@@ -782,7 +858,7 @@ Sortie : reprise compréhensible et vérifiable.
 - [ ] Démonstration sur copie de projet, pas sur une fixture originale.
 - [ ] Documenter l’installation, la désinstallation et les limites.
 
-Sortie : version locale réellement utilisable, preuves séparées des simulations.
+Sortie : version portable réellement utilisable sans installation ni droits administrateur, preuves séparées des simulations.
 
 ## Livraison et hors périmètre
 
@@ -795,8 +871,6 @@ Avant une publication : décider licence, gouvernance, distribution, conditions 
 Pour chaque changement de comportement : cas qui échoue, correction minimale, vérification ciblée, puis contrôle du jalon. Conserver les tests existants. La documentation de preuve doit préciser version, commandes, résultat observé et limites.
 
 Ne pas présenter une simulation comme une preuve de dialogue réel avec un compte ni un rendu navigateur comme une preuve de fenêtre autonome.
-
-
 
 ---
 
@@ -816,6 +890,38 @@ Tous les contrôles ci-dessous sont des exigences futures, sauf les preuves hist
 | Export modèle seul | DBML sans conversations ni brouillon non enregistré |
 | Copier le projet complet | Discussions et propositions récupérables selon format final |
 | Import d’un compagnon ancien | Pas de doublons, aucun effacement silencieux |
+
+## Version portable Windows
+
+| Cas | Résultat exigé |
+| --- | --- |
+| ZIP extrait sur un poste sans outils de développement | DBCodex.exe démarre par double-clic, sans installation de Node.js ni élévation |
+| Compte Windows standard | Ouvrir/créer, éditer, enregistrer et rouvrir un .dbcd sans droits administrateur |
+| Aucun réseau ni moteur IA disponible | Éditeur, diagramme, brouillon et historique utilisables |
+| Paramètres et caches | Écriture uniquement dans des emplacements accessibles au compte ; emplacements documentés |
+| Remplacement du dossier applicatif | Projets et paramètres conservés ; migration éventuelle qualifiée |
+| Codex/Claude sous compte standard | Moteurs présents : connexion et restrictions vérifiées séparément ; moteur absent : chat correspondant indisponible, éditeur et données de discussion conservés |
+| Politique d’entreprise bloquant un moteur ou le réseau IA | Limite documentée, pas de contournement ni d’élévation ; éditeur disponible si son exécution est autorisée |
+| Archive, projet ou copie vers un autre poste | Aucun identifiant IA embarqué ; reconnexion selon le compte et le poste |
+
+Consigner la version de Windows, l’architecture, le type de compte et les dépendances présentes. Une validation sur le seul poste de développement ne suffit pas.
+
+## Préférences, chemins relatifs et dossier synchronisé
+
+| Cas | Résultat exigé |
+| --- | --- |
+| Préférences absentes au premier lancement | Accueil utilisable, thème par défaut, liste récente vide ; aucun blocage |
+| Préférences illisibles ou version future inconnue | Valeurs par défaut, information discrète ; original conservé sans écrasement automatique |
+| Répertoire portable non inscriptible | Repli local annoncé ; si repli impossible, préférences en mémoire pour la session |
+| Écriture des préférences interrompue | Ancienne configuration lisible ou nouvelle configuration complète ; pas de fichier partiel utilisé |
+| Dossier portable déplacé, racine OneDrive différente | Les chemins relatifs restent fonctionnels si l’arborescence est conservée |
+| Lancement depuis un autre répertoire courant | Résolution relative à la racine portable, sans dépendance au répertoire courant |
+| Projet externe référencé par chemin absolu devenu invalide | État indisponible et relocalisation volontaire ; aucun projet vide créé |
+| Projet récent absent, accès refusé ou téléchargement local impossible | Indisponible, Réessayer/Retrouver/Retirer accessibles ; autres projets utilisables |
+| Retirer une entrée récente | Aucun fichier supprimé |
+| Projet disparaissant pendant l’édition | Travail en mémoire conservé, écriture suspendue et récupération proposée ; aucune fausse confirmation de sauvegarde |
+| Copie en conflit ou remplacement externe par synchronisation | Conflit signalé ; aucune fusion ou écrasement silencieux du projet |
+| Deux instances mettent à jour les projets récents | Configuration valide, thème préservé et entrées distinctes conservées selon une règle documentée |
 
 ## Chat et confidentialité
 
@@ -861,7 +967,21 @@ Tous les contrôles ci-dessous sont des exigences futures, sauf les preuves hist
 | Restauration avec discussions | Conversations gardées et propositions requalifiées |
 | Fermeture/réouverture | Modèle, vues, zoom, discussions, brouillons récupérés |
 | Arrêt forcé | Limite documentée au dernier état écrit |
-| Deux fenêtres | Conflits détectés ; pas de perte silencieuse |
+| Deux projets ouverts en parallèle | Sessions, messages, propositions et sauvegardes isolés par projet |
+| Même projet ouvert dans deux fenêtres/instances | Une seule fenêtre éditable ; seconde en lecture seule, sans écriture de chat, brouillon ni modèle |
+| Modification externe du projet | Conflit détecté ; pas de perte silencieuse |
+| Archiver une discussion | Retirée de la liste active, données conservées et réactivation possible |
+| Supprimer une discussion | Action explicite ; révisions et traces des modifications appliquées conservées |
+| Commandes graphiques existantes | Disponibles dans la fenêtre éditable et comportement conservé |
+| Panneau droit | Un seul panneau repliable avec onglets Vues / IA ; aucun panneau IA adjacent ni inspecteur Propriétés complet |
+| Changement d’onglet droit | Discussion, saisie et requête en cours conservées ; aucun appel IA déclenché |
+| Couleur de table ou groupe | Commande Couleur dans la barre flottante du bas, ouvrant palette et couleur personnalisée ; désactivée sans sélection compatible ou en lecture seule |
+| Création de groupe depuis la barre flottante | Sélection compatible requise ; validations existantes préservées, couleur accessible dans cette même barre |
+| Clic simple sur un objet graphique | Sélection graphique sans déplacement du focus ni défilement du DBML |
+| Double-clic sur table ou groupe | Éditeur gauche ouvert, bloc Table/TableGroup exact sélectionné et visible, focus éditeur ; aucune modification de source |
+| Double-clic sur relation | Déclaration Ref ou clause ref inline exacte sélectionnée et visible, y compris plusieurs relations entre mêmes tables |
+| Navigation avec schémas homonymes ou source modifiée | Bonne définition dans le texte courant ; si localisation impossible, information discrète sans sélection erronée ni perte de brouillon |
+| Double-clic avec panneau IA actif ou projet en lecture seule | Onglet, saisie et discussion conservés ; navigation permise sans écriture ni appel IA |
 
 ## Sécurité effective des moteurs
 
@@ -911,8 +1031,6 @@ Sur un projet fictif :
 
 La livraison ne peut être déclarée complète avec seulement des fichiers de code, des tests simulés ou un screenshot de maquette.
 
-
-
 ---
 
 # Risques, arbitrages techniques et limites
@@ -921,7 +1039,7 @@ La livraison ne peut être déclarée complète avec seulement des fichiers de c
 
 ### Fichier unique et compatibilité
 
-La préférence est un .dbcd contenant les discussions. Il faut prouver la migration v1 et le comportement des anciens clients. Le code compagnon partiel peut fournir des idées, mais ne définit pas la cible.
+Le fichier unique .dbcd contenant toutes les données du projet, dont les discussions et propositions, est confirmé. Il faut prouver la migration v1 et le comportement des anciens clients. Le code compagnon partiel peut fournir des idées, mais ne définit pas la cible.
 
 ### Patchs et contexte restreint
 
@@ -945,7 +1063,7 @@ La V1 peut limiter les propositions IA à la structure du modèle. Si positions,
 
 ### Brouillons et fenêtres multiples
 
-Le store actuel comporte un seul brouillon. Plusieurs discussions ne signifient pas plusieurs éditeurs indépendants. Fixer un éditeur actif par projet en V1, ou concevoir explicitement une isolation de brouillons.
+Le store actuel comporte un seul brouillon. Plusieurs projets simultanés sont autorisés, avec une seule fenêtre éditable par projet. Les ouvertures supplémentaires sont en lecture seule. Spécifier le verrou entre instances, sa libération après arrêt et le transfert explicite du droit d’édition. Plusieurs discussions ne créent pas plusieurs éditeurs indépendants.
 
 ### Interruption et quotas
 
@@ -957,7 +1075,13 @@ Tester le module de stockage avec le runtime choisi pour l’application et les 
 
 ### Packaging
 
-Portable ou installateur sont des options à choisir après le prototype fonctionnel. Les signatures, mises à jour, associations de fichiers et désinstallation demandent une validation dédiée ; elles ne sont pas garanties par l’installation d’Electron.
+La distribution locale portable en ZIP, sans installation ni droits administrateur, a été validée le 13 octobre 2026. Elle doit être démontrée sur un poste sans dépendances de développement. Les emplacements de données, le remplacement du dossier et la compatibilité SQLite embarquée demandent une validation dédiée. Les moteurs Codex/Claude et leur authentification doivent être qualifiés séparément sous compte standard. Les politiques d’entreprise peuvent bloquer l’exécution ou le réseau ; aucun contournement n’est prévu. Les signatures, mises à jour et associations de fichiers restent à qualifier ; l’association .dbcd n’est pas un prérequis.
+
+### Répertoire portable synchronisé et préférences
+
+Le thème et les projets récents sont conservés dans le répertoire portable, avec chemins relatifs lorsque possible. La validation doit couvrir OneDrive, les fichiers non disponibles localement, les préférences absentes/invalides et les permissions d’écriture. Définir le schéma versionné de préférences, le repli local et la coordination de leurs mises à jour entre instances. La disponibilité et le comportement sous synchronisation ne sont pas encore démontrés.
+
+Le contrôle d’une seule fenêtre éditable sur le poste ne prouve pas une exclusion entre deux PC. Ne pas annoncer une édition simultanée sûre du même .dbcd par synchronisation : préciser le parcours de fermeture/reprise sur un autre poste et tester les conflits. Aucun verrou local ni copie en conflit ne doit être interprété comme une autorisation d’écraser un fichier distant.
 
 ## Décisions différées historiques
 
@@ -981,8 +1105,6 @@ Aucun abonnement facturé par DBCodex, service cloud de stockage, télémétrie 
 6. Extension des fonctionnalités.
 
 Présenter une difficulté concrète et une recommandation quand un choix manque. Ne pas redemander la permission pour chaque détail réversible déjà dans la mission, mais ne pas transformer une demande de spécification en autorisation de développer.
-
-
 
 ---
 
@@ -1025,10 +1147,17 @@ Ne modifie pas main. Ne fais pas de reset/clean global. Ne supprime pas les fich
 - Plusieurs discussions utilisent le même modèle enregistré ; leurs messages et propositions restent distincts.
 - Chaque proposition repose sur une version vérifiée ; les propositions périmées sont bloquées.
 - Chaque application crée une révision ; restaurer crée une nouvelle version et garde l’historique.
-- Discussions conservées avec le projet, idéalement dans le même .dbcd ; prévoir une migration sûre du format v1.
+- Toutes les données du projet, discussions et propositions comprises, dans le même .dbcd ; prévoir une migration sûre du format v1.
+- Commandes graphiques existantes conservées ; plusieurs projets ouverts simultanément, avec une seule fenêtre éditable par projet et les ouvertures supplémentaires en lecture seule.
+- Un seul panneau droit repliable et redimensionnable avec onglets Vues / IA ; aucun panneau adjacent séparé ni inspecteur Propriétés complet. Commandes Couleur (table ou groupe sélectionné) et Créer un groupe dans la barre flottante du bas. Changer d’onglet conserve la saisie et les requêtes sans appel IA supplémentaire.
+- Clic simple : sélection graphique. Double-clic sur table, relation ou groupe : ouvrir le panneau DBML gauche, défiler et sélectionner la définition exacte (bloc Table/TableGroup, déclaration Ref ou clause ref inline), sans modifier le texte ni perdre le brouillon.
+- Archivage des discussions par défaut ; suppression explicite conservant les révisions et les traces des modifications appliquées.
 - Contexte IA visible, limité par défaut à la structure des tables de la vue active/sélection.
 - Aucun envoi implicite, aucune clé API imposée, aucune requête IA de test facturable silencieuse.
 - Éditeur utilisable même sans assistant ou hors ligne.
+- Moteur Codex/Claude absent : chat correspondant indisponible, données de discussion conservées ; aucun embarquement ou installation automatique des moteurs requis.
+- Distribution Windows portable en ZIP : décompresser puis lancer DBCodex.exe sous compte standard, sans installation ni élévation, avec les composants nécessaires embarqués. Tester sur un poste sans outils de développement et qualifier séparément Codex/Claude et leur authentification sans droits administrateur.
+- Préférences personnelles (thème et projets récents) dans le répertoire portable ; chemins relatifs basés sur ce dossier lorsque possible. Prévoir OneDrive et le déplacement entre postes ; gérer préférences absentes/illisibles/non inscriptibles, repli local ou session, projets indisponibles et relocalisation sans erreur globale ni perte de données. Les identifiants IA restent propres au poste.
 
 Le chat dialogue avec les moteurs locaux ; MCP n’est pas l’interface de chat. Prouve les permissions effectives afin que les assistants ne puissent pas écrire directement dans le projet.
 
@@ -1040,10 +1169,8 @@ Qualifie les échecs actuels, réutilise les éléments utiles, adapte ce qui co
 
 ## Livrables
 
-Une application locale exécutable, une procédure d’installation/lancement, des tests de migration/propositions/concurrence, une validation de fenêtre autonome, les preuves de connexion aux fournisseurs et les limitations restantes.
+Une archive ZIP portable avec application locale exécutable, une procédure d’extraction/lancement et de remplacement préservant les données, des tests de migration/propositions/concurrence, une validation de fenêtre autonome sous compte Windows standard, les preuves de connexion aux fournisseurs et les limitations restantes.
 
 Sépare tests simulés, tests de fichiers, rendu réel et inférence réelle. Ne marque aucune étape non exécutée comme validée. Garde les exports PNG/SVG, bases de production et fonctionnalités cloud hors de ce chantier.
 
 ---
-
-

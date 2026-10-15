@@ -93,7 +93,13 @@ export function setNodeHidden(document: PresentationDocument, viewId: string, ta
   return command(document, (draft) => { node(draft, viewId, tableId).hidden = hidden; });
 }
 export function setNodePosition(document: PresentationDocument, viewId: string, tableId: string, position: Point): PresentationDocument {
-  return command(document, (draft) => { Object.assign(node(draft, viewId, tableId), position); });
+  return setNodePositions(document, viewId, [{ id: tableId, position }]);
+}
+/** Apply a multi-selection/group move with one clone and one validation. */
+export function setNodePositions(document: PresentationDocument, viewId: string, positions: ReadonlyArray<{ id: string; position: Point }>): PresentationDocument {
+  return command(document, (draft) => {
+    for (const { id, position } of positions) Object.assign(node(draft, viewId, id), position);
+  });
 }
 export function setViewport(document: PresentationDocument, viewId: string, viewport: View["viewport"]): PresentationDocument {
   return command(document, (draft) => { view(draft, viewId).viewport = viewport; });
@@ -116,7 +122,13 @@ export function resetRelationRoute(document: PresentationDocument, viewId: strin
 }
 export function searchTables(graph: SchemaGraph, current: View, query: string): string[] {
   const term = query.trim().toLocaleLowerCase();
+  if (!term) return graph.tables.map(table => table.id);
+  const groupNames = new Map<string, string[]>();
+  for (const group of Object.values(current.groups)) for (const id of group.tableIds) {
+    const names = groupNames.get(id);
+    if (names) names.push(group.name); else groupNames.set(id, [group.name]);
+  }
   return graph.tables.filter((table) =>
-    [table.id, table.schema, ...table.columns.map((column) => column.name), ...Object.values(current.groups).filter((group) => group.tableIds.includes(table.id)).map((group) => group.name)]
+    [table.id, table.schema, ...table.columns.map((column) => column.name), ...(groupNames.get(table.id) ?? [])]
       .some((value) => value?.toLocaleLowerCase().includes(term))).map((table) => table.id);
 }

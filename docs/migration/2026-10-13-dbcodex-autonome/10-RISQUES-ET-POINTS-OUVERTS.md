@@ -4,7 +4,7 @@
 
 ### Fichier unique et compatibilité
 
-La préférence est un .dbcd contenant les discussions. Il faut prouver la migration v1 et le comportement des anciens clients. Le code compagnon partiel peut fournir des idées, mais ne définit pas la cible.
+Le fichier unique .dbcd contenant toutes les données du projet, dont les discussions et propositions, est confirmé. Il faut prouver la migration v1 et le comportement des anciens clients. Le code compagnon partiel peut fournir des idées, mais ne définit pas la cible.
 
 ### Patchs et contexte restreint
 
@@ -28,7 +28,7 @@ La V1 peut limiter les propositions IA à la structure du modèle. Si positions,
 
 ### Brouillons et fenêtres multiples
 
-Le store actuel comporte un seul brouillon. Plusieurs discussions ne signifient pas plusieurs éditeurs indépendants. Fixer un éditeur actif par projet en V1, ou concevoir explicitement une isolation de brouillons.
+Le store actuel comporte un seul brouillon. Plusieurs projets simultanés sont autorisés, avec une seule fenêtre éditable par projet. Les ouvertures supplémentaires sont en lecture seule. Spécifier le verrou entre instances, sa libération après arrêt et le transfert explicite du droit d’édition. Plusieurs discussions ne créent pas plusieurs éditeurs indépendants.
 
 ### Interruption et quotas
 
@@ -40,7 +40,13 @@ Tester le module de stockage avec le runtime choisi pour l’application et les 
 
 ### Packaging
 
-Portable ou installateur sont des options à choisir après le prototype fonctionnel. Les signatures, mises à jour, associations de fichiers et désinstallation demandent une validation dédiée ; elles ne sont pas garanties par l’installation d’Electron.
+La distribution locale portable en ZIP, sans installation ni droits administrateur, a été validée le 13 octobre 2026. Elle doit être démontrée sur un poste sans dépendances de développement. Les emplacements de données, le remplacement du dossier et la compatibilité SQLite embarquée demandent une validation dédiée. Les moteurs Codex/Claude et leur authentification doivent être qualifiés séparément sous compte standard. Les politiques d’entreprise peuvent bloquer l’exécution ou le réseau ; aucun contournement n’est prévu. Les signatures, mises à jour et associations de fichiers restent à qualifier ; l’association .dbcd n’est pas un prérequis.
+
+### Répertoire portable synchronisé et préférences
+
+Le thème et les projets récents sont conservés dans le répertoire portable, avec chemins relatifs lorsque possible. La validation doit couvrir OneDrive, les fichiers non disponibles localement, les préférences absentes/invalides et les permissions d’écriture. Définir le schéma versionné de préférences, le repli local et la coordination de leurs mises à jour entre instances. La disponibilité et le comportement sous synchronisation ne sont pas encore démontrés.
+
+Le contrôle d’une seule fenêtre éditable sur le poste ne prouve pas une exclusion entre deux PC. Ne pas annoncer une édition simultanée sûre du même .dbcd par synchronisation : préciser le parcours de fermeture/reprise sur un autre poste et tester les conflits. Aucun verrou local ni copie en conflit ne doit être interprété comme une autorisation d’écraser un fichier distant.
 
 ## Décisions différées historiques
 

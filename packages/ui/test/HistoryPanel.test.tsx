@@ -6,6 +6,9 @@ import { emptyPresentation } from "../../core/src/presentation.js";
 import { ProjectWorkbench } from "../src/DbcdWorkbench.js";
 import { openResult } from "./workbench-fixture.js";
 import { setupFlowDom } from "./flow-dom.js";
+import { HistoryPanel } from "../src/HistoryPanel.js";
+import type { DocumentSession } from "../src/useDocumentSession.js";
+import { graph } from "./workbench-fixture.js";
 
 beforeEach(() => { setupFlowDom(); Object.defineProperty(window, "innerWidth", { value: 1200, configurable: true }); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -25,6 +28,28 @@ function setup(readOnly = false) {
   return { host, ...rendered };
 }
 describe("history workflow", () => {
+  it("uses readable labels, names changed objects and confirms replacing a draft", async () => {
+    const opened = openResult();
+    const session: DocumentSession = { source: opened._meta.dbcodex.sourceText, presentation: opened.structuredContent.presentation,
+      graph, diagnostics: [], generation: 3, revisions: [older], dirty: true, validating: false, saving: false, error: null,
+      setSource: vi.fn(), setPresentation: vi.fn(), save: vi.fn(), restore: vi.fn(), pin: vi.fn() };
+    const bridge = { requestDisplayMode: vi.fn(), callTool: vi.fn().mockResolvedValue({ _meta: { dbcodex: {
+      revision: { ...older, sourceText: "", presentation: emptyPresentation() }, graph: { ...graph, tables: [], relations: [] },
+    } } }) };
+    render(<HistoryPanel session={session} bridge={bridge} projectPath="demo.dbcd" readOnly={false} onClose={vi.fn()} />);
+    expect(screen.queryByText("Initial revision")).toBeNull();
+    expect(screen.getByText("Création du projet")).toBeTruthy();
+    expect(screen.getByText(/25 sept. 2026/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Comparer la dernière version" }));
+    expect(await screen.findByText("Table ajoutée : users")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Restaurer a1b2c3" }));
+    expect(session.restore).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Annuler" }));
+    expect(session.restore).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Restaurer a1b2c3" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmer la restauration" }));
+    expect(session.restore).toHaveBeenCalledWith(older.id);
+  });
   it("labels estimated line counts for a large comparison", async () => {
     const opened = openResult();
     opened._meta.dbcodex.sourceText = Array.from({ length: 2001 }, (_, i) => `// current ${i}`).join("\n");

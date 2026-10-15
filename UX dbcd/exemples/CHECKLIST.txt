@@ -1,0 +1,43 @@
+UX dbcd — Checklist réutilisable
+
+Cadrage
+[ ] Je sais qui utilise cette surface et quelle tâche elle termine.
+[ ] La première décision et la réussite sont explicites.
+[ ] Les objets métiers et leur identité sont stables.
+[ ] Le parcours de retour et les modes d’échec sont décrits.
+
+Hiérarchie
+[ ] L’action principale ressort sans masquer le contenu de travail.
+[ ] Les actions de document et d’objet ont une portée distincte.
+[ ] L’arbre ou la liste sert à parcourir ; la fiche sert à modifier.
+[ ] Les identifiants et diagnostics restent au niveau utile à la tâche.
+
+Interaction
+[ ] Les bascules affichent leur état et les sélections leur contexte.
+[ ] La fermeture d’un panneau conserve un moyen stable de le rouvrir.
+[ ] La portée d’une action de groupe reste compréhensible sous filtre.
+[ ] Les gestes fréquents ont une alternative ou une récupération adaptée.
+[ ] Annuler et Rétablir restaurent une opération cohérente.
+
+États et confiance
+[ ] Chargement, vide, erreur, résultat identique et lecture seule ont un comportement prévu.
+[ ] Une erreur conserve la saisie et donne une prochaine action.
+[ ] Aperçu, brouillon et version enregistrée ne se confondent pas.
+[ ] Une modification externe ne remplace pas silencieusement le travail local.
+[ ] La suppression indique ce qui disparaît et les dépendances affectées.
+[ ] Quitter un travail non enregistré offre des sorties distinctes et compréhensibles.
+
+Adaptation et accès
+[ ] Le contenu long ne détruit pas la mise en page.
+[ ] La fenêtre compacte conserve une action principale accessible.
+[ ] Les panneaux se replient, se superposent ou se réordonnent selon la tâche.
+[ ] Les commandes ont un nom accessible et un focus visible.
+[ ] L’ouverture et la fermeture des menus et dialogues gèrent le focus.
+[ ] La couleur et le mouvement ne sont pas les seuls moyens de comprendre.
+
+Validation
+[ ] J’ai inspecté les captures des états clair, sombre et compact pertinents.
+[ ] J’ai testé le véritable geste et son résultat, pas seulement la présence du bouton.
+[ ] J’ai mesuré les lenteurs sur un cas représentatif avant de revendiquer un gain.
+[ ] Je distingue la compilation, l’interface testée et l’exécutable livré.
+[ ] Les sources, captures et limites sont reliées à chaque conclusion.

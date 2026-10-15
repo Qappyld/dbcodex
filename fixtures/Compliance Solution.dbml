@@ -1,0 +1,510 @@
+TableGroup "PM" [color: #1E69FD] {
+  "Personne Morale" 
+  Société
+}
+
+TableGroup "PP" [color: #00ff00] {
+  "Personne Physique"
+  Contact
+}
+
+
+TableGroup "CRM" [color: #aa00aa] {
+  "Mission"
+  "Cabinet" 
+}
+//////////////////////////////////////////////////////////////
+// ENUMS (Option Sets Dataverse)
+//////////////////////////////////////////////////////////////
+
+Enum OS_ComportementRisqueClient {
+  "Au début ou au cours de la relation d'affaires, versements ou retraits fréquents en cash"
+  "Nombre important de transferts entrant ou sortant sans raison apparente"
+  "Société intégrée dans une structure / groupe complexe"
+  "Demande du client (PP) d'utiliser le compte du client PM sans motif clair apparent"
+  "Utilisation de prêts back to back sans raison apparente"
+  "Procédure judiciaire à l'encontre de la société"
+  "Informations insuffisantes sur le financement de la société"
+  "Financement de la structure par contribution personnelle du BO"
+  "Financement de la structure par son activité propre"
+  "Financement de la structure par financement bancaire (Monaco/UE/UK/Suisse/juridiction réputée équivalente)"
+  "Financement de la structure par financement bancaire (pays sensible ou ETHR)"
+  "POA illimité sur compte bancaire / signature individuelle du BO"
+  "Signature conjointe avec le BO"
+  "Tiers mandataire seul sur le compte"
+  "La société n'est pas en règle avec son administration fiscale nationale"
+}
+
+Enum OS_Type_Client
+{
+  "Personne Physique"
+    "Personne Morale"
+}
+
+Enum OS_OwnershipRole {
+  "Propriétaire bénéficiaire"
+  "Directeur"
+  "Juridique"
+  "Représentant"
+  "Actionnaire"
+  "Bénéficiaire effectif ultime"
+  "Signataire"
+  "Administrateur"
+  "Autre"
+}
+
+Enum OS_CycleDeVie {
+  Prospect
+  "Prospect sans suite"
+  Actif
+  "Relation terminée"
+}
+
+Enum OS_Titre {
+  M
+  Mme
+  Mlle
+  Dr
+  Pr
+}
+
+Enum OS_Sexe {
+  Homme
+  Femme
+  Autre
+}
+
+Enum OS_EntreeEnRelation {
+  "Client direct"
+  "Apporteur référencé"
+  "Apporteur non référencé"
+  "Recommandation interne"
+}
+
+Enum OS_Mission {
+  "Tenue Comptable"
+  "Révision"
+  "Audit"
+  "Visa"
+  "Social"
+  "Juridique"
+  "Fiscal"
+  "Commissariat aux comptes"
+  "Mandataire agréé 1,381"
+  "Mandataire conservation des données"
+  "Advisory LCB/FT-P-C"
+  "Advisory Protection des données"
+  "RIE & IBE"
+}
+
+Enum OS_TypeMission {
+  "Récurrente"
+  "Occasionnelle"
+}
+
+Enum OS_TypeTelephone {
+  Personnel
+  Domicile
+  Professionnel
+  Autre
+}
+
+Enum OS_TypeEmail {
+  Personnel
+  Professionnel
+  Autre
+}
+
+Enum OS_FormeJuridique {
+  "SARL"
+  "SAS"
+  "SA"
+  "SASU"
+  "EURL"
+  "SNC"
+  "Association"
+  "Fondation"
+  "Autre"
+}
+
+Enum OS_SecteurActivite {
+  "Commerce"
+  "Industrie"
+  "Services"
+  "Immobilier"
+  "Finance"
+  "Construction"
+  "Informatique"
+  "Santé"
+  "Transport"
+  "Autre"
+}
+
+Enum OS_FonctionDirigeant {
+  "Gérant"
+  "Président"
+  "Directeur Général"
+  "Associé"
+  "Administrateur"
+  "Représentant légal"
+  "Autre"
+}
+
+Enum OS_StatutPM {
+  "Actif"
+  "En sommeil"
+  "Dissoute"
+  "En liquidation"
+  "Fusionnée"
+}
+Enum OS_Status_analyse_de_risque
+{
+  Brouillon
+  Validation
+  "Initialisation du calcul"
+ "Validé"
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Référence Pays (lookup)
+//////////////////////////////////////////////////////////////
+
+Table ReferencePays {
+  Id uuid [pk]
+  Nom varchar(100)
+  "Code ISO" varchar(10)
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Téléphone
+//////////////////////////////////////////////////////////////
+
+Table Telephone {
+  Id uuid [pk]
+  "Personne Physique" uuid [ref: > "Personne Physique".Id]
+  "Personne Morale" uuid [ref: > "Personne Morale".Id]
+  "Type de téléphone" OS_TypeTelephone
+  "Numéro" Text
+  "Principal?" YN
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Email
+//////////////////////////////////////////////////////////////
+
+Table Email {
+  Id uuid [pk]
+  "Personne Physique" uuid [ref: > "Personne Physique".Id]
+  "Personne Morale" uuid [ref: > "Personne Morale".Id]
+  "Type d’email" OS_TypeEmail
+  "Adresse email" Text
+  "Principal?" YN
+}
+
+ Table Contact {
+  Id uuit [pk]
+  Titre OS_Titre
+  Nom Text
+  "Nom usage" Text
+  "Nom marital" Text
+  Prénoms varchar(255)
+  Sexe OS_Sexe
+  "Date de naissance" Date
+  "Lieu de naissance" Text
+  "Pays de naissance" uuid [ref: > ReferencePays.Id]
+  }
+//////////////////////////////////////////////////////////////
+// TABLE : Personne Physique
+// Fusion des informations générales + conformité (AML/KYC)
+//////////////////////////////////////////////////////////////
+
+Table "Personne Physique" {
+  Id uuid [pk]
+  Contact uuid [ref: > Contact.Id]
+  // 🔹 Informations administratives générales
+  "Numéro dossier" Text
+  "DA" Text
+  "Date entrée en relation" Date
+  "Date clôture relation" Date
+  Collaborateur User
+  Responsable User
+
+
+
+  // 🔹 Adresse et situation personnelle
+  "Adresse" TexteLong
+  "Code postal" Text
+  Ville Text
+  "Pays de résidence" uuid [ref: > ReferencePays.Id]
+  "La résidence principale est la même que la résidence fiscale?" bool
+  "Pays de résidence fiscale" uuid [ref: > ReferencePays.Id]
+  "Numéro fiscal" Text
+  "Situation familiale" OptionSet
+  "Régime matrimoniale" OptionSet
+
+  // 🔹 Contact
+  Téléphone uuid [ref: > Telephone.Id]
+  Email uuid [ref: > Email.Id]
+
+  // 🔸 Compliance / KYC / AML
+  "Date révision dossier" Date
+  "Cycle de vie" OS_CycleDeVie
+  PEP YN
+  "Revenus estimés" Currency
+  "Estimation du patrimoine" Currency
+  "Origine du patrimoine" OptionSet
+  "Origine du patrimoine - détail" TexteLong
+  Corroboration OptionSet
+  "Corroboration - détail" TexteLong
+  "Client Examen Spécifique" YN
+  "Commentaire entrée relation" TexteLong
+  "Entrée en relation" OS_EntreeEnRelation
+  "EER via apporteur référencé" YN
+  "CR Visite ou Mémo" TexteLong
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Personne Physique Nationalité (multi)
+//////////////////////////////////////////////////////////////
+
+Table "Nationalite" {
+  Id uuid [pk]
+  "Pays" uuid [ref: > ReferencePays.Id]
+  "Personne Physique" uuid [ref: > "Personne Physique".Id]
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Personne Morale
+// Fusion des informations générales + conformité (AML/KYC)
+//////////////////////////////////////////////////////////////
+
+Table Société{
+  Id uuid [pk]
+    "Dénomination / Raison sociale" Text
+  "Dénomination commerciale" Text
+  "Forme juridique" OS_FormeJuridique
+  "Pays d’enregistrement" uuid [ref: > ReferencePays.Id]
+  "Numéro d’immatriculation" Text
+  "Capital social" Currency
+  "Type de société" OptionSet
+}
+
+Table "Personne Morale" {
+  Id uuid [pk]
+
+  // 🔹 Informations générales
+  "Numéro dossier" Text
+  "Date entrée en relation" Date
+  "Date clôture relation" Date
+  Collaborateur User
+  Responsable User
+
+  // 🔹 Identité juridique
+Société uuid [ref: > Société.Id]
+
+  "Date de constitution" Date
+  "Durée de la société (en année)" Int
+  "Date de fin" Date
+
+  "Nombre de parts / actions" Int
+
+  "Société cotée en bourse" YNAC
+
+  // 🔹 Activité et structure
+  "Adresse du siège social" TexteLong
+  "Code postal" Text
+  Ville Text
+  "Activité de la société" OS_SecteurActivite
+  "Objet social" TexteLong
+  "Type Fiscalité" OptionSet
+  "Régime social" OptionSet
+  "Imposition" OptionSet
+  "Régime TVA" OptionSet
+  "N° de TVA intracommunautaire" Text
+  "Blocage pour impayé" YN
+  "Assujetti 1.362" YN
+  "Personnes liées" TexteLong
+  "Comportements à risque" OS_ComportementRisqueClient[] // multi-sélection
+  "Commissaire aux comptes" uuid [ref: > "Contact".Id]
+
+  // 🔸 Compliance / KYC / AML
+  "Date révision dossier" Date
+  "Cycle de vie" OS_CycleDeVie
+  "Client Examen Spécifique" YN
+  PEP YN
+  "PEP par contamination" YN
+  "Pays d’activité principale" uuid [ref: > ReferencePays.Id]
+  "Pays de provenance des fonds" uuid [ref: > ReferencePays.Id]
+  "Pays de destination des fonds" uuid [ref: > ReferencePays.Id]
+  "Origine du patrimoine" OptionSet
+  "Origine du patrimoine - détail" TexteLong
+  Corroboration OptionSet
+  "Corroboration - détail" TexteLong
+  "Dirigeant / représentant" uuid [ref: > "Personne Physique".Id]
+  "Chaine de détention complexe" YN
+  "Patrimoine/fond Social" Currency
+  "Données financière" OptionSet
+  "Opérations complexes" YN
+  "Commentaire entrée relation" TexteLong
+  "Entrée en relation" OS_EntreeEnRelation
+  "EER via apporteur référencé" YN
+  "CR Visite ou Mémo" TexteLong
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Relation (structure de détention)
+//////////////////////////////////////////////////////////////
+
+Table Relation {
+  Id uuid [pk]
+  "Détenteur PP" uuid [ref: > "Contact".Id]
+  "Détenteur PM" uuid [ref: > "Société".Id]
+  "PM Détenu" uuid [ref: > "Société".Id]
+  "Nombre de parts" Int
+  "Pourcentage détention" Decimal(5,2)
+  "Date de début de détention" Date
+  "Role" OS_OwnershipRole
+  "Email" uuid [ref: > "Email".Id]
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Mission
+//////////////////////////////////////////////////////////////
+
+Table "Mission" {
+  Id uuid [pk]
+
+  // 🔹 Liens
+  "Personne Physique" uuid [ref: > "Personne Physique".Id]
+  "Personne Morale" uuid [ref: > "Personne Morale".Id]
+
+  // 🔹 Informations mission
+  Mission OS_Mission
+  "Type de mission" OS_TypeMission
+  "Date début mission" Date
+  "Date fin mission" Date
+  "Statut mission" OptionSet
+  "Commentaire" TexteLong
+  "Chargé de mission" User
+
+  // 🔹 Références internes
+  "Cabinet" uuid [ref: > "Cabinet".Id]
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Cabinet
+//////////////////////////////////////////////////////////////
+
+Table "Cabinet" {
+  Id uuid [pk]
+  "Nom du cabinet" Text
+}
+
+
+//////////////////////////////////////////////////////////////
+// TABLE : Cabinet
+//////////////////////////////////////////////////////////////
+
+TableGroup "ANR" [color: #FFA500] {
+  "Analyse de risque"
+    Questionnaire
+    Question
+    Reponse
+    "Plan d'action"
+    "Section"
+   "Regle de Calcul"
+  "Seuil de calcul"
+}
+
+Table "Analyse de risque"
+  {
+    Id uuid [pk]
+    Nom Text
+  "Personne Physique" uuid [ref: > "Personne Physique".Id]
+  "Personne Morale" uuid [ref: > "Personne Morale".Id]
+  "Plan d'action" uuid [ref: > "Plan d'action".Id]
+  "Calcul Type" os
+  "Score Questionnaire" int
+  "ScorePlan d'action" int
+  "Score final" int  
+  "Regle Calcul" uuid [ref: > "Regle de Calcul".Nom]
+  "Status analyse de risque" OS_Status_analyse_de_risque
+
+  }
+
+  Table Questionnaire
+  {
+    Id uuid [pk]
+    "Analyse de risque" uuid [ref: >"Analyse de risque".Id]
+    Nom Text
+    Section uuid [ref:> Section.Id]
+    Question uuid [ref:> Question.Id]
+    Type OS_Question_Type
+    Ordre int
+    Reponse text
+    Poids int
+  
+  }
+    Enum OS_Question_Type {
+    "Choix unique"
+    "Choix Multiple"
+    "Réponse libre"
+  }
+
+        Table Question [headercolor: #CA4242]
+  {
+    Id uuid [pk]
+    Nom Text
+    Section uuid [ref:> Section.Id]
+    Type OS_Question_Type
+    Ordre int
+  
+  }
+        Table Reponse [headercolor: #CA4242]
+  {
+    Id uuid [pk]
+    Nom Text
+    Question uuid [ref:> Question.Id]
+    Poids int
+  
+  }
+  Table "Plan d'action"
+  {
+    Id uuid [pk]
+    Nom Text
+    Commentaire TexteLong
+    Poids int
+  
+  }
+        Table "Section" [headercolor: #CA4242]
+  {
+    Id uuid [pk]
+    Nom Text
+    "Type Client" OS_Type_Client
+    "Regle de Calcul" uuid [ref: > "Regle de Calcul".Nom]
+  }
+
+Table "Regle de Calcul" [headercolor: #2D6512]
+{Nom text
+Priorite int
+}
+Table "Seuil de calcul" [headercolor: #2D6512]
+{
+  "Regle Calcul" uuid [ref: > "Regle de Calcul".Nom]
+  "Niveau de risque" text
+  "Seuil" int
+}
+
+
+
+
+
+

@@ -1,0 +1,140 @@
+{
+  "label": "before",
+  "openMs": 3662,
+  "measurements": {
+    "recalculate": {
+      "wallMs": 1013,
+      "cpuMs": 800,
+      "scriptMs": 710,
+      "layoutMs": 4,
+      "longTasks": 2,
+      "maxLongTaskMs": 550,
+      "frameP95Ms": 531
+    },
+    "hover": {
+      "wallMs": 1176,
+      "cpuMs": 1108,
+      "scriptMs": 949,
+      "layoutMs": 6,
+      "longTasks": 6,
+      "maxLongTaskMs": 234,
+      "frameP95Ms": 250
+    },
+    "drag": {
+      "wallMs": 14274,
+      "cpuMs": 13384,
+      "scriptMs": 12340,
+      "layoutMs": 43,
+      "longTasks": 61,
+      "maxLongTaskMs": 412,
+      "frameP95Ms": 313
+    },
+    "pan": {
+      "wallMs": 1681,
+      "cpuMs": 738,
+      "scriptMs": 183,
+      "layoutMs": 20,
+      "longTasks": 1,
+      "maxLongTaskMs": 66,
+      "frameP95Ms": 63
+    }
+  },
+  "dom": {
+    "elements": 2205,
+    "handles": 800,
+    "relations": 37
+  },
+  "hot": [
+    {
+      "name": "congestion",
+      "samples": 4015,
+      "percent": 37.2
+    },
+    {
+      "name": "exports.jsx",
+      "samples": 1194,
+      "percent": 11.1
+    },
+    {
+      "name": "(idle)",
+      "samples": 1071,
+      "percent": 9.9
+    },
+    {
+      "name": "(program)",
+      "samples": 845,
+      "percent": 7.8
+    },
+    {
+      "name": "(anonymous)",
+      "samples": 595,
+      "percent": 5.5
+    },
+    {
+      "name": "run",
+      "samples": 501,
+      "percent": 4.6
+    },
+    {
+      "name": "automaticRoute",
+      "samples": 358,
+      "percent": 3.3
+    },
+    {
+      "name": "addObjectDiffToProperties",
+      "samples": 243,
+      "percent": 2.3
+    },
+    {
+      "name": "ReactElement",
+      "samples": 156,
+      "percent": 1.4
+    },
+    {
+      "name": "exports.jsxs",
+      "samples": 150,
+      "percent": 1.4
+    },
+    {
+      "name": "pop",
+      "samples": 142,
+      "percent": 1.3
+    },
+    {
+      "name": "segmentBlocked",
+      "samples": 112,
+      "percent": 1
+    },
+    {
+      "name": "(garbage collector)",
+      "samples": 77,
+      "percent": 0.7
+    },
+    {
+      "name": "updateProperties",
+      "samples": 65,
+      "percent": 0.6
+    },
+    {
+      "name": "addValueToProperties",
+      "samples": 62,
+      "percent": 0.6
+    },
+    {
+      "name": "now",
+      "samples": 51,
+      "percent": 0.5
+    },
+    {
+      "name": "position2",
+      "samples": 48,
+      "percent": 0.4
+    },
+    {
+      "name": "validateProperty",
+      "samples": 47,
+      "percent": 0.4
+    }
+  ],
+  "errors": []
+}

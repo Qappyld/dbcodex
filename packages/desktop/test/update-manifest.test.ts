@@ -7,6 +7,13 @@ const repo = 'Qappyld/dbcodex-releases';
 const manifest = { schema: 1, version: '0.1.2', platform: 'win32', arch: 'x64', url: `https://github.com/${repo}/releases/download/v0.1.2/DBCodex-0.1.2-win-x64.zip`, size: 100, sha256: 'a'.repeat(64), notes: 'Corrections', files: [{ path: 'DBCodex.exe', sha256: 'b'.repeat(64) }, { path: 'resources/app.asar', sha256: 'c'.repeat(64) }] };
 function envelope(value: unknown) { const payload = Buffer.from(JSON.stringify(value)); return JSON.stringify({ payload: payload.toString('base64'), signature: sign(null, payload, key.privateKey).toString('base64') }); }
 describe('mises à jour signées', () => {
+  it('accepte le canal EXE signé et refuse ses inventaires ou liens ZIP', () => {
+    const { files, ...base } = manifest;
+    const portable = { ...base, schema: 2, url: base.url.replace('.zip', '.exe') };
+    expect(readSignedManifest(envelope(portable), publicKey, repo)).toEqual(portable);
+    expect(() => readSignedManifest(envelope({ ...portable, files }), publicKey, repo)).toThrow();
+    expect(() => readSignedManifest(envelope({ ...portable, url: base.url }), publicKey, repo)).toThrow('Origine');
+  });
   it('accepte une publication signée de la bonne origine', () => { expect(readSignedManifest(envelope(manifest), publicKey, repo)).toEqual(manifest); });
   it('refuse un contenu modifié après signature et une autre clé', () => {
     const tampered = JSON.parse(envelope(manifest)); tampered.payload = Buffer.from(JSON.stringify({ ...manifest, version: '9.0.0' })).toString('base64');

@@ -1,8 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { dirname, join, basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, realpathSync } from "node:fs";
-import { createDbcdProject, openDbcdProject, parseDbml } from "@dbcodex/core";
+import { createDbcdProject, openDbcdProject, parseDbml, newProjectTemplate, projectProfileSchema } from "@dbcodex/core";
 import { createHandlers } from "../../mcp/src/handlers.js";
 import { PreferencesStore } from "./preferences.js";
 import { acquireProjectLock } from "./project-lock.js";
@@ -10,12 +10,43 @@ import type { Server } from "node:net";
 import { PortableUpdater } from "./updater.js";
 import releaseConfig from "../../../release-config.json" with { type: "json" };
 import { existsSync } from "node:fs";
+import { liveEndpoint, liveToken, serveLive, writeLiveConnection, type LiveRequest } from "../../mcp/src/live-session.js";
+import { serveLiveHttp } from "../../mcp/src/live-http.js";
+import { randomUUID } from "node:crypto";
+import { DiagnosticLog, diagnosticError } from "./diagnostic-log.js";
 const here = dirname(fileURLToPath(import.meta.url));
+const portableExecutable = app.isPackaged ? process.env.PORTABLE_EXECUTABLE_FILE : undefined;
+const portableRoot = portableExecutable ? dirname(portableExecutable) : dirname(process.execPath);
 type Session = { path?: string; root?: string; lock?: Server | null; closing?: boolean };
 const sessions = new Map<number, Session>();
 let preferences: PreferencesStore;
 let updater: PortableUpdater;
 let updateClosing = false;
+let diagnostics: DiagnosticLog | undefined;
+process.on("uncaughtExceptionMonitor", error => diagnostics?.write("app.uncaught-exception", { errorName: error.name }));
+const mcpMode = process.argv.includes("--mcp");
+const endpoint = liveEndpoint(app.isPackaged ? portableRoot : resolve(here, "../../.."));
+const pendingLive = new Map<string, { senderId: number; resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
+function askWindow(senderId: number, request: LiveRequest): Promise<unknown> {
+  const window = BrowserWindow.fromId(senderId);
+  if (!window || window.isDestroyed()) return Promise.reject(Error("Session fermée."));
+  return new Promise((resolveRequest, reject) => {
+    const id = randomUUID();
+    const timer = setTimeout(() => { pendingLive.delete(id); reject(Error("Atelier indisponible ou occupé.")); }, 5000);
+    pendingLive.set(id, { senderId: window.webContents.id, resolve: resolveRequest, reject, timer });
+    window.webContents.send("dbcodex:live-request", { id, request });
+  });
+}
+async function liveRequest(request: LiveRequest): Promise<unknown> {
+  if (request.action === "list") return { sessions: BrowserWindow.getAllWindows().flatMap(window => {
+    const session = sessions.get(window.webContents.id);
+    return session?.path ? [{ sessionId: String(window.id), path: session.path, readOnly: !session.lock }] : [];
+  }) };
+  const window = BrowserWindow.getAllWindows().find(window => String(window.id) === request.sessionId);
+  const session = window && sessions.get(window.webContents.id);
+  if (!window || !session?.path || session.closing) throw Error("Session introuvable ou en fermeture.");
+  return { sessionId: request.sessionId, path: session.path, state: await askWindow(window.id, request) };
+}
 function windowFor(path?: string) {
   const window = new BrowserWindow({ width: 1440, height: 940, minWidth: 850, minHeight: 580, title: "DBCodex", webPreferences: { preload: join(here, "preload.cjs"), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   sessions.set(window.webContents.id, {});
@@ -28,10 +59,33 @@ function windowFor(path?: string) {
   return window;
 }
 app.whenReady().then(() => {
+  diagnostics = new DiagnosticLog(join(app.isPackaged ? portableRoot : resolve(here, "../../.."), "data", "logs"), releaseConfig.version, join(app.getPath("userData"), "logs"));
+  diagnostics.write("app.started", { platform: process.platform, arch: process.arch, packaged: app.isPackaged, mcpEnabled: mcpMode });
+  app.on("render-process-gone", (_event, _contents, details) => diagnostics?.write("app.renderer-exited", { reason: details.reason, exitCode: details.exitCode }));
+  app.on("before-quit", () => diagnostics?.write("app.quitting", { updating: updateClosing }));
+  ipcMain.on("dbcodex:live-response", (event, response) => {
+    const pending = pendingLive.get(response?.id);
+    if (!pending || pending.senderId !== event.sender.id) return;
+    clearTimeout(pending.timer); pendingLive.delete(response.id);
+    if (typeof response.error === "string") pending.reject(Error(response.error)); else pending.resolve(response.result);
+  });
+  void liveToken(endpoint).then(async token => {
+    await serveLive(endpoint, liveRequest, token);
+    if (mcpMode) {
+      const http = await serveLiveHttp(endpoint, token, Number(process.argv.find(value => value.startsWith("--mcp-port="))?.split("=")[1] ?? 31425));
+      const address = http.address();
+      if (address && typeof address === "object") await writeLiveConnection(endpoint, token, address.port, app.isPackaged ? portableRoot : resolve(here, "../../.."));
+    }
+  }).catch(error => {
+    diagnostics?.write("mcp.start.failed", diagnosticError(error));
+    // Another instance retains its endpoint; never steal it or close a user's window.
+    process.stderr.write(`Passerelle MCP indisponible : ${error instanceof Error ? error.message : "erreur locale"}\n`);
+    if (mcpMode) dialog.showErrorBox("Connexion MCP indisponible", "La passerelle locale n’a pas pu démarrer. Vérifiez que cette version de DBCodex et le port MCP ne sont pas déjà utilisés.");
+  });
   Menu.setApplicationMenu(null);
-  preferences = new PreferencesStore(app.isPackaged ? dirname(process.execPath) : resolve(here, "../../.."), join(app.getPath("userData"), "preferences"));
-  updater = new PortableUpdater(releaseConfig, dirname(process.execPath), join(here, "apply-update.ps1"), app.isPackaged && process.platform === "win32" && process.arch === "x64");
-  if (app.isPackaged && existsSync(join(dirname(process.execPath), '.dbcodex-update.lock'))) {
+  preferences = new PreferencesStore(app.isPackaged ? portableRoot : resolve(here, "../../.."), join(app.getPath("userData"), "preferences"));
+  updater = new PortableUpdater(releaseConfig, portableRoot, join(here, "apply-update.ps1"), app.isPackaged && process.platform === "win32" && process.arch === "x64", portableExecutable, diagnostics);
+  if (app.isPackaged && existsSync(join(portableRoot, '.dbcodex-update.lock'))) {
     dialog.showErrorBox('Mise à jour interrompue', 'Une mise à jour est en cours ou a été interrompue. Fermez les autres instances. Si le problème persiste, suivez la récupération décrite dans UPDATES.md, à côté de DBCodex.exe.');
     app.quit(); return;
   }
@@ -50,6 +104,12 @@ app.whenReady().then(() => {
     const window = BrowserWindow.fromWebContents(event.sender)!; const session = sessions.get(event.sender.id)!;
     if (!session) throw Error("Fenêtre inconnue.");
     if (name === 'update_status') return updater.status;
+    if (name === 'open_logs') {
+      if (!diagnostics?.directory) throw Error("Les journaux sont indisponibles : aucun dossier accessible en écriture.");
+      const error = await shell.openPath(diagnostics.directory);
+      if (error) throw Error("Impossible d’ouvrir le dossier des journaux.");
+      return updater.status;
+    }
     if (name === 'update_check') return updater.check();
     if (name === 'update_download') return updater.download();
     if (name === 'update_restart') {
@@ -66,15 +126,16 @@ app.whenReady().then(() => {
     if (["open", "create", "import", "locate"].includes(name)) {
       let path = typeof args.path === "string" ? args.path : undefined;
       if (name === "create" || name === "import") {
-        let sourceText = "// Nouveau projet\nTable exemple {\n  id integer [pk]\n}\n";
+        const template = name === "create" ? newProjectTemplate(projectProfileSchema.parse(args.profile)) : null;
+        let sourceText = template?.sourceText ?? "";
         if (name === "import") { const input = await dialog.showOpenDialog(window, { filters: [{ name: "DBML", extensions: ["dbml"] }], properties: ["openFile"] }); if (input.canceled) return null; sourceText = readFileSync(input.filePaths[0]!, "utf8"); if (!parseDbml(sourceText, input.filePaths[0]!).graph) throw Error("DBML invalide : import annulé."); }
         const output = await dialog.showSaveDialog(window, { filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }] }); if (output.canceled || !output.filePath) return null;
-        path = output.filePath; await createDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path), sourceText });
+        path = output.filePath; await createDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path), sourceText, ...(template ? {presentation:template.presentation} : {}) });
       } else if (!path) { const result = await dialog.showOpenDialog(window, { filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }], properties: ["openFile"] }); if (result.canceled) return null; path = result.filePaths[0]!; }
       path = realpathSync(path!);
       await openDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path) });
       if (name === "locate" && typeof args.entry === "string") preferences.remove(args.entry);
-      if (session.path) { windowFor(path); return null; }
+      if (session.path) { windowFor(path); return name === "create" ? { openedInNewWindow: true } : null; }
       session.path = path; session.root = dirname(path); session.lock = await acquireProjectLock(path);
       window.setTitle(`${basename(path)} — DBCodex${session.lock ? "" : " · Lecture seule"}`); preferences.add(path);
       const result = await createHandlers(session.root).openDbcd({ path: basename(path) });
@@ -82,6 +143,29 @@ app.whenReady().then(() => {
       return result;
     }
     if (!session.path || !session.root) throw Error("Ouvrez un projet.");
+    if (name === "save_as") {
+      if (typeof args.sourceText !== "string" || !args.presentation) throw Error("Contenu du projet absent.");
+      const output = await dialog.showSaveDialog(window, {
+        title: "Enregistrer sous", defaultPath: join(session.root, `${basename(session.path, ".dbcd")} - copie.dbcd`),
+        filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }],
+      });
+      if (output.canceled || !output.filePath) return null;
+      const path = resolve(output.filePath);
+      if (existsSync(path)) throw Error("Ce fichier existe déjà. Choisissez un nouveau nom, ou utilisez Enregistrer pour le projet courant.");
+      // Build and validate the complete current document before changing the active session.
+      await createDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path), sourceText: args.sourceText, presentation: args.presentation as any });
+      const lock = await acquireProjectLock(path);
+      if (!lock) throw Error("La copie a été enregistrée, mais elle est déjà ouverte ailleurs. Le projet courant reste ouvert.");
+      let result;
+      try {
+        result = await createHandlers(dirname(path)).openDbcd({ path: basename(path) });
+        if ("isError" in result && result.isError) throw Error("La copie a été enregistrée, mais son ouverture a échoué.");
+      } catch (error) { lock.close(); throw error; }
+      session.lock?.close();
+      session.path = path; session.root = dirname(path); session.lock = lock;
+      window.setTitle(`${basename(path)} — DBCodex`); preferences.add(path);
+      return result;
+    }
     if (name === "save_copy") {
       if (typeof args.sourceText !== "string") throw Error("Source absente.");
       const output = await dialog.showSaveDialog(window, { title: "Enregistrer une copie récupérée", filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }] });

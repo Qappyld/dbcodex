@@ -1,0 +1,66 @@
+BASE DE PRÉPARATION DU FUTUR SKILL
+Édition du 15 octobre 2026
+Ce fichier est une base de conception, pas un skill installé.
+
+INTENTION
+Aider un agent à comprendre un produit, améliorer son parcours et vérifier son interface.
+Le résultat attendu est une tâche plus claire et plus fiable, appuyée par des preuves.
+
+DÉCLENCHEMENT
+Conception, amélioration, revue ou correction UI qui affecte tâche, hiérarchie, interaction,
+texte, état, adaptation, accès ou fluidité. Petite correction : procédure légère.
+Changement purement backend sans effet UI : hors périmètre.
+
+PROCÉDURE
+1. Lire les instructions et composants du projet. Identifier ce qu’il faut conserver.
+2. Remplir le brief objet, utilisateur, parcours, décision, réussite et récupération.
+3. Diagnostiquer la friction avant de choisir une apparence.
+4. Choisir la profondeur nécessaire : polissage, composant, page ou parcours.
+5. Relier l’action à son objet. Séparer navigation, aperçu, édition et engagement.
+6. Prévoir états, conflits et récupération proportionnés aux opérations.
+7. Réutiliser les comportements et rôles visuels existants, adapter les valeurs au produit.
+8. Vérifier les gestes réels, le clavier, les contenus difficiles et la fenêtre compacte.
+9. Si une lenteur est en cause, mesurer avant et après avec les mêmes conditions utiles.
+10. Livrer une preuve du résultat, ses limites et la référence exacte de la version testée.
+11. Conserver les leçons répétables avec contexte, exemple et exception.
+
+PRINCIPES
+1. Comprendre avant de dessiner : Nommer utilisateur, objet métier, tâche, point d’entrée, première décision, résultat attendu et récupération. Exemple DBCodex : construire une relation et vérifier sa cible, pas simplement afficher une page de graphe. Cas UX01, UX24.
+2. Construire autour des objets : Parcourir dans une liste ou un arbre, inspecter l’objet choisi dans une fiche et modifier dans ce contexte. Ne pas exposer tous les formulaires à égalité. Cas UX22, UX25.
+3. Garder un point de retour : Un panneau fermé conserve son déclencheur ; un filtre sans résultat possède une sortie ; une vue personnalisée conserve une vue complète de référence. Cas UX02, UX17, UX23.
+4. Nommer les engagements : Distinguer aperçu, brouillon, validation, enregistrement, publication ou déploiement selon le produit. Chaque bouton doit avoir une portée compréhensible. Cas UX18, UX28, UX38.
+5. Préserver l’intention manuelle : Les automatismes conservent les retouches lorsqu’ils peuvent le faire ; remplacer un travail manuel se fait avec une portée annoncée et une récupération. Cas UX10, UX14.
+6. Donner le sens avant le détail : Résultat humain puis détail utile puis diagnostic brut. Garder les termes techniques lorsqu’ils sont nécessaires à la tâche. Cas UX05, UX32.
+7. Traiter les transitions : Le parcours comprend entrée, décision, action, retour, erreur, récupération et fin. Un bel écran sans transition sûre est insuffisant. Cas UX03, UX19, UX29.
+8. Tester des cas difficiles : Prévoir noms longs, absence de résultat, données denses, brouillon invalide, lecture seule, conflit et fenêtre compacte ; choisir les cas pertinents au produit. Cas UX23, UX27, UX34.
+9. Vérifier les gestes : Une capture montre l’apparence. Un test d’interaction prouve le clic, le glissement, le clavier, l’annulation et le résultat. Cas UX07, UX12, UX13.
+10. Mesurer la sensation de blocage : Profiler une tâche réelle et le matériel du test. Mesurer les temps et vérifier la correction du document après optimisation. Cas UX36, UX37.
+11. Codifier sans figer le style : Conserver les invariants UX et les critères observables. Les couleurs, dimensions et gestes particuliers restent des choix de contexte. Cas UX04, UX06, UX35.
+12. Qualifier les preuves : Distinguer demandé, implémenté, testé, capturé et livré. Ne pas déduire une fonctionnalité d’un plan ou d’une comparaison avec un autre logiciel. Cas UX15, UX39.
+
+EXCEPTIONS À NE PAS GÉNÉRALISER
+- DBCodex impose un profil fixe ; une autre application peut avoir besoin d’une migration.
+- Les 36/40 px des barres et les 28 px de poignées sont des choix desktop contextualisés.
+- Bouton central, Alt et Maj ne suffisent pas pour les utilisateurs tactiles.
+- Les animations malgré prefers-reduced-motion sont une exception demandée dans DBCodex.
+  Repartir du respect des préférences dans un nouveau projet et étudier tout écart.
+- Une confirmation est utile avant une perte ou une suppression conséquente ; ne pas en
+  ajouter systématiquement à une action réversible ou déjà examinée dans le parcours.
+- Les vues du même modèle ne sont pas des copies indépendantes de données.
+- L’export DBML ne conserve pas toutes les métadonnées du projet .dbcd.
+- Une compilation et des tests de composants ne prouvent pas toute l’intégration hôte.
+- Les métriques d’un geste sur Compliance ne sont pas un budget garanti sur tout modèle.
+
+SOURCES À CHARGER AU BESOIN
+DONNEES-DOSSIER.json : 39 fiches et leurs exemples.
+exemples/SCENARIOS.json : huit parcours.
+exemples/CHECKLIST.txt et BRIEF-ET-REVUE.txt : modèles.
+sources/skills/ui-ux/ : skill complet, références et templates existants.
+sources/skills/dbcodex/SKILL.md : règles locales de fichiers et d’édition.
+sources/projet/ : rapports de décisions et de vérification.
+captures/ : états authentiques, avec origines dans MANIFESTE.json.
+
+FUTURE ORGANISATION
+Garder le point d’entrée court ; séparer principes, études de cas, états et vérification.
+Les captures illustrent des décisions, elles ne dictent pas une esthétique universelle.
+Ne pas installer les copies comme nouveaux skills sans une demande de création explicite.

@@ -46,7 +46,8 @@ try {
 
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map(({ name }) => name).sort(), [
-    "apply_dbcd_edits",
+    "apply_dbcd_edits", "create_dbcd",
+    "read_dbcd", "validate_dbcd_changes", "update_dbcd",
     "discard_dbcd_draft", "export_dbml", "import_dbml", "list_dbcd_revisions", "open_dbcd", "open_dbml",
     "open_dbcd_app", "open_dbcd_file", "open_dbcd_workbench", "pin_dbcd_revision", "read_dbcd_revision", "resolve_dbcd_file", "restore_dbcd_revision", "save_dbcd", "save_dbcd_draft",
     "save_layout", "validate_dbcd_draft",
@@ -57,6 +58,25 @@ try {
   const launcher = await client.callTool({ name: "open_dbcd_workbench", arguments: {} });
   assert.equal(launcher.structuredContent.dbcodexLauncher, true);
   assert.ok(!JSON.stringify(launcher).includes(workspace));
+  const assistantPath = "fixtures/assistant.dbcd";
+  const assistantCreate = await client.callTool({ name: "create_dbcd", arguments: {
+    path: assistantPath, profile: { mode: "sql", dialect: "sqlite" }, sourceText: "Table customers { id integer [pk] }",
+  } });
+  assert.equal(assistantCreate.isError, undefined);
+  const assistantRead = await client.callTool({ name: "read_dbcd", arguments: { path: assistantPath } });
+  assert.equal(assistantRead.isError, undefined);
+  assert.match(JSON.parse(assistantRead.content[0].text).sourceText, /Table customers/);
+  const assistantState = assistantRead.structuredContent;
+  const assistantArgs = { path: assistantPath, expectedProjectId: assistantState.projectId,
+    expectedRevisionId: assistantState.currentRevisionId, expectedGeneration: assistantState.generation,
+    sourceText: `${assistantState.sourceText}\n// assistant revision` };
+  const preview = await client.callTool({ name: "validate_dbcd_changes", arguments: assistantArgs });
+  assert.equal(preview.structuredContent.valid, true);
+  assert.equal((await client.callTool({ name: "read_dbcd", arguments: { path: assistantPath } })).structuredContent.generation, 1);
+  const assistantSaved = await client.callTool({ name: "update_dbcd", arguments: assistantArgs });
+  assert.equal(assistantSaved.structuredContent.saved, true);
+  assert.equal(assistantSaved.structuredContent.generation, 2);
+  assert.equal((await client.callTool({ name: "update_dbcd", arguments: assistantArgs })).isError, true);
   const fileEntry = await client.callTool({ name: "open_dbcd_file", arguments: { file: { name: "demo-shop.dbcd", resourceUri: "opaque://demo" } } });
   assert.equal(fileEntry.structuredContent.dbcodexFile.resourceUri, "opaque://demo");
   const fileView = await client.callTool({ name: "resolve_dbcd_file", arguments: {},

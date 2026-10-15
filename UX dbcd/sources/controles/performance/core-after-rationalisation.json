@@ -1,0 +1,58 @@
+{
+  "compliance": {
+    "tables": 19,
+    "parse": {
+      "medianMs": 0.92,
+      "p95Ms": 0.97,
+      "samples": 15
+    },
+    "editedParse": {
+      "medianMs": 22.39,
+      "p95Ms": 33.64,
+      "samples": 15
+    },
+    "open": {
+      "medianMs": 5.43,
+      "p95Ms": 16.87,
+      "samples": 15
+    },
+    "draft": {
+      "medianMs": 13.62,
+      "p95Ms": 14.93,
+      "samples": 15
+    },
+    "save": {
+      "medianMs": 16.76,
+      "p95Ms": 17.54,
+      "samples": 5
+    }
+  },
+  "large": {
+    "tables": 100,
+    "parse": {
+      "medianMs": 10.23,
+      "p95Ms": 10.7,
+      "samples": 15
+    },
+    "editedParse": {
+      "medianMs": 133.12,
+      "p95Ms": 181.34,
+      "samples": 15
+    },
+    "open": {
+      "medianMs": 14.81,
+      "p95Ms": 20.21,
+      "samples": 15
+    },
+    "draft": {
+      "medianMs": 32.61,
+      "p95Ms": 38.46,
+      "samples": 15
+    },
+    "save": {
+      "medianMs": 43.6,
+      "p95Ms": 45.14,
+      "samples": 5
+    }
+  }
+}

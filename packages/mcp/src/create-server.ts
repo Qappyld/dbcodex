@@ -9,6 +9,8 @@ import { OpenAIFileEntrypointInputSchema, type OpenAIFileEntrypointInput, type O
 import { createNativeIntegration } from "./native-integration.js";
 import { fileURLToPath } from "node:url";
 import { presentationSchema, assertJsonByteLimit, boundedUtf8Length, DBCD_MAX_PRESENTATION_BYTES, DBCD_MAX_SOURCE_BYTES } from "@dbcodex/core";
+import { projectProfileSchema, projectModelSchema } from "@dbcodex/core";
+import { createAssistantHandlers } from "./assistant-handlers.js";
 import { createHandlers } from "./handlers.js";
 import { loadUiHtml, UI_RESOURCE_URI } from "./ui-resource.js";
 
@@ -59,8 +61,22 @@ const boundedPresentation = z.preprocess((value, context) => {
 }, presentationSchema);
 const projectDraftInput = pathInput.extend({ sourceText: boundedSource });
 const expectedState = { expectedProjectId: z.string().min(1), expectedRevisionId: z.string().min(1), expectedGeneration: z.number().int().positive() };
+const boundedModel = z.preprocess((value, context) => {
+  try { assertJsonByteLimit(value, DBCD_MAX_PRESENTATION_BYTES); return value; }
+  catch { context.addIssue({ code: "custom", message: "The project model exceeds its size limit." }); return z.NEVER; }
+}, projectModelSchema);
+const assistantChanges = pathInput.extend({ ...expectedState, sourceText: boundedSource.optional(),
+  model: boundedModel.optional(), label: z.string().max(512).optional() })
+  .refine(input => input.sourceText !== undefined || input.model !== undefined, "Supply sourceText or model.");
 
 export const buildToolDefinitions = () => ({
+  readAssistant: { title: "Read DBCodex for assistant", description: "Explicitly share saved DBML, business model and revision identity with the requesting assistant. Draft content is excluded unless includeDraft is true. No MCP Apps UI required.",
+    inputSchema: pathInput.extend({ includeDraft: z.boolean().optional() }), annotations: readOnly, _meta: {} },
+  validateAssistant: { title: "Preview DBCodex changes", description: "Validate proposed DBML and/or a complete replacement business model without writing. Requires fresh project identity; refuses drafts and fixed-profile changes. Omitted source/model is preserved; diagram views are always preserved.",
+    inputSchema: assistantChanges, annotations: readOnly, _meta: {} },
+  updateAssistant: { title: "Update DBCodex project", description: "Save user-requested DBML and/or a complete replacement business model as one revision. Validate first with validate_dbcd_changes. Requires fresh identity, refuses recoverable drafts and conflicts, preserves diagram views and fixed profile. Omitted source/model is preserved (lookup targets reconcile after source edits).",
+    inputSchema: assistantChanges, annotations: { ...writeOnce, destructiveHint: true }, _meta: {} },
+  createDbcd: { title: "Create DBCodex project", description: "Create a workspace .dbcd with a fixed SharePoint, Dataverse, SQL or generic profile. Optional sourceText and complete business model initialize a populated project atomically. Never overwrites an existing file.", inputSchema:pathInput.extend({profile:projectProfileSchema,sourceText:boundedSource.optional(),model:boundedModel.optional()}),annotations:writeOnce,_meta:publicUi },
   threadWorkbench: { title: "Atelier DBML", description: "Open the local DBML workbench beside the conversation.", inputSchema: z.object({}), annotations: readOnly, icons, _meta: entryUi("thread") },
   globalWorkbench: { title: "dbcodex", description: "Open the local DBCodex app.", inputSchema: z.object({}), annotations: readOnly, icons, _meta: entryUi("global") },
   fileWorkbench: { title: "Atelier dbcodex", description: "Open a host-provided workspace .dbcd or .dbml file.", inputSchema: z.object({ file: z.object({ name: z.string().min(1), resourceUri: z.string().trim().min(1) }) }), annotations: readOnly, icons, _meta: entryUi("file") },
@@ -175,8 +191,13 @@ export function createServer(trustedFallbackRoot?: string): McpServer {
   });
   const roots = createWorkspaceRootProvider(server.server, trustedFallbackRoot);
   const handlers = createHandlers(roots);
+  const assistant = createAssistantHandlers(roots);
   const native = createNativeIntegration(roots, handlers);
   const definitions = buildToolDefinitions();
+
+  server.registerTool("read_dbcd", definitions.readAssistant, assistant.read);
+  server.registerTool("validate_dbcd_changes", definitions.validateAssistant, assistant.validate);
+  server.registerTool("update_dbcd", definitions.updateAssistant, assistant.update);
 
   registerAppTool(server, "open_dbcd_workbench", definitions.threadWorkbench, native.launch);
   registerAppTool(server, "open_dbcd_app", definitions.globalWorkbench, native.launch);
@@ -187,6 +208,7 @@ export function createServer(trustedFallbackRoot?: string): McpServer {
   registerAppTool(server, "apply_dbcd_edits", definitions.editDbcd, native.edit);
 
   registerAppTool(server, "open_dbcd", definitions.openDbcd, handlers.openDbcd);
+  registerAppTool(server, "create_dbcd", definitions.createDbcd, handlers.createDbcd);
   registerAppTool(server, "open_dbml", definitions.openDbml, handlers.openDbml);
   registerAppTool(server, "import_dbml", definitions.importDbml, handlers.importDbml);
   registerAppTool(server, "export_dbml", definitions.exportDbml, handlers.exportDbml);

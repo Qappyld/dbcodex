@@ -2,9 +2,21 @@
 
 ## Lancement
 
-Décompresser entièrement l’archive `DBCodex-X.Y.Z-win-x64.zip` dans un dossier accessible, puis lancer `DBCodex.exe`. Conserver tous les fichiers extraits. Aucun Node.js, installation ou droit administrateur n’est demandé par l’application.
+Télécharger `DBCodex-X.Y.Z-win-x64.exe` dans un dossier accessible puis double-cliquer dessus. Ce fichier unique lance l’application sans installation, Node.js ou droit administrateur. Ses composants sont extraits temporairement puis supprimés à la fermeture normale ; le démarrage peut prendre quelques secondes. Il peut être renommé, y compris avec des espaces.
+
+Le dossier `data/` est créé à côté de cet EXE pour conserver les préférences. Déplacer l’EXE avec ce dossier pour les retrouver sur un autre emplacement. Les projets `.dbcd` restent des fichiers distincts. Pour passer de l’ancienne version ZIP au fichier unique, placer le nouvel EXE dans l’ancien dossier portable : le même `data/` et les mêmes chemins récents seront réutilisés. L’ancien ZIP reste produit pour assurer les mises à jour des éditions déjà distribuées.
 
 Créer un projet, ouvrir un `.dbcd` ou importer un `.dbml`. Enregistrer avec le bouton ou Ctrl+S. L’export DBML contient le modèle enregistré ; enregistrer les modifications avant l’export. Ouvrir un autre projet crée une autre fenêtre.
+
+## Connexion MCP à partir de la version 0.1.6
+
+Pour permettre à un client MCP local de consulter le projet ouvert sans contrôler la souris, lancer l’EXE avec `--mcp` (par exemple depuis PowerShell : `& '.\DBCodex-0.1.6-win-x64.exe' --mcp`). La fenêtre s’ouvre normalement et le serveur MCP Streamable HTTP écoute sur `http://127.0.0.1:31425/mcp`. Un autre port peut être choisi avec `--mcp-port=31426`.
+
+Les paramètres de connexion sont écrits dans `%USERPROFILE%\.dbcodex\live\<identifiant>.json` : choisir celui dont `applicationRoot` correspond au dossier de cet EXE, puis reporter `url` et `httpHeaders.Authorization` dans le client MCP. Ces fichiers contiennent une clé privée locale : ne pas les partager. L’EXE unique ne doit pas être configuré comme serveur stdio ; son lanceur ne transmet pas la sortie standard.
+
+Les trois outils permettent de lister les projets ouverts, lire la source en mémoire (modifications non enregistrées comprises) et sélectionner/centrer une table, une colonne ou une relation visible. Une cible masquée est refusée sans modifier la vue. La passerelle ne propose pas d’écriture du schéma. La lecture transmet explicitement le contenu demandé à l’assistant et à son fournisseur.
+
+Le client doit prendre en charge HTTP local et l’en-tête d’authentification. Un client cloud ou situé sur un autre poste ne peut pas joindre cette adresse locale directement. Aucun tunnel distant n’est fourni. Fermer l’application arrête la connexion ; déplacer l’EXE dans un autre dossier demande de reprendre les nouveaux paramètres. Pour des processus distincts, utiliser des dossiers et des ports distincts.
 
 Clic simple : sélection graphique. Double-clic sur l’en-tête de table, une relation ou un groupe : définition DBML sélectionnée et éditeur ouvert. Avec un texte invalide, le dernier diagramme valide reste affiché ; la navigation refuse une plage incertaine.
 
@@ -34,13 +46,17 @@ La mise à jour du 14 octobre ajuste les raccordements lorsque les tables bougen
 
 ## Données et mise à jour
 
+La 0.1.7 corrige le contrôle des emplacements OneDrive : les marqueurs Cloud Files reconnus sont autorisés après vérification du chemin, tandis que les liens symboliques et jonctions restent refusés. Si une ancienne version annule déjà les mises à jour sur OneDrive, installer cette version une fois manuellement en remplaçant uniquement l’EXE après fermeture, sans supprimer `data/` ni les projets.
+
+**Mises à jour → Ouvrir les journaux** ouvre les diagnostics locaux, normalement dans `data/logs/`. Les étapes et erreurs de mise à jour restent disponibles après redémarrage. **Détails du dernier échec** affiche la cause technique, l’étape et la référence de tentative. En cas de dossier du portable non accessible en écriture, les journaux utilisent le dossier local de données utilisateur. Aucun journal n’est envoyé automatiquement ; vérifier les chemins personnels avant de partager un fichier. Voir `UPDATES.md` pour les formats et la conservation.
+
 La livraison du 13 octobre inclut l'optimisation de la fluidité : React en mode production, raccordements limités aux relations utilisées, conservation des calculs valides et adaptation légère pendant les déplacements. Le recalcul global est réparti en petites étapes ; ses boutons sont temporairement désactivés pendant le calcul. Si la disposition change entre-temps, un résultat devenu obsolète est écarté.
 
 Les préférences se trouvent dans `data/preferences.json` à côté de l’exécutable. Les projets placés sous ce dossier portable utilisent des chemins récents relatifs ; les projets extérieurs utilisent des chemins absolus. Déplacer toute l’arborescence conserve les références relatives. Les projets `.dbcd` restent à l’emplacement choisi.
 
 À partir de la version 0.1.1, ouvrir **Mises à jour** dans l’en-tête : télécharger la nouvelle version, puis choisir **Mettre à jour et redémarrer**. Les fichiers sont vérifiés et remplacés automatiquement après conservation des brouillons. Fermer les autres instances avant le redémarrage. Les détails de publication et de récupération sont dans `UPDATES.md`.
 
-Pour les anciennes versions, fermer toutes les fenêtres, extraire la nouvelle archive dans un dossier temporaire, puis remplacer les fichiers applicatifs dans le dossier existant. **Conserver le sous-dossier `data/` et les projets** : ne pas supprimer l’ancien dossier complet. L’archive ne contient pas de préférences préremplies.
+Pour une mise à jour manuelle du fichier unique, fermer toutes les fenêtres puis remplacer uniquement l’EXE. **Conserver le sous-dossier `data/` et les projets**. L’EXE distribué ne contient pas de préférences préremplies. Les éditions ZIP continuent à recevoir leur format de mise à jour habituel ; le passage au fichier unique se fait manuellement.
 
 Une configuration illisible ou de version inconnue est conservée intacte ; les changements de préférences restent alors dans la session. Si `data/` ne peut pas être créé, l’application essaie le dossier de préférences du compte Windows ; le repli est annoncé dans l’interface. Les caches Electron restent dans les données du compte Windows.
 
@@ -58,11 +74,11 @@ Les notes/couleurs enrichissent la présentation v1. Cette application ouvre les
 
 La version a été essayée sur l’hôte de développement Windows Server 2025 x64. Un compte Windows standard distinct, un PC sans outils de développement et OneDrive n’ont pas été testés.
 
-1. Sous un compte standard, extraire le ZIP dans Documents puis lancer l’exécutable sans terminal. Vérifier l’absence de demande d’élévation.
+1. Sous un compte standard, placer l’EXE unique dans Documents puis le lancer sans terminal. Vérifier l’absence de demande d’élévation.
 2. Créer un projet fictif, importer un DBML, modifier un commentaire et une table, créer une vue et un groupe, changer leur couleur et ajouter une note. Enregistrer puis exporter le DBML.
 3. Fermer et rouvrir ; vérifier texte, vues, groupe, couleur, note et historique. Restaurer une ancienne révision : les versions suivantes doivent rester consultables.
 4. Lancer deux fois le même projet : la seconde fenêtre doit afficher Lecture seule. Ouvrir un autre projet : ses modifications doivent rester isolées.
 5. Déplacer le dossier portable avec un projet dans un sous-dossier. Vérifier thème et ouverture du récent. Remplacer seulement les fichiers applicatifs en conservant `data/`.
 6. Dans OneDrive, utiliser un projet disponible localement, tester déplacement, indisponibilité puis relocalisation. Modifier une copie du projet depuis un autre outil pendant une édition et vérifier le conflit et Enregistrer une copie.
 
-Le verrou concerne uniquement les instances locales. Aucun verrou entre deux PC via OneDrive, aucune synchronisation ou fusion automatique de bases n’est promis. Aucune connexion IA, discussion ou proposition n’est livrée dans cette version.
+Le verrou concerne uniquement les instances locales. Aucun verrou entre deux PC via OneDrive, aucune synchronisation ou fusion automatique de bases n’est promis. Aucun assistant intégré, fournisseur IA embarqué ou éditeur de propositions n’est livré ; la connexion facultative à un client externe passe par la passerelle MCP locale décrite ci-dessus.

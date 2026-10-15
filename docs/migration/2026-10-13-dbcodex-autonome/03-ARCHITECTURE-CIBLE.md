@@ -75,7 +75,7 @@ Le modèle parle au fournisseur sur Internet. L’éditeur et la base restent lo
 
 Le fichier a une identité et une génération. Les discussions, propositions et sessions d’éditeur gardent leur version de base.
 
-La V1 peut sérialiser les requêtes IA par projet, tout en permettant de changer d’onglet de discussion. Les écritures de projet restent sérialisées et transactionnelles. Une seconde fenêtre peut lire le projet ; les modifications concurrentes doivent être détectées, pas fusionnées silencieusement.
+La V1 peut sérialiser les requêtes IA par projet, tout en permettant de changer d’onglet de discussion. Plusieurs projets peuvent être ouverts simultanément dans des fenêtres ou instances distinctes. Une seule fenêtre possède le droit d’éditer un même projet ; les ouvertures supplémentaires sont en lecture seule. Ce droit doit être contrôlé entre processus, pas seulement dans l’interface. Les écritures de projet restent sérialisées et transactionnelles ; les modifications externes doivent être détectées, pas fusionnées silencieusement.
 
 Le format existant contient un seul brouillon. Ne pas annoncer une isolation de brouillons par discussion ou par fenêtre tant qu’elle n’est pas conçue et testée.
 

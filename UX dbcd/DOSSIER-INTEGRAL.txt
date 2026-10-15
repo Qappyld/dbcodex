@@ -1,0 +1,1237 @@
+UX dbcd
+Les améliorations UX et UI au 15 octobre 2026
+
+
+Lire et réutiliser le dossier
+
+
+Ce dossier rassemble les améliorations UX et UI de DBCodex jusqu’au 15 octobre 2026, depuis les fondations de l’atelier de septembre jusqu’aux travaux sur Construction et l’historique. Il relie les changements à leurs problèmes de départ, à des exemples, aux captures disponibles et aux fichiers qui permettent de les vérifier.
+
+
+Le résultat principal est un atelier cohérent entre source, arbre, fiche, diagramme, vues et historique. Les acquis réutilisables concernent la priorité donnée à la tâche, la stabilité du contexte, la séparation des états de travail, la récupération et la vérification des interactions. Ils sont détaillés dans 39 fiches et prolongés par une méthode pour de futurs projets.
+
+
+Deux lectures. Pour comprendre le projet, suivre les chapitres illustrés. Pour préparer un skill, partir des principes transférables, des cas pratiques, de la checklist et du fichier BASE FUTUR SKILL, puis consulter les sources uniquement au besoin.
+
+
+Comment lire les preuves. Les captures sont les images authentiques des contrôles précédents, copiées sans retouche. Chaque légende précise le contexte. Les améliorations sont confirmées par les rapports et le code présent ; aucune capture « avant » n’a été recréée. Les paires historiques ne sont pas des essais contrôlés sur une même donnée et un même cadrage. Les liens de sources ouvrent les copies conservées dans ce dossier.
+
+
+État de référence. Le README et le rapport Historique désignent la portable locale 0.1.4 comme référence. Le rapport de performance du 15 octobre concerne une compilation de développement qui n’a pas remplacé cette portable. Le dépôt contient aussi des changements non commités : le dossier conserve un instantané des fichiers consultés, et non uniquement l’état du dernier commit.
+
+
+Les descriptions du chat autonome et de l’intégration native sont des chantiers distincts. Les parcours de discussion, préparation et application envisagés dans les documents de migration ne sont pas présentés ici comme une interface livrée. Les exports PNG/SVG figurent parmi les exigences historiques, sans preuve suffisante pour être listés comme des acquis réalisés.
+
+Les étapes du projet
+
+ | Période | Chantier | Évolution UX et UI | Nature de la preuve
+
+ | 25 septembre | Conception du workbench | Choix d’un outil local, source unique, vues et persistance explicite. | Spécifications et décisions historiques ; ne pas en déduire toute la livraison actuelle.
+
+ | 26 et 27 septembre | Atelier .dbcd | Éditeur, dernier graphe valide, vues, groupes, détail, historique et restauration. | Acceptation navigateur sur hôte de test MCP, 323 tests consignés ; hôte natif distinct.
+
+ | 9 octobre | Intégration native expérimentale | Lanceur, entrées de plugin, rafraîchissement externe et préservation au teardown. | Métadonnées et tests ne prouvent pas la disponibilité de chaque surface dans Codex.
+
+ | 13 octobre | Atelier Windows et diagramme | Barres compactes, Fichier, icônes, thèmes, gestes, couleurs, routage et fluidité. | Tests et gestes Electron sur copies ; plusieurs ajustements successifs consignés.
+
+ | 14 octobre | Vues et profils métier | Sélecteur compact, aperçu de visibilité, trois sorties, Construction et mise à jour. | Rapports dédiés et captures ; les anciens tests du chat avaient encore des échecs signalés à cette date.
+
+ | 15 octobre | Construction et historique | Recherche, fiche contextualisée, comparaison structurelle, adaptation compacte. | Contrôles sur la portable principale puis référence 0.1.4 pour l’historique.
+
+ | 15 octobre | Rationalisation de performance | Caches, index et commandes groupées ; correction des anciens tests du desktop. | Rapport final : 50 fichiers, 439 tests réussis ; performance compilée en développement, livraison distincte.
+
+La chronologie distingue les étapes plutôt que d’additionner des nombres de tests incompatibles. Le résultat de 439 tests correspond à la validation finale consignée le 15 octobre ; les autres nombres décrivent leurs propres périmètres à leurs dates.
+
+Repérer les améliorations
+
+• UX01 · Réduire la place des commandes globales
+
+• UX02 · Garder les éditeurs accessibles après fermeture
+
+• UX03 · Ouvrir un projet sans perdre le travail
+
+• UX04 · Unifier les composants et leurs états
+
+• UX05 · Séparer nom affiché et identité technique
+
+• UX06 · Utiliser la couleur pour suivre les objets
+
+• UX07 · Séparer panoramique et sélection multiple
+
+• UX08 · Adapter la quantité de détail
+
+• UX09 · Relier l’arbre le code et le diagramme
+
+• UX10 · Rendre les transformations réversibles
+
+• UX11 · Tracer depuis les champs avec des obstacles explicites
+
+• UX12 · Différencier déplacer un segment et créer un détour
+
+• UX13 · Aider le geste et permettre son annulation
+
+• UX14 · Conserver le travail manuel au recalcul
+
+• UX15 · Corriger les détours à partir de cas visibles
+
+• UX16 · Clarifier le sens des animations
+
+• UX17 · Protéger la vue complète et alléger le sélecteur
+
+• UX18 · Séparer prévisualiser valider et enregistrer
+
+• UX19 · Proposer trois sorties avant de quitter une vue modifiée
+
+• UX20 · Conserver la portée des actions de groupe malgré la recherche
+
+• UX21 · Choisir le type avant de créer le fichier
+
+• UX22 · Associer un arbre de navigation à une fiche contextualisée
+
+• UX23 · Rechercher avec les deux vocabulaires
+
+• UX24 · Préremplir une relation depuis le geste graphique
+
+• UX25 · Respecter les différences entre plateformes
+
+• UX26 · Préserver les éléments protégés et les références à résoudre
+
+• UX27 · Conserver le dernier graphe valide
+
+• UX28 · Distinguer brouillon et version enregistrée
+
+• UX29 · Traiter les conflits comme une récupération
+
+• UX30 · Expliquer ce qu’un export conserve
+
+• UX31 · Rendre les versions identifiables
+
+• UX32 · Commencer par les changements compréhensibles
+
+• UX33 · Restaurer avec une conséquence claire
+
+• UX34 · Adapter les panneaux plutôt que réduire tout le contenu
+
+• UX35 · Rendre les commandes utilisables au clavier
+
+• UX36 · Alléger le geste et stabiliser au relâchement
+
+• UX37 · Découper les calculs et rejeter les résultats périmés
+
+• UX38 · Séparer vérifier télécharger et redémarrer
+
+• UX39 · Avoir une référence locale identifiable
+
+Un atelier centré sur le travail
+
+DBCodex sert à concevoir un schéma, lire ses relations et conserver les décisions dans un projet local. Les utilisateurs alternent entre texte DBML, exploration du diagramme et construction métier. Le parcours de référence est ouvrir ou créer un projet, comprendre son état, sélectionner un objet, modifier, vérifier puis enregistrer. L’interface doit garder le modèle et la prochaine action visibles pendant ce parcours.
+
+UX01 Réduire la place des commandes globales
+
+Friction de départ. Les commandes d’application et les commandes du schéma peuvent consommer l’espace nécessaire au diagramme ou se mélanger.
+
+Amélioration réalisée. La portable emploie une barre application de 36 px et une barre atelier de 40 px. Fichier, mises à jour et thème sont séparés des commandes Enregistrer, Annuler, Historique et Vues. Les outils graphiques restent au voisinage du canevas.
+
+Effet pour l’utilisateur. L’utilisateur repère à la fois le projet actif et les opérations utiles sans traverser une page de présentation.
+
+Exemple concret. Pour modifier une relation, sélectionner le lien puis utiliser le routage du diagramme ; pour changer de fichier, passer par Fichier.
+
+Principe à réutiliser. Organiser les actions selon leur portée application, document et objet. Donner l’espace principal au contenu de travail.
+
+Limite ou choix de contexte. 36 et 40 px sont des choix de cet atelier desktop, pas une norme universelle de taille de cible.
+
+UX02 Garder les éditeurs accessibles après fermeture
+
+Friction de départ. Fermer un panneau peut rendre son point de réouverture introuvable.
+
+Amélioration réalisée. Un rail persistant donne accès à DBML et à SharePoint, Dataverse ou Construction. DBML est l’éditeur initial. Cliquer à nouveau sur l’éditeur actif ferme son contenu ; le rail reste visible.
+
+Effet pour l’utilisateur. L’utilisateur gagne de la place sans perdre le chemin de retour.
+
+Exemple concret. Fermer SharePoint pour explorer une grande table, puis rouvrir le même éditeur depuis le rail.
+
+Principe à réutiliser. Une surface escamotable conserve un déclencheur stable et indique son état ouvert ou fermé.
+
+UX03 Ouvrir un projet sans perdre le travail
+
+Friction de départ. Le changement de fichier et l’ouverture simultanée peuvent faire perdre un brouillon ou autoriser deux écritures concurrentes.
+
+Amélioration réalisée. L’accueil et le menu Fichier proposent création, ouverture, récents et import. Ouvrir un autre projet conserve la fenêtre et son brouillon ; une seconde ouverture du même projet est en lecture seule. Ctrl+O ouvre un fichier ; Échap ferme le menu et restitue le focus.
+
+Effet pour l’utilisateur. L’accès aux projets reste rapide tout en protégeant la session déjà ouverte.
+
+Exemple concret. Deux fenêtres sur le même .dbcd ne donnent pas deux éditeurs concurrents.
+
+Principe à réutiliser. Traiter la navigation entre documents comme une transition avec un état à préserver.
+
+Figure 1 — Le menu Fichier dans l’atelierLes actions de fichier et les récents restent accessibles dans l’environnement de travail. Capture du contrôle Windows du 13 octobre.Capture de contrôle du projet · Source build/ui-review/file-menu.png · Cliquer pour agrandir
+
+Figure 2 — L’atelier enrichi de ConstructionLe rail, l’arbre, la fiche et le diagramme partagent une session. Capture du contrôle Construction du 15 octobre.Capture de contrôle du projet · Source build/construction-review/sharepoint-desktop.png · Cliquer pour agrandir
+
+Sources du chapitre. README.md · docs/evidence/windows-ui-2026-10-13.md · packages/ui/src/DbcdWorkbench.tsx · packages/desktop/src/renderer/PortableApp.tsx
+Revenir à l’index des améliorations
+Hiérarchie visuelle et langage
+
+L’identité de l’atelier vient surtout de la cohérence des composants et de la lisibilité. Le thème portable donne des valeurs communes aux surfaces, textes, bordures et accents. Les couleurs des objets ajoutent une information métier ; elles ne remplacent pas les libellés, les clés et les états.
+
+UX04 Unifier les composants et leurs états
+
+Friction de départ. Des boutons, champs, panneaux et tables corrects isolément peuvent former un ensemble visuellement incohérent.
+
+Amélioration réalisée. Boutons, champs, panneaux, tables, notes et barre flottante ont été harmonisés. L’action Enregistrer disponible reçoit l’accent ; les commandes indisponibles, les sélections et les boutons bascule ont des états distincts. Les icônes SVG sont locales et accompagnées de noms accessibles et d’infobulles.
+
+Effet pour l’utilisateur. La même apparence annonce la même catégorie de comportement.
+
+Exemple concret. Grille et Relations exposent leur état actif ; Enregistrer reflète la possibilité réelle de conserver le travail.
+
+Principe à réutiliser. Définir ensemble les états normal, survol, focus, actif, sélectionné, désactivé et en cours. Vérifier leur cohérence entre composants.
+
+UX05 Séparer nom affiché et identité technique
+
+Friction de départ. Un nom interne utile au stockage peut être difficile à lire pour le métier ; renommer un libellé peut casser une identité stable.
+
+Amélioration réalisée. Les noms techniques sont proposés à la création et personnalisables. Modifier ensuite le nom affiché conserve le nom interne. Le diagramme propose Affichés, Techniques ou Les deux. Les identifiants techniques des fiches utilisent une police monospace.
+
+Effet pour l’utilisateur. Le métier lit ses propres termes et le développeur retrouve l’identité exacte sans mélange.
+
+Exemple concret. « Client secondaire » reste associé au nom interne Clientsecondaire ; Dataverse propose des noms minuscules avec le préfixe choisi.
+
+Principe à réutiliser. Conserver une identité stable et proposer plusieurs représentations adaptées au lecteur, sans multiplier les objets.
+
+UX06 Utiliser la couleur pour suivre les objets
+
+Friction de départ. Dans un graphe dense, suivre une relation et distinguer les groupes demande un effort visuel important.
+
+Amélioration réalisée. Les en-têtes colorés reprennent headercolor. La couleur individuelle prime sur celle du groupe ; le texte de l’en-tête est contrasté. Lignes et boules suivent la couleur de la table référencée. La sélection met en évidence les objets et champs liés.
+
+Effet pour l’utilisateur. La couleur aide à suivre les voisinages et les ensembles du modèle.
+
+Exemple concret. Dans Compliance, les groupes colorés séparent les domaines tandis qu’une relation sélectionnée ressort du reste du diagramme.
+
+Principe à réutiliser. Attribuer un sens stable à la couleur et la compléter par texte, forme ou sélection.
+
+Limite ou choix de contexte. Ce comportement ne constitue pas un audit exhaustif de contraste ni une certification d’accessibilité.
+
+Figure 3 — Groupes et couleurs du modèle ComplianceLe cas de contrôle contient 19 tables, 37 relations et 4 groupes. Les couleurs structurent un modèle réel plutôt qu’un exemple à deux objets.Capture de contrôle du projet · Source build/ui-review/compliance-overview.png · Cliquer pour agrandir
+
+Figure 4 — Le même atelier en thème sombreLe thème s’applique aux commandes, à l’arbre, aux champs et au diagramme. Le contrôle inclut l’affichage des deux formes de noms.Capture de contrôle du projet · Source build/construction-review/sharepoint-dark.png · Cliquer pour agrandir
+
+Sources du chapitre. packages/ui/src/styles.css · packages/desktop/src/renderer/portable.css · packages/ui/src/ActionIcon.tsx · docs/evidence/windows-ui-2026-10-13.md
+Revenir à l’index des améliorations
+Explorer et manipuler le diagramme
+
+Le diagramme combine lecture d’ensemble, inspection d’une table et manipulation précise. Les gestes doivent différencier déplacement du point de vue, sélection et modification d’un objet. Les détails graphiques restent utiles seulement si l’on peut comprendre ce qui est sélectionné et revenir sur une action.
+
+UX07 Séparer panoramique et sélection multiple
+
+Friction de départ. Un geste ambigu peut déplacer la vue alors que l’utilisateur tente de sélectionner plusieurs tables.
+
+Amélioration réalisée. Le bouton central maintenu déplace le diagramme. Le glissé gauche depuis le fond produit une sélection multiple partielle, sans déplacer le viewport. Les groupes possèdent un en-tête déplaçable et un bouton de réduction distinct.
+
+Effet pour l’utilisateur. Chaque geste a une intention stable et les groupes ne se déplacent pas lorsque l’on veut seulement les réduire.
+
+Exemple concret. Encadrer plusieurs tables, leur appliquer une couleur, puis déplacer un groupe entier par son en-tête.
+
+Principe à réutiliser. Attribuer un geste explicite à chaque intention fréquente et rendre les affordances voisines distinctes.
+
+UX08 Adapter la quantité de détail
+
+Friction de départ. Afficher tous les champs sur un grand modèle masque la structure ; n’afficher que les noms peut masquer les relations utiles.
+
+Amélioration réalisée. Le diagramme propose Noms seulement, Clés seulement et Tous les champs. Les champs masqués disposent d’une zone récapitulative permettant de maintenir les raccordements. Zoom, adapter la vue, recherche et mini-carte complètent la navigation.
+
+Effet pour l’utilisateur. L’utilisateur choisit le niveau nécessaire sans changer le modèle.
+
+Exemple concret. Commencer par les noms pour lire les domaines, passer aux clés pour vérifier les relations puis afficher tous les champs pour contrôler une table.
+
+Principe à réutiliser. Conserver le même objet et la même sélection quand on change sa représentation.
+
+Limite ou choix de contexte. La mini-carte est présente dans le code actuel ; les notes historiques qui la reportaient ne décrivent plus cet état.
+
+UX09 Relier l’arbre le code et le diagramme
+
+Friction de départ. Le même objet existe dans plusieurs panneaux ; sans synchronisation, l’utilisateur doit le retrouver à chaque changement de vue.
+
+Amélioration réalisée. La sélection depuis Construction centre et sélectionne l’objet du diagramme. La sélection et la navigation source relient tables et colonnes à leur contexte. Les groupes réduits nécessaires à la navigation peuvent être développés.
+
+Effet pour l’utilisateur. L’utilisateur poursuit une même tâche à travers plusieurs représentations.
+
+Exemple concret. Choisir la colonne Client secondaire dans l’arbre pour retrouver son champ et ses relations sur le canevas.
+
+Principe à réutiliser. Partager une identité de sélection entre les surfaces ; ne pas confondre cette sélection avec la sauvegarde ou le filtrage.
+
+Limite ou choix de contexte. La localisation dans le texte dépend des plages disponibles ; ne pas promettre une navigation exhaustive pour toute syntaxe DBML.
+
+UX10 Rendre les transformations réversibles
+
+Friction de départ. Une réorganisation globale peut détruire une disposition manuelle laborieuse.
+
+Amélioration réalisée. Réorganiser annonce le remplacement des positions et routages de la vue courante. Les commandes du diagramme et de Construction passent par Annuler et Rétablir. Les recentrages programmatiques ne polluent pas cette pile.
+
+Effet pour l’utilisateur. L’utilisateur peut essayer une transformation sans perdre sa disposition précédente.
+
+Exemple concret. Réorganiser puis annuler pour comparer avec le placement manuel ; un simple recentrage n’ajoute pas une étape métier à annuler.
+
+Principe à réutiliser. Distinguer manipulation de l’affichage, modification du document et enregistrement durable.
+
+Figure 5 — Sélection multiple par le fondLe contrôle souris vérifie une sélection de tables sans déplacement du point de vue.Capture de contrôle du projet · Source build/ui-review/selection-box.png · Cliquer pour agrandir
+
+Figure 6 — Visibilité partielle et groupesLe panneau combine le regroupement, le nombre visible sur le total et l’état partiel des cases.Capture de contrôle du projet · Source build/ui-review/compliance-partial-group.png · Cliquer pour agrandir
+
+Sources du chapitre. docs/evidence/dbcd-workbench.md · docs/evidence/windows-ui-2026-10-13.md · packages/ui/src/DiagramCanvas.tsx · packages/ui/src/TableNode.tsx · packages/ui/src/DbcdWorkbench.tsx
+Revenir à l’index des améliorations
+Lire et corriger les relations
+
+Le routage a été travaillé à la fois comme un problème de géométrie et comme une interaction. Les améliorations visent des liens lisibles, des manipulations précises et la préservation des ajustements manuels. L’étude de dbdiagram a porté sur des comportements observables ; les heuristiques et le code restent propres à DBCodex.
+
+UX11 Tracer depuis les champs avec des obstacles explicites
+
+Friction de départ. Les diagonales, liens traversant les tables et croisements confus rendent la lecture d’une relation incertaine.
+
+Amélioration réalisée. Les relations se raccordent aux champs ou à leur résumé. Les chemins orthogonaux arrondis contournent tables et titres de groupe, utilisent des voies parallèles et de petits ponts aux croisements. Les côtés gauche et droit s’adaptent à la position des tables ; les cardinalités restent à l’extérieur.
+
+Effet pour l’utilisateur. Le lecteur identifie les extrémités et suit plus facilement une relation.
+
+Exemple concret. Le survol d’une relation met en évidence les deux champs concernés, même lorsqu’une zone résumée porte leur raccordement.
+
+Principe à réutiliser. Préserver d’abord la justesse des extrémités, puis optimiser la lisibilité du trajet.
+
+Limite ou choix de contexte. Le routage ne garantit pas zéro croisement. Des tables superposées ou une sortie bloquée peuvent imposer un tracé de repli.
+
+UX12 Différencier déplacer un segment et créer un détour
+
+Friction de départ. Une poignée unique ne permet pas de comprendre si l’on déplace une portion existante ou si l’on ajoute une nouvelle géométrie.
+
+Amélioration réalisée. Les grandes poignées déplacent les segments et leurs coudes voisins ; les petits points créent un détour local. Les contrôles intermédiaires sont disposés aux quarts du segment. Les zones de saisie sont plus larges que le dessin et les poignées principales sont prioritaires en cas de recouvrement.
+
+Effet pour l’utilisateur. Le geste reste précis même à faible zoom.
+
+Exemple concret. Saisir un petit point au milieu d’une relation pour contourner un obstacle sans refaire tout le trajet.
+
+Principe à réutiliser. Adapter l’affordance à la transformation et garder une zone de saisie stable à l’écran.
+
+Limite ou choix de contexte. Le diamètre de 28 px documenté pour les poignées est une décision desktop ; il ne valide pas à lui seul un usage tactile.
+
+UX13 Aider le geste et permettre son annulation
+
+Friction de départ. Une correction manuelle devient fatigante si chaque alignement est fragile et chaque erreur irréversible.
+
+Amélioration réalisée. Aimantation et repères temporaires accompagnent le déplacement. Alt désactive l’aimantation ; les flèches et Maj permettent l’édition au clavier ; Échap annule le glissement. Les coudes inutiles sont simplifiés.
+
+Effet pour l’utilisateur. L’utilisateur combine précision, vitesse et récupération immédiate.
+
+Exemple concret. Commencer à déplacer un segment, constater que la trajectoire est mauvaise puis presser Échap pour revenir à l’état initial.
+
+Principe à réutiliser. Fournir un moyen de correction pendant l’action, au clavier et après l’action.
+
+UX14 Conserver le travail manuel au recalcul
+
+Friction de départ. Un recalcul global qui écrase les retouches manuelles oblige à refaire un travail déjà validé.
+
+Amélioration réalisée. Le recalcul par défaut conserve les routes manuelles. La relation sélectionnée peut être recalculée ; une option explicite permet d’inclure toutes les routes manuelles. Les tracés automatiques recalculés sont enregistrés et participent à l’annulation et à la réouverture.
+
+Effet pour l’utilisateur. Les automatismes assistent la disposition au lieu de rendre son résultat imprévisible.
+
+Exemple concret. Réinitialiser un seul lien gênant, puis recalculer les autres routes automatiques sans perdre les détours choisis.
+
+Principe à réutiliser. Une automatisation distingue l’intention manuelle des valeurs calculées et annonce la portée d’un remplacement.
+
+Limite ou choix de contexte. Une route automatique déjà enregistrée peut nécessiter un recalcul explicite pour bénéficier d’un nouvel algorithme.
+
+UX15 Corriger les détours à partir de cas visibles
+
+Friction de départ. Des captures révélaient des demi-tours colinéaires et de grands crochets dans un espace libre.
+
+Amélioration réalisée. La simplification retire les segments retracés sur une même ligne sans supprimer les boucles rectangulaires. La pénalité de congestion dépend de la longueur partagée, plutôt que du nombre d’arêtes de grille ; le coût des croisements a été ajusté. Des tests reproduisent les deux défauts.
+
+Effet pour l’utilisateur. La correction vise la cause géométrique plutôt qu’une retouche particulière du modèle Compliance.
+
+Exemple concret. Un segment vertical qui dépasse son coude avant de revenir sur lui-même est supprimé du trajet.
+
+Principe à réutiliser. Transformer une capture de défaut en invariant vérifiable et en cas de non-régression.
+
+UX16 Clarifier le sens des animations
+
+Friction de départ. Le bouton Relations et un bouton Animations séparé pouvaient sembler contrôler la visibilité du graphe de façon redondante.
+
+Amélioration réalisée. Le bouton Animations a été retiré. Relations commande les boules animées sur tous les liens, sans masquer les lignes. Quand il est désactivé, une relation sélectionnée ou les relations d’une table sélectionnée peuvent rester animées. Les boules suivent le chemin SVG exact.
+
+Effet pour l’utilisateur. Le graphe reste lisible et l’animation sert de repère de direction ou de sélection.
+
+Exemple concret. Désactiver Relations pour calmer la vue générale, puis sélectionner une table pour suivre son voisinage.
+
+Principe à réutiliser. Un bouton doit annoncer précisément l’effet qu’il produit ; éviter deux contrôles proches pour un même comportement.
+
+Limite ou choix de contexte. À la demande de l’utilisateur, la version documentée anime aussi sous prefers-reduced-motion. C’est une exception locale, à réévaluer dans un autre produit ; elle ne doit pas devenir une règle générique du futur skill.
+
+Figure 7 — Routage sur le modèle denseLes liens orthogonaux et les groupes sont vérifiés sur Compliance, pas seulement sur un graphe minimal.Capture de contrôle du projet · Source build/routing-review/overview-light.png · Cliquer pour agrandir
+
+Figure 8 — Une relation sélectionnée et ses contrôlesLa relation sélectionnée expose des points de manipulation. Le nombre de contrôles dépend de sa géométrie.Capture de contrôle du projet · Source build/routing-review/manual-selected.png · Cliquer pour agrandir
+
+Figure 9 — Créer un détour à la sourisCapture issue du scénario réel de routage. Les petites poignées et les grandes poignées ont des fonctions distinctes.Capture de contrôle du projet · Source build/routing-review/pointer-detour-light.png · Cliquer pour agrandir
+
+Sources du chapitre. docs/evidence/relation-routing-2026-10-13.md · docs/evidence/routing-spikes-2026-10-14.md · docs/evidence/dbdiagram-routing-study-2026-10-14.md · docs/evidence/windows-ui-2026-10-13.md · packages/ui/src/DirectedRelationEdge.tsx · packages/ui/src/relation-routing.ts
+Revenir à l’index des améliorations
+Choisir ce qui est visible sans perdre le contexte
+
+Les vues sont des lectures du même modèle. Le chantier du 14 octobre a réduit les commandes permanentes et rendu explicite le cycle de prévisualisation de visibilité. Il distingue la sauvegarde des choix de visibilité d’une vue et l’enregistrement du projet.
+
+UX17 Protéger la vue complète et alléger le sélecteur
+
+Friction de départ. Une vue système supprimable et un formulaire permanent de renommage multiplient les erreurs et encombrent le panneau.
+
+Amélioration réalisée. La vue système all, libellée Default View, reste permanente et ne propose ni renommage ni suppression. Les vues personnalisées se choisissent dans un sélecteur compact ; la création peut partir d’une vue vide, le renommage se fait dans la liste et la suppression demande confirmation.
+
+Effet pour l’utilisateur. L’utilisateur dispose d’un point de retour complet et de commandes adaptées à son choix courant.
+
+Exemple concret. Créer une vue « Relations clients » sans retirer des tables du modèle global.
+
+Principe à réutiliser. Garder un repère système fiable et déplacer les actions occasionnelles au niveau de l’objet sélectionné.
+
+Limite ou choix de contexte. Default View est le libellé actuel ; les anciennes mentions Toutes les tables ou View All décrivent d’autres étapes du projet.
+
+UX18 Séparer prévisualiser valider et enregistrer
+
+Friction de départ. Déplacer une table ne devrait pas confirmer silencieusement une sélection provisoire de visibilité.
+
+Amélioration réalisée. La visibilité en prévisualisation est séparée de la présentation enregistrable. Enregistrer la vue la valide ; Réinitialiser revient au choix enregistré. Enregistrer comme nouvelle vue conserve le diagramme affiché. La section Tables du DiagramView DBML est synchronisée sans réécrire le texte extérieur.
+
+Effet pour l’utilisateur. L’utilisateur peut essayer des sous-ensembles et conserver séparément ses positions et son niveau de détail.
+
+Exemple concret. Masquer temporairement deux tables puis les réafficher avec Réinitialiser, sans perdre un déplacement de table.
+
+Principe à réutiliser. Nommer chaque niveau d’engagement et empêcher les actions voisines de valider un brouillon implicite.
+
+UX19 Proposer trois sorties avant de quitter une vue modifiée
+
+Friction de départ. Une confirmation binaire ne distingue pas abandonner une modification et renoncer à naviguer.
+
+Amélioration réalisée. Le changement de vue avec visibilité modifiée propose Enregistrer, Abandonner ou Annuler. Cette protection couvre aussi une navigation DBML nécessitant le retour à Default View.
+
+Effet pour l’utilisateur. L’utilisateur choisit entre conserver, perdre volontairement ou rester, avec une conséquence identifiable.
+
+Exemple concret. Cliquer Annuler ferme la demande et maintient la vue courante avec son aperçu.
+
+Principe à réutiliser. Aux transitions qui peuvent perdre un travail, séparer conserver les changements, les abandonner et interrompre la transition.
+
+UX20 Conserver la portée des actions de groupe malgré la recherche
+
+Friction de départ. Un filtre peut faire croire qu’une action de groupe touche seulement ses résultats visibles.
+
+Amélioration réalisée. La recherche porte sur l’ensemble des tables. Les cases de groupe agissent sur tous leurs membres malgré le filtre ; compteurs visible sur total et état partiel rendent le résultat perceptible. Les relations des tables masquées disparaissent avec elles.
+
+Effet pour l’utilisateur. Les actions de groupe restent cohérentes et leur portée ne dépend pas accidentellement du filtre.
+
+Exemple concret. Rechercher une table puis cocher son groupe conserve la sémantique du groupe entier.
+
+Principe à réutiliser. Définir explicitement si une commande groupée porte sur le groupe, les résultats filtrés ou une sélection.
+
+Limite ou choix de contexte. Dans un autre produit, une action sur résultats filtrés peut être préférable ; annoncer sa portée au lieu de recopier ce choix sans réflexion.
+
+Figure 10 — Le panneau de vues avant sa simplificationCapture du contrôle Windows du 13 octobre. Le nom de vue, la duplication, le renommage, la suppression et le détail occupaient une zone permanente.État historique du 13 octobre · Source build/ui-review/workspace-1440.png · Cliquer pour agrandir
+
+Figure 11 — Le sélecteur compact après le chantier des vuesCapture du contrôle du 14 octobre. Le détail est dans la barre flottante et le panneau donne plus de place aux tables. Le jeu de données diffère de la capture précédente.État du chantier du 14 octobre · Source build/ui-review/views-final.png · Cliquer pour agrandir
+
+Figure 12 — La sortie explicite d’un aperçu modifiéEnregistrer, Abandonner et Annuler sont trois décisions différentes. La capture prouve la présence de ce choix.Capture de contrôle du projet · Source build/ui-review/views-unsaved.png · Cliquer pour agrandir
+
+Figure 13 — La suppression contextualisée d’une vueLa suppression est confirmée au niveau de la vue. Elle ne doit pas être confondue avec la suppression des tables du modèle.Capture de contrôle du projet · Source build/ui-review/views-delete.png · Cliquer pour agrandir
+
+Sources du chapitre. docs/evidence/views-2026-10-14.md · docs/evidence/windows-ui-2026-10-13.md · packages/ui/src/ViewManager.tsx · packages/ui/src/TableVisibilityTree.tsx · packages/ui/src/view-visibility.ts
+Revenir à l’index des améliorations
+Construire avec les concepts du métier
+
+Construction ajoute une manière guidée de modifier la structure sans imposer à chaque utilisateur la syntaxe DBML. L’interface garde des concepts propres à SharePoint, Dataverse et SQL, plutôt qu’un formulaire générique qui cacherait leurs différences. Les changements entrent dans le brouillon commun et Enregistrer crée la révision.
+
+UX21 Choisir le type avant de créer le fichier
+
+Friction de départ. Un type technique choisi trop tard peut imposer une conversion ambiguë du travail déjà saisi.
+
+Amélioration réalisée. Le formulaire demande SharePoint, Dataverse, SQL ou DBML générique avant le choix de destination. SQL révèle le moteur ; Dataverse révèle le préfixe avec sa contrainte de format. Le type reste fixe après création ; les anciens projets sans profil restent génériques.
+
+Effet pour l’utilisateur. Les options suivantes correspondent immédiatement au bon environnement.
+
+Exemple concret. Choisir Dataverse et le préfixe demo, puis créer le projet ; aucune conversion de projet existant n’est proposée.
+
+Principe à réutiliser. Faire choisir les paramètres structurants avant les choix qui en dépendent, avec des champs conditionnels.
+
+Limite ou choix de contexte. Un profil immuable est une décision propre au modèle de DBCodex, pas une obligation pour tous les outils.
+
+UX22 Associer un arbre de navigation à une fiche contextualisée
+
+Friction de départ. Un grand formulaire mélangeant tables, colonnes et relations rend l’objet actif difficile à identifier.
+
+Amélioration réalisée. Le panneau affiche un titre, le type de projet et le nombre d’objets. L’arbre utilise indentation, types et sélection visible, y compris pour les colonnes système. La fiche nomme le contexte et l’objet actif ; la suppression reste en pied de fiche.
+
+Effet pour l’utilisateur. L’utilisateur parcourt la structure puis ne modifie que l’objet qu’il a choisi.
+
+Exemple concret. « Commandes / Colonne », puis « Client secondaire », situe la fiche avant ses propriétés.
+
+Principe à réutiliser. Séparer la navigation entre objets de l’édition détaillée d’un objet. Garder les actions destructrices dans ce contexte.
+
+UX23 Rechercher avec les deux vocabulaires
+
+Friction de départ. Une personne peut connaître le libellé métier tandis qu’une autre connaît seulement le nom technique.
+
+Amélioration réalisée. La recherche de Construction porte sur les noms affichés et techniques, sans sensibilité aux accents. L’absence de résultat indique qu’aucune table ni colonne ne correspond ; une récupération et Échap permettent de vider la recherche.
+
+Effet pour l’utilisateur. Un même objet reste retrouvable depuis les mots employés par différents utilisateurs.
+
+Exemple concret. Saisir Clientsecondaire retrouve « Client secondaire ». Une recherche vide de résultat ne fait pas croire que les données ont disparu.
+
+Principe à réutiliser. Indexer les noms utiles au lecteur, expliquer l’état vide et offrir une sortie immédiate du filtre.
+
+UX24 Préremplir une relation depuis le geste graphique
+
+Friction de départ. Dessiner un lien puis ressaisir sa source et sa cible dans un formulaire duplique le travail et crée des erreurs.
+
+Amélioration réalisée. Tracer un lien depuis une colonne ou une table ouvre les options dans Construction avec le contexte prérempli. Une colonne existante peut être réutilisée pour devenir un Lookup plutôt qu’être dupliquée.
+
+Effet pour l’utilisateur. Le diagramme initie la relation ; le formulaire précise les contraintes nécessaires.
+
+Exemple concret. Glisser Client secondaire vers Clients ouvre Créer un Lookup avec Clients déjà choisi.
+
+Principe à réutiliser. Transmettre l’intention et le contexte d’un geste à l’étape de configuration suivante.
+
+UX25 Respecter les différences entre plateformes
+
+Friction de départ. Assimiler toutes les relations à une clé étrangère de colonne masque des règles métier essentielles.
+
+Amélioration réalisée. SharePoint distingue listes, bibliothèques, champs système et Lookup simple ou multiple, avec colonne affichée et colonnes supplémentaires compatibles. Dataverse distingue préfixe, nom principal, Lookup et relations N:N indépendantes. SQL propose ses catalogues de types et une cible de colonne.
+
+Effet pour l’utilisateur. Les réglages restent fidèles à l’objet que l’utilisateur cherche à concevoir.
+
+Exemple concret. Une relation N:N Dataverse n’est pas présentée comme une simple colonne Lookup ; un Lookup SharePoint peut autoriser plusieurs valeurs.
+
+Principe à réutiliser. Mutualiser la structure de l’interface tout en conservant les différences qui changent une décision utilisateur.
+
+Limite ou choix de contexte. Le modèle est local : pas de création dans un tenant, pas de déploiement SQL et pas d’évaluation des expressions.
+
+UX26 Préserver les éléments protégés et les références à résoudre
+
+Friction de départ. Supprimer une table cible ou modifier un champ système peut produire une structure trompeuse ou incohérente.
+
+Amélioration réalisée. Les champs système techniques sont protégés dans Construction. Supprimer une table demande le sort des Lookup qui la ciblent : suppression ou conservation avec le statut À résoudre. L’annulation restaure ensemble source et propriétés métier.
+
+Effet pour l’utilisateur. La conséquence de l’action est explicite et les dépendances ne disparaissent pas silencieusement.
+
+Exemple concret. Conserver les Lookup d’une table supprimée permet de traiter leur cible ensuite ; Annuler rétablit l’opération complète.
+
+Principe à réutiliser. Pour une suppression avec dépendances, présenter la portée réelle et conserver un état de récupération compréhensible.
+
+Figure 14 — Choisir les paramètres structurantsLe formulaire de création révèle le préfixe Dataverse avant le choix du fichier.Capture de contrôle du projet · Source build/construction-review/new-project.png · Cliquer pour agrandir
+
+Figure 15 — Construction DataverseL’interface conserve les concepts de table, de Lookup et de relations N:N du profil.Capture de contrôle du projet · Source build/construction-review/dataverse-desktop.png · Cliquer pour agrandir
+
+Figure 16 — Construction SQLMême structure générale de navigation et de fiche, avec les types et cibles propres au moteur SQL.Capture de contrôle du projet · Source build/construction-review/sql-desktop.png · Cliquer pour agrandir
+
+Sources du chapitre. docs/evidence/construction-modes-2026-10-14.md · docs/evidence/construction-panel-2026-10-15.md · packages/ui/src/ProjectTypeForm.tsx · packages/ui/src/SchemaBuilder.tsx · packages/ui/src/SchemaTree.tsx · packages/ui/src/model-commands.ts
+Revenir à l’index des améliorations
+Préserver le travail et expliquer son état
+
+La confiance ne vient pas seulement des confirmations. Elle dépend d’un modèle cohérent de brouillon, validation, enregistrement et récupération. L’utilisateur doit comprendre si son texte est en cours, si sa structure est valide et si le disque contient réellement son travail.
+
+UX27 Conserver le dernier graphe valide
+
+Friction de départ. Une erreur de syntaxe temporaire peut faire disparaître tout le diagramme et interrompre la compréhension.
+
+Amélioration réalisée. La validation DBML est différée. Un DBML invalide conserve la dernière structure valide en consultation ; Construction expose Corriger le DBML. L’enregistrement invalide est empêché et les résultats de validation obsolètes ne remplacent pas une saisie plus récente.
+
+Effet pour l’utilisateur. L’utilisateur garde un repère visuel et un chemin de correction pendant une erreur de saisie.
+
+Exemple concret. Ajouter une déclaration incomplète laisse l’ancien graphe visible ; Corriger le DBML ramène vers la source.
+
+Principe à réutiliser. Conserver un résultat utile lors d’un échec provisoire, mais rendre explicite qu’il ne représente pas encore la nouvelle saisie.
+
+Limite ou choix de contexte. Si aucun graphe valide n’a jamais existé, un état vide invite à corriger le DBML ; ne pas inventer un résultat valide.
+
+UX28 Distinguer brouillon et version enregistrée
+
+Friction de départ. Un autosave de récupération peut être confondu avec une version que l’utilisateur a volontairement conservée.
+
+Amélioration réalisée. Le brouillon est récupérable sans créer de révision. Chaque enregistrement explicite accepté crée une révision atomique. Le statut de sauvegarde et la disponibilité du bouton reflètent le travail courant ; les conflits de génération bloquent l’écriture.
+
+Effet pour l’utilisateur. L’utilisateur sait quand il expérimente et quand il produit une nouvelle version de référence.
+
+Exemple concret. Modifier une option dans Construction marque le travail comme non enregistré ; Enregistrer conserve source et propriétés dans une même version.
+
+Principe à réutiliser. Nommer et représenter séparément persistance de secours et engagement explicite du document.
+
+UX29 Traiter les conflits comme une récupération
+
+Friction de départ. Une modification externe peut écraser un brouillon si le rafraîchissement est assimilé à une simple mise à jour visuelle.
+
+Amélioration réalisée. Le composant visible relit l’état enregistré toutes les deux secondes. Un brouillon local provoque un conflit au lieu d’être remplacé. La fermeture ordonnée peut préserver le brouillon si le client attend le teardown ; un arrêt forcé dépend de la dernière persistance réussie.
+
+Effet pour l’utilisateur. Le travail local reste prioritaire face à une version externe et les limites de récupération sont compréhensibles.
+
+Exemple concret. Une modification par assistant ne doit pas remplacer silencieusement une saisie locale non enregistrée.
+
+Principe à réutiliser. Ne jamais présenter une récupération supposée comme une sauvegarde accomplie ; vérifier la version avant écriture.
+
+Limite ou choix de contexte. La disponibilité du plein écran et le teardown du composant intégré dépendent de l’hôte. L’intégration native reste distincte de la portable testée.
+
+UX30 Expliquer ce qu’un export conserve
+
+Friction de départ. Un fichier d’échange peut être pris pour une sauvegarde complète du projet.
+
+Amélioration réalisée. Le .dbcd conserve texte exact, présentation, brouillons, versions et propriétés métier. Le .dbml exporte le texte enregistré, sans inclure le brouillon ni toutes les options SharePoint/Dataverse ou relations N:N. Import et export refusent l’écrasement de destination.
+
+Effet pour l’utilisateur. L’utilisateur peut choisir le bon format selon son intention de transfert ou de sauvegarde.
+
+Exemple concret. Garder le .dbcd pour reprendre le travail complet ; exporter .dbml pour échanger la structure textuelle.
+
+Principe à réutiliser. Rendre les limites d’un format visibles au moment où elles changent la décision de l’utilisateur.
+
+Sources du chapitre. README.md · docs/evidence/dbcd-workbench.md · docs/evidence/construction-modes-2026-10-14.md · packages/ui/src/useDocumentSession.ts · packages/ui/src/DbcdWorkbench.tsx · skills/dbcodex/SKILL.md
+Revenir à l’index des améliorations
+Comprendre une version avant de la restaurer
+
+Le chantier du 15 octobre a fait de l’historique un outil de compréhension. La comparaison donne d’abord les changements du schéma, puis permet d’ouvrir les compteurs de présentation et le texte avant/après. La direction est toujours de la version sélectionnée vers le travail courant, brouillon inclus.
+
+UX31 Rendre les versions identifiables
+
+Friction de départ. Une liste d’identifiants techniques oblige à ouvrir plusieurs versions pour comprendre ce qu’elles représentent.
+
+Amélioration réalisée. Les versions sont triées de la plus récente à la plus ancienne, avec date française, résumé, libellé éventuel, ID court et repère de dernière version. La sélection est visuellement distincte. L’épinglage protège de la rétention.
+
+Effet pour l’utilisateur. Le lecteur choisit rapidement une référence avant de lancer une comparaison.
+
+Exemple concret. Version 1 — Création du projet — 15 oct. 2026 donne un repère lisible ; l’ID court reste disponible pour identifier précisément la révision.
+
+Principe à réutiliser. Donner aux éléments d’historique un repère humain et une identité persistante.
+
+Limite ou choix de contexte. Les numéros suivent l’ordre de l’historique conservé ; l’identifiant reste la référence stable. La rétention vise 90 jours et 500 entrées, en conservant versions courantes et épinglées.
+
+UX32 Commencer par les changements compréhensibles
+
+Friction de départ. Un diff de lignes seul ne permet pas de comprendre rapidement la portée métier d’une version.
+
+Amélioration réalisée. Le panneau nomme tables, colonnes et relations ajoutées ou supprimées, changements de type, champs obligatoires et clés primaires. Les compteurs de présentation et le DBML avant/après restent accessibles dans des détails repliables. Le contenu sélectionné est chargé à la demande.
+
+Effet pour l’utilisateur. L’utilisateur comprend d’abord ce qui a changé, puis consulte la preuve textuelle utile.
+
+Exemple concret. « Colonne ajoutée : clients.email » et « Table ajoutée : commandes » précèdent le DBML complet.
+
+Principe à réutiliser. Présenter le sens du changement avant son détail brut, avec une direction de comparaison explicite.
+
+Limite ou choix de contexte. Le résumé sémantique ne couvre pas toutes les options DBML et métier ; les compteurs de présentation ne sont pas un audit complet de chaque propriété.
+
+UX33 Restaurer avec une conséquence claire
+
+Friction de départ. Un bouton Restaurer peut être compris comme une suppression du futur ou un simple aperçu.
+
+Amélioration réalisée. La restauration remplace le travail courant et crée une nouvelle révision. Remplacer un brouillon demande confirmation. L’historique prévoit chargement, erreur avec nouvelle tentative, aucune version, contenu identique et lecture seule.
+
+Effet pour l’utilisateur. La récupération est explicite et les versions antérieures restent traçables selon la rétention.
+
+Exemple concret. Après restauration de Version 1, une nouvelle version courante existe ; l’opération ne crée aucun commit Git.
+
+Principe à réutiliser. Une récupération doit dire ce qu’elle remplace et ce qu’elle conserve, et proposer une reprise en cas d’échec.
+
+Figure 17 — Comparer une version au travail courantLe résumé structurel nomme les objets modifiés. La liste et le détail restent visibles avec le contexte de l’atelier.Capture de contrôle du projet · Source build/history-review/desktop.png · Cliquer pour agrandir
+
+Figure 18 — Consulter la preuve textuelleLe contrôle ouvre le DBML avant/après après avoir vérifié les changements structurels.Capture de contrôle du projet · Source build/history-review/comparison.png · Cliquer pour agrandir
+
+Figure 19 — Historique dans une fenêtre étroiteLe contrôle à 480 px vérifie l’absence de débordement horizontal du panneau. La liste précède la comparaison.Capture de contrôle du projet · Source build/history-review/narrow.png · Cliquer pour agrandir
+
+Sources du chapitre. docs/evidence/history-2026-10-15.md · packages/ui/src/HistoryPanel.tsx · packages/ui/src/history-changes.ts · packages/ui/src/revision-diff.ts
+Revenir à l’index des améliorations
+Adapter l’espace et l’accès aux commandes
+
+Les contrôles portent sur l’atelier desktop et ses fenêtres compactes. Les thèmes et l’adaptation des panneaux ont été vérifiés dans Electron. Ces preuves montrent une interface adaptable ; elles ne suffisent pas à qualifier le produit comme une application mobile tactile complète.
+
+UX34 Adapter les panneaux plutôt que réduire tout le contenu
+
+Friction de départ. Des panneaux fixes peuvent écraser le diagramme sur une fenêtre étroite.
+
+Amélioration réalisée. Les panneaux se réduisent, se redimensionnent ou deviennent des tiroirs et superpositions. Construction se superpose au diagramme en fenêtre étroite. L’historique passe à une lecture séquentielle ; les contrôles de barre se compactent et les contenus longs ont des règles de retour ou de troncature.
+
+Effet pour l’utilisateur. Le contenu principal garde un espace exploitable au lieu de diminuer uniformément.
+
+Exemple concret. À 850 px, ouvrir Construction comme superposition ; à 480 px, lire les versions avant le détail de comparaison.
+
+Principe à réutiliser. Définir une stratégie par zone et par tâche : garder, replier, superposer ou réordonner.
+
+Limite ou choix de contexte. L’absence de débordement sur un panneau ne prouve pas que tous les gestes du diagramme sont adaptés au mobile.
+
+UX35 Rendre les commandes utilisables au clavier
+
+Friction de départ. Une interface à icônes et panneaux flottants peut cacher le focus ou perdre l’utilisateur à la fermeture d’un menu.
+
+Amélioration réalisée. Les commandes ont des noms accessibles ; les bascules exposent aria-pressed et les panneaux aria-expanded. Le focus visible est dessiné. Le menu Fichier rend le focus au déclencheur après Échap. Le formulaire de création prend le focus, le contient pendant la navigation Tab et le restitue à la fermeture.
+
+Effet pour l’utilisateur. L’utilisateur peut se situer et poursuivre son parcours sans dépendre uniquement de la souris.
+
+Exemple concret. Ouvrir Nouveau projet, parcourir ses champs au clavier puis annuler en retrouvant le déclencheur.
+
+Principe à réutiliser. Vérifier ouverture, ordre de tabulation, focus visible, sortie et retour au contexte.
+
+Limite ou choix de contexte. Aucun audit complet WCAG ni contrôle exhaustif au lecteur d’écran n’est attesté par ces vérifications ciblées.
+
+Figure 20 — Construction dans une fenêtre compacteLe scénario vérifie une superposition exploitable, le rail persistant et l’absence de débordement horizontal à 850 px.Capture de contrôle du projet · Source build/construction-review/sharepoint-compact.png · Cliquer pour agrandir
+
+Sources du chapitre. docs/evidence/windows-ui-2026-10-13.md · docs/evidence/construction-panel-2026-10-15.md · docs/evidence/history-2026-10-15.md · packages/ui/src/DbcdWorkbench.tsx · packages/ui/src/styles.css · packages/desktop/src/renderer/portable.css
+Revenir à l’index des améliorations
+Traiter la fluidité comme une qualité UX
+
+La performance a été travaillée sur des gestes réels et sur des opérations répétées. Le résultat utile est le temps pendant lequel une action bloque ou désoriente l’utilisateur. Les mesures ci-dessous proviennent des rapports locaux ; elles ne sont pas une nouvelle campagne de benchmark réalisée pour ce dossier.
+
+UX36 Alléger le geste et stabiliser au relâchement
+
+Friction de départ. Le déplacement recalculait les chemins complets sur les événements souris ; le renderer de développement et 800 raccordements DOM accentuaient le coût.
+
+Amélioration réalisée. Build de production, raccordements utiles seulement, index, mémorisation et caches réduisent le travail. Pendant le glissement, les raccordements s’adaptent légèrement ; le calcul complet et la réparation arrivent au relâchement. Les routes indépendantes valides sont réutilisées.
+
+Effet pour l’utilisateur. L’utilisateur voit la table suivre son geste avec moins de longues interruptions.
+
+Exemple concret. Sur Compliance, 800 raccordements DOM deviennent 176 et le 95e percentile des intervalles d’images du déplacement passe de 313 à 31 ms dans l’essai du 13 octobre.
+
+Principe à réutiliser. Profiler une action représentative, retirer le travail inutile puis vérifier que le résultat et la sauvegarde restent exacts.
+
+Limite ou choix de contexte. Une pointe de 109 ms reste mesurée au relâchement dans ce rapport ; il ne démontre pas 60 images par seconde sur tout modèle.
+
+UX37 Découper les calculs et rejeter les résultats périmés
+
+Friction de départ. Un calcul long peut bloquer l’interface ou appliquer un résultat devenu faux après un autre geste.
+
+Amélioration réalisée. Le recalcul global est découpé en tranches avec commandes temporairement indisponibles. Les résultats devenus obsolètes après modification, mouvement ou démontage sont ignorés. Le 15 octobre, parsing réutilisé, index métier et commande groupée ont réduit les opérations répétées.
+
+Effet pour l’utilisateur. L’interface peut continuer à traiter des événements et n’applique pas un état dépassé.
+
+Exemple concret. Déplacer 100 tables dans un document de 11 vues passe de 127,21 à 1,34 ms pour la commande de présentation mesurée.
+
+Principe à réutiliser. Optimiser le travail récurrent sans supprimer les contrôles de validité, de conflit ou de transaction.
+
+Limite ou choix de contexte. Le cache n’accélère pas systématiquement une première analyse : les textes modifiés mesurés deviennent un peu plus coûteux. Les optimisations du 15 octobre sont compilées en développement et ne sont pas attestées dans la portable 0.1.4 par ce rapport.
+
+Sources du chapitre. docs/evidence/performance-2026-10-13.md · docs/evidence/performance-2026-10-15.md · docs/evidence/dbdiagram-routing-study-2026-10-14.md
+Revenir à l’index des améliorations
+Faire évoluer l’application sans perdre la session
+
+L’amélioration de l’expérience inclut aussi les opérations autour de l’éditeur. La mise à jour et le regroupement des versions locales réduisent le risque d’utiliser un ancien exécutable ou de perdre un brouillon pendant un redémarrage.
+
+UX38 Séparer vérifier télécharger et redémarrer
+
+Friction de départ. Une mise à jour automatique opaque peut interrompre le travail ou laisser croire qu’elle est terminée alors que seul le téléchargement a réussi.
+
+Amélioration réalisée. Le menu Mises à jour expose attente, progression, disponibilité, erreur et récupération. Les nouveautés sont repliées ; l’utilisateur redémarre lorsque son travail est prêt. Le parcours de test vérifie conservation du brouillon, du thème et des récents après remplacement.
+
+Effet pour l’utilisateur. L’utilisateur voit l’étape atteinte et garde la maîtrise du moment de redémarrage.
+
+Exemple concret. Une version téléchargée propose l’étape suivante au lieu de prétendre que la session utilise déjà la nouvelle version.
+
+Principe à réutiliser. Afficher l’état réellement atteint dans une opération à plusieurs phases, avec une reprise adaptée à la phase.
+
+Limite ou choix de contexte. La récupération après interruption brutale reste manuelle ; le rollback de remplacement ne couvre pas toute panne fonctionnelle après démarrage.
+
+UX39 Avoir une référence locale identifiable
+
+Friction de départ. Plusieurs portables de test rendent incertaine la version réellement utilisée et peuvent disperser les projets récents.
+
+Amélioration réalisée. Les livraisons successives ont été regroupées vers une installation principale, avec sauvegardes et conservation des données. Le README et le rapport Historique identifient ensuite la portable locale 0.1.4 comme référence, après les étapes 0.1.2 et 0.1.3.
+
+Effet pour l’utilisateur. L’utilisateur retrouve un seul point d’entrée à jour sans confondre les états de développement.
+
+Exemple concret. Le parcours de référence utilise release/DBCodex-win32-x64/DBCodex.exe ; les sources compilées constituent un état distinct.
+
+Principe à réutiliser. Nommer la version testée, l’exécutable livré et l’état du document ; une compilation seule ne prouve pas la livraison.
+
+Figure 21 — Une version disponibleCapture du contrôle de mise à jour du 14 octobre. Les étapes de disponibilité et de redémarrage sont distinguées.Capture de contrôle du projet · Source build/update-available.png · Cliquer pour agrandir
+
+Figure 22 — La mise à jour prête au redémarrageCapture du contrôle de mise à jour du 14 octobre. Les étapes de disponibilité et de redémarrage sont distinguées.Capture de contrôle du projet · Source build/update-ready.png · Cliquer pour agrandir
+
+Sources du chapitre. docs/evidence/portable-updates-2026-10-14.md · docs/evidence/history-2026-10-15.md · README.md · packages/desktop/src/renderer/UpdatePanel.tsx
+Revenir à l’index des améliorations
+Les choix visuels observés dans le code
+
+Ces valeurs proviennent des règles explicites de thème dans portable.css. Le composant intégré possède également ses valeurs de base dans styles.css. Réutiliser les rôles des variables, puis adapter leurs valeurs à chaque produit.
+
+ | Variable | Rôle | Portable clair | Portable sombre
+
+ | --dbc-bg | Fond de l’espace de travail | #eef2f6 | #171e27
+
+ | --dbc-surface | Panneaux et contrôles | #ffffff | #222c38
+
+ | --dbc-text | Texte principal | #203044 | #edf3fa
+
+ | --dbc-muted | Texte secondaire | #68788b | #adbac9
+
+ | --dbc-border | Séparateurs et bordures | #dce3ea | #3c4c60
+
+ | --dbc-accent | Action et sélection | #326b91 | #76b9e5
+
+La typographie principale suit la pile système, notamment Segoe UI sous Windows. La monospace signale les identifiants et la source. Le canevas tramé, les surfaces sobres, les boutons d’accent et les en-têtes colorés forment la grammaire locale. Les barres compactes et les cibles de routage ont été choisies pour une application de bureau dense ; leur copie dans une interface tactile demanderait une adaptation.
+
+Les gains mesurés et leur portée
+
+Les mesures du 13 et du 15 octobre concernent des états fonctionnels différents. Elles sont présentées séparément afin de conserver leurs conditions de comparaison.
+
+Interaction graphique du 13 octobre
+
+ | Mesure sur Compliance | Avant | Après | Ce que cela mesure
+
+ | Raccordements DOM | 800 | 176 | Éléments nécessaires aux relations du modèle testé
+
+ | Thread principal pendant le déplacement | 13 384 ms | 678 ms | Durée cumulée TaskDuration du scénario
+
+ | Traitement JavaScript du déplacement | 12 340 ms | 423 ms | Temps de script dans le geste mesuré
+
+ | Tâches supérieures à 50 ms | 61 | 1 | Interruptions longues pendant le déplacement
+
+ | Intervalle entre images au 95e percentile | 313 ms | 31 ms | Régularité des images pendant le geste
+
+Le scénario déplace une table de Compliance en 30 étapes. La comparaison optimisée est réalisée hors compression du ZIP. La pointe de stabilisation au relâchement et les limites de généralisation restent documentées dans le rapport.
+
+Opérations répétées du 15 octobre
+
+ | Opération | 19 tables avant puis après | 100 tables avant puis après
+
+ | Parsing du même texte | 21,48 → 0,92 ms | 118,65 → 10,23 ms
+
+ | Ouverture répétée dans un processus chaud | 22,24 → 5,43 ms | 121,59 → 14,81 ms
+
+ | Persistance de brouillon | 49,89 → 13,62 ms | 248,76 → 32,61 ms
+
+ | Enregistrement explicite | 83,83 → 16,76 ms | 525,95 → 43,60 ms
+
+ | Parsing d’un texte modifié à chaque appel | 18,32 → 22,39 ms | 118,95 → 133,12 ms
+
+Les médianes portent sur 15 opérations, sauf cinq enregistrements. Le test synthétique contient 100 tables et 3 100 colonnes. La commande groupée de déplacement de 100 tables dans 11 vues passe séparément de 127,21 à 1,34 ms, avec égalité des documents. Ces temps ne mesurent ni tout le démarrage Electron ni toute l’animation du diagramme. Les textes nouveaux paient le coût de copie et de comptabilisation du cache.
+
+docs/evidence/performance-2026-10-13.md · docs/evidence/performance-2026-10-15.md
+
+Les principes transférables aux prochains projets
+
+Cette synthèse croise les leçons attestées de DBCodex et le skill ui-ux existant. Elle formule des critères de conception ; elle ne prétend pas que chaque critère avait déjà été écrit ou appliqué systématiquement dans tout le projet.
+
+1 Comprendre avant de dessiner
+
+Nommer utilisateur, objet métier, tâche, point d’entrée, première décision, résultat attendu et récupération. Exemple DBCodex : construire une relation et vérifier sa cible, pas simplement afficher une page de graphe.
+
+Cas DBCodex : UX01, UX24
+
+2 Construire autour des objets
+
+Parcourir dans une liste ou un arbre, inspecter l’objet choisi dans une fiche et modifier dans ce contexte. Ne pas exposer tous les formulaires à égalité.
+
+Cas DBCodex : UX22, UX25
+
+3 Garder un point de retour
+
+Un panneau fermé conserve son déclencheur ; un filtre sans résultat possède une sortie ; une vue personnalisée conserve une vue complète de référence.
+
+Cas DBCodex : UX02, UX17, UX23
+
+4 Nommer les engagements
+
+Distinguer aperçu, brouillon, validation, enregistrement, publication ou déploiement selon le produit. Chaque bouton doit avoir une portée compréhensible.
+
+Cas DBCodex : UX18, UX28, UX38
+
+5 Préserver l’intention manuelle
+
+Les automatismes conservent les retouches lorsqu’ils peuvent le faire ; remplacer un travail manuel se fait avec une portée annoncée et une récupération.
+
+Cas DBCodex : UX10, UX14
+
+6 Donner le sens avant le détail
+
+Résultat humain puis détail utile puis diagnostic brut. Garder les termes techniques lorsqu’ils sont nécessaires à la tâche.
+
+Cas DBCodex : UX05, UX32
+
+7 Traiter les transitions
+
+Le parcours comprend entrée, décision, action, retour, erreur, récupération et fin. Un bel écran sans transition sûre est insuffisant.
+
+Cas DBCodex : UX03, UX19, UX29
+
+8 Tester des cas difficiles
+
+Prévoir noms longs, absence de résultat, données denses, brouillon invalide, lecture seule, conflit et fenêtre compacte ; choisir les cas pertinents au produit.
+
+Cas DBCodex : UX23, UX27, UX34
+
+9 Vérifier les gestes
+
+Une capture montre l’apparence. Un test d’interaction prouve le clic, le glissement, le clavier, l’annulation et le résultat.
+
+Cas DBCodex : UX07, UX12, UX13
+
+10 Mesurer la sensation de blocage
+
+Profiler une tâche réelle et le matériel du test. Mesurer les temps et vérifier la correction du document après optimisation.
+
+Cas DBCodex : UX36, UX37
+
+11 Codifier sans figer le style
+
+Conserver les invariants UX et les critères observables. Les couleurs, dimensions et gestes particuliers restent des choix de contexte.
+
+Cas DBCodex : UX04, UX06, UX35
+
+12 Qualifier les preuves
+
+Distinguer demandé, implémenté, testé, capturé et livré. Ne pas déduire une fonctionnalité d’un plan ou d’une comparaison avec un autre logiciel.
+
+Cas DBCodex : UX15, UX39
+
+Les choix à adapter avant de généraliser
+
+ | Choix DBCodex | Principe transférable | Adaptation nécessaire
+
+ | Vue système permanente | Fournir un retour fiable à l’ensemble | Utile si les vues sont des sous-ensembles d’un même modèle
+
+ | Profil fixe à la création | Éviter une conversion implicite | Certains produits doivent au contraire proposer une migration guidée
+
+ | Rails et barre flottante | Garder les commandes au bon niveau | Tester leur pertinence selon écran, fréquence et contenu
+
+ | Alt, Maj et bouton central | Fournir précision et contrôle | Prévoir tactile, clavier et découvrabilité selon les utilisateurs
+
+ | Animation malgré réduction des mouvements | Une exception doit rester traçable | Respecter les préférences de mouvement dans le prochain projet sauf décision explicitement étudiée
+
+ | Palette bleue et gris | Employer des rôles visuels cohérents | Choisir les valeurs selon l’identité et les contrastes du produit
+
+ | Confirmer avant perte de travail | Rendre la conséquence compréhensible | Préférer une annulation quand elle suffit ; ne pas ajouter une confirmation à tout clic
+
+Exemples de parcours et de vérification
+
+Ces huit fiches permettent de rejouer les principes sur des copies de démonstration. Elles reprennent les contrôles documentés ; elles ne déclarent pas une nouvelle exécution pendant la fabrication de ce dossier.
+
+E01 Passer d’une vue provisoire à une autre
+
+• Créer une vue vide puis rendre quelques tables visibles.
+
+• Tenter de choisir une autre vue.
+
+• Essayer séparément Annuler, Abandonner et Enregistrer.
+
+• Déplacer une table pendant un autre aperçu puis réinitialiser la visibilité.
+
+Résultat attendu. Annuler garde l’aperçu ; Abandonner quitte sans le valider ; Enregistrer le valide avant navigation. Réinitialiser la visibilité ne supprime pas la disposition.
+
+Leçon. Séparer navigation, aperçu et engagement.
+
+UX18, UX19
+
+E02 Créer un Lookup sans ressaisie inutile
+
+• Créer Clients puis Commandes en SharePoint.
+
+• Ajouter Client secondaire dans Commandes.
+
+• Glisser cette colonne vers Clients.
+
+• Valider les options puis enregistrer et rouvrir le projet.
+
+Résultat attendu. Le formulaire connaît la cible et réutilise la colonne. Le type Lookup et les options sont conservés dans le .dbcd.
+
+Leçon. Le contexte d’un geste doit alimenter son formulaire.
+
+UX24, UX25
+
+E03 Se remettre d’une erreur DBML
+
+• Partir d’une structure valide.
+
+• Saisir une déclaration DBML incomplète.
+
+• Ouvrir Construction puis utiliser Corriger le DBML.
+
+• Corriger la source et enregistrer.
+
+Résultat attendu. Le dernier graphe valide reste consultable ; l’erreur bloque l’enregistrement ; la correction retourne vers la source sans effacer la saisie.
+
+Leçon. Maintenir un repère utile et un chemin de correction.
+
+UX27, UX28
+
+E04 Corriger un seul lien et conserver les autres
+
+• Créer un détour manuel sur une relation.
+
+• Recalculer les routes automatiques.
+
+• Sélectionner un autre lien et le réinitialiser.
+
+• Annuler puis enregistrer et rouvrir.
+
+Résultat attendu. Le recalcul par défaut préserve le détour manuel ; le recalcul local a une portée limitée ; annulation et persistance conservent la géométrie attendue.
+
+Leçon. Préserver l’intention de l’utilisateur dans les automatismes.
+
+UX12, UX14
+
+E05 Comprendre une ancienne version
+
+• Enregistrer une version avec Clients.
+
+• Ajouter clients.email et Commandes puis enregistrer.
+
+• Sélectionner la première version dans Historique.
+
+• Ouvrir le détail DBML et examiner Restaurer sans le déclencher sur un fichier réel.
+
+Résultat attendu. Le résumé nomme les ajouts ; le sens Version sélectionnée vers travail courant est visible ; la conséquence de Restaurer est expliquée.
+
+Leçon. Montrer le sens de la comparaison avant le texte.
+
+UX31, UX32, UX33
+
+E06 Retrouver un objet après une recherche infructueuse
+
+• Rechercher le nom interne d’une colonne connue.
+
+• Rechercher une chaîne absente.
+
+• Effacer avec Échap puis choisir l’objet retrouvé.
+
+Résultat attendu. Le nom interne retrouve le libellé ; aucun résultat est distingué de l’absence de données ; Échap restaure l’arbre.
+
+Leçon. Une recherche doit toujours offrir une récupération.
+
+UX23
+
+E07 Contrôler le clavier et la fenêtre compacte
+
+• Ouvrir Fichier au clavier puis fermer par Échap.
+
+• Ouvrir Nouveau projet et parcourir les champs avec Tab et Maj+Tab.
+
+• Annuler puis réduire la fenêtre à 850 px.
+
+• Ouvrir Construction et contrôler le panneau Historique à 480 px.
+
+Résultat attendu. Le focus revient au bon déclencheur, ne se perd pas dans le fond du dialogue et la mise en page ciblée ne déborde pas horizontalement.
+
+Leçon. L’adaptation se vérifie sur un parcours, pas uniquement sur une capture.
+
+UX34, UX35
+
+E08 Mesurer une interaction dense
+
+• Copier le jeu Compliance dans un emplacement temporaire.
+
+• Mesurer déplacement, survol, recalcul et panoramique.
+
+• Répéter dans les mêmes conditions après une optimisation.
+
+• Contrôler routes, annulation, sauvegarde et absence d’erreur JavaScript.
+
+Résultat attendu. Les mesures indiquent machine, jeu, état du build et phase ; un gain de commande ne devient pas une promesse générale de fluidité.
+
+Leçon. Mesurer les gains avec leur périmètre et leur coût.
+
+UX36, UX37
+
+Un exemple de texte adapté à la tâche
+
+Dans l’historique, « Colonne ajoutée : clients.email » donne une conclusion directement exploitable. Dans une fiche, « Commandes / Colonne » puis « Client secondaire » répondent à la question de l’objet actif. Dans une erreur, « Corriger le DBML » donne une action située.
+
+Pour un futur produit, une proposition de texte pourrait être : « Le projet a changé depuis votre dernière lecture. Conservez votre brouillon ou rechargez la version enregistrée. » Cet exemple est une recommandation de rédaction, pas une citation d’un écran livré.
+
+Une petite structure pour exercer les règles
+Table clients {
+  id int [pk]
+  nom varchar(80) [not null]
+  email text
+}
+
+Table commandes {
+  id int [pk]
+  client_id int [ref: > clients.id]
+}
+
+Le fichier atelier minimal permet d’exercer validation, niveau de détail et relation. Il est créé pour ce dossier et ne constitue pas une capture historique. Les fixtures demo-shop et commerce à sept tables sont également copiées lorsqu’elles sont disponibles.
+
+Checklist de conception et de revue
+
+Cette checklist prépare le futur skill. Elle doit être appliquée au niveau de changement réellement demandé. Un petit ajustement n’exige pas de reconstruire toute l’architecture ni de multiplier les tests sans risque identifié.
+
+Cadrage
+
+• Je sais qui utilise cette surface et quelle tâche elle termine.
+
+• La première décision et la réussite sont explicites.
+
+• Les objets métiers et leur identité sont stables.
+
+• Le parcours de retour et les modes d’échec sont décrits.
+
+Hiérarchie
+
+• L’action principale ressort sans masquer le contenu de travail.
+
+• Les actions de document et d’objet ont une portée distincte.
+
+• L’arbre ou la liste sert à parcourir ; la fiche sert à modifier.
+
+• Les identifiants et diagnostics restent au niveau utile à la tâche.
+
+Interaction
+
+• Les bascules affichent leur état et les sélections leur contexte.
+
+• La fermeture d’un panneau conserve un moyen stable de le rouvrir.
+
+• La portée d’une action de groupe reste compréhensible sous filtre.
+
+• Les gestes fréquents ont une alternative ou une récupération adaptée.
+
+• Annuler et Rétablir restaurent une opération cohérente.
+
+États et confiance
+
+• Chargement, vide, erreur, résultat identique et lecture seule ont un comportement prévu.
+
+• Une erreur conserve la saisie et donne une prochaine action.
+
+• Aperçu, brouillon et version enregistrée ne se confondent pas.
+
+• Une modification externe ne remplace pas silencieusement le travail local.
+
+• La suppression indique ce qui disparaît et les dépendances affectées.
+
+• Quitter un travail non enregistré offre des sorties distinctes et compréhensibles.
+
+Adaptation et accès
+
+• Le contenu long ne détruit pas la mise en page.
+
+• La fenêtre compacte conserve une action principale accessible.
+
+• Les panneaux se replient, se superposent ou se réordonnent selon la tâche.
+
+• Les commandes ont un nom accessible et un focus visible.
+
+• L’ouverture et la fermeture des menus et dialogues gèrent le focus.
+
+• La couleur et le mouvement ne sont pas les seuls moyens de comprendre.
+
+Validation
+
+• J’ai inspecté les captures des états clair, sombre et compact pertinents.
+
+• J’ai testé le véritable geste et son résultat, pas seulement la présence du bouton.
+
+• J’ai mesuré les lenteurs sur un cas représentatif avant de revendiquer un gain.
+
+• Je distingue la compilation, l’interface testée et l’exécutable livré.
+
+• Les sources, captures et limites sont reliées à chaque conclusion.
+
+Préparer le futur skill
+
+Le dossier conserve une base de capitalisation sans installer de nouveau skill. Le futur skill pourra employer les principes transférables comme instructions, les fiches UX01 à UX39 comme références et les scénarios E01 à E08 comme exemples de vérification. Son point d’entrée devrait rester court et charger les références selon la tâche.
+
+
+Déclenchement proposé
+
+Utiliser pour concevoir, améliorer ou revoir une surface de produit dont le changement affecte la tâche, la hiérarchie, les interactions, le texte, les états, l’adaptation ou l’accès. Employer une procédure légère pour une petite correction. Écarter les changements purement backend sans effet utilisateur.
+
+
+Procédure proposée
+
+• Lire les contraintes du projet et les composants déjà utilisés.
+
+• Identifier utilisateur, objet, parcours, décision, réussite et récupération.
+
+• Qualifier la surface et garder les éléments existants qui servent déjà la tâche.
+
+• Choisir le niveau de modification nécessaire, puis produire une proposition concrète dans le périmètre autorisé.
+
+• Mettre en place les états et la réversibilité avec les composants communs.
+
+• Vérifier les gestes, le clavier, les contenus difficiles et les largeurs utiles.
+
+• Mesurer si la fluidité est en cause et préciser les conditions.
+
+• Livrer un résultat accompagné de preuves et conserver les règles qui peuvent resservir.
+
+
+Organisation possible
+SKILL.md                      Déclenchement et procédure courte
+references/principes.md        Principes transférables
+references/cas-dbcd.md         Études de cas et exceptions
+references/etats.md            Brouillon erreur récupération et confirmation
+references/verification.md     Gestes clavier adaptation et mesures
+templates/brief.md             Objet parcours décision réussite
+templates/revue.md             Constats preuves limites et actions
+assets/                       Quelques captures choisies et leurs légendes
+
+Les références complètes du skill ui-ux sont rapatriées avec ses templates. Le skill dbcodex apporte les contraintes de fichiers, d’état et d’édition. Leur copie constitue une source datée, pas une activation ni une nouvelle politique du projet.
+
+
+Le fichier de préparation contient une procédure réutilisable et les exceptions à ne pas perdre. Le modèle de brief et de revue et la checklist texte se réemploient indépendamment du document illustré.
+
+Les limites à garder visibles
+
+Hôte et livraison. La portable Electron a des preuves de gestes et de rendu. Les entrées natives et le plein écran du composant intégré dépendent du client. Une déclaration de manifeste ne suffit pas à annoncer une association de fichiers ou une persistance entre conversations.
+
+État du code. Le README actualisé et les rapports du 14 et du 15 octobre précisent les capacités récentes. Les anciennes décisions de septembre et le dossier de migration gardent une valeur historique ; leurs projets de chat autonome et certaines exigences ne sont pas des fonctionnalités UI acquises. La validation finale de 439 tests remplace les échecs anciens signalés dans les rapports antérieurs, pour la suite et l’état précis décrits le 15 octobre.
+
+Couverture. Les captures disponibles documentent des états choisis. Les scénarios sont plus larges que ce que les images fixes prouvent seules. La récupération de brouillon, les conflits et certains états d’erreur sont décrits par les tests et rapports, sans capture dédiée dans cet ensemble. Aucun avant/après visuel n’a été inventé pour combler ce manque.
+
+Accessibilité et mobile. Les contrôles ciblés de focus, clavier, thèmes et fenêtre compacte sont des acquis utiles. L’audit complet de contraste, le lecteur d’écran, l’usage tactile et une stratégie de mouvement respectant toutes les préférences restent à examiner avant une promesse plus générale.
+
+Algorithmes et performances. L’étude de dbdiagram décrit des observations. Elle n’établit pas son algorithme interne. Les chiffres de performance restent rattachés aux modèles, commandes et conditions de leurs rapports. La nouvelle compilation de performance n’est pas assimilée à une nouvelle livraison portable.
+
+Sources et traçabilité
+
+La date de clôture du contenu est le 15 octobre 2026. Les copies réunissent documents, extraits de l’implémentation sous forme de fichiers complets sélectionnés, scripts de contrôle, résultats historiques et skills. Le manifeste donne l’origine, la taille et l’empreinte SHA-256 des pièces rapatriées. La date de modification d’un fichier n’est pas présentée comme la date de réalisation d’une fonctionnalité.
+
+Documents de référence
+
+• README.md
+
+• docs/decisions.md
+
+• docs/feature-inventory.md
+
+• docs/evidence/dbcd-workbench.md
+
+• docs/evidence/windows-ui-2026-10-13.md
+
+• docs/evidence/relation-routing-2026-10-13.md
+
+• docs/evidence/routing-spikes-2026-10-14.md
+
+• docs/evidence/dbdiagram-routing-study-2026-10-14.md
+
+• docs/evidence/views-2026-10-14.md
+
+• docs/evidence/construction-modes-2026-10-14.md
+
+• docs/evidence/construction-panel-2026-10-15.md
+
+• docs/evidence/history-2026-10-15.md
+
+• docs/evidence/performance-2026-10-13.md
+
+• docs/evidence/performance-2026-10-15.md
+
+• docs/evidence/portable-updates-2026-10-14.md
+
+• docs/evidence/native-integration.md
+
+• docs/evidence/consolidation-2026-10-15.md
+
+• docs/superpowers/specs/2026-09-25-dbcodex-workbench-design.md
+
+• docs/superpowers/specs/2026-09-26-dbcd-work-file-design.md
+
+• docs/superpowers/specs/2026-10-13-relation-routing-design.md
+
+• docs/migration/2026-10-13-dbcodex-autonome/05-INTERFACE-ET-PARCOURS.md
+
+• docs/migration/2026-10-13-dbcodex-autonome/07-ETAT-REEL-DU-CODE.md
+
+Skills rapatriés
+
+• ui-ux — compréhension produit, parcours, hiérarchie, états, garde-fous, revue et templates. Les règles réutilisables sont adaptées dans les chapitres de capitalisation.
+
+• dbcodex — contexte local du projet, fichiers, révisions, brouillons, conflits et limites de l’hôte.
+
+Les originaux sont conservés dans leur langue. Le dossier de synthèse est rédigé en français. Le code et les scripts copiés servent à comprendre et retrouver les décisions ; ils ne constituent pas une application autonome exécutable à partir de ce dossier.
+
+Le fichier DOSSIER INTEGRAL reprend le contenu en texte pour une lecture par un assistant. Les données structurées sont dans DONNEES DOSSIER. Les captures sont embarquées dans ce HTML : la lecture illustrée fonctionne même si ce fichier est copié seul ; les liens de pièces jointes demandent le dossier complet.

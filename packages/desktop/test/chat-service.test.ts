@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { parseDbml, hashDocument, saveDbcdProject, saveDbcdDraft } from '@dbcodex/core';
+import { parseDbml, hashDocument, saveDbcdProject, saveDbcdDraft, openDbcdProject } from '@dbcodex/core';
 import { makeDbcdFixture } from '../../core/test/support/dbcd-fixture.js';
 import { removeTempWorkspace } from '../../core/test/support/temp-workspace.js';
 import { ChatStore } from '../src/chat-store.js';
@@ -47,8 +47,12 @@ it('recovers a project saved before chat status was written', async () => {
   expect((await applyChatProposal({ workspaceRoot: f.root, projectPath: 'shop.dbcd', store: f.store, proposalId: f.proposal.id })).generation).toBe(2);
 });
 it('refuses recoverable drafts without clearing them', async () => {
-  const f = await fixture(); await saveDbcdDraft({ ...f.input, sourceText: 'Table draft { id int }', presentation: f.snapshot.presentation });
+  const f = await fixture(); await saveDbcdDraft({ ...f.input, baseGeneration: f.snapshot.generation, sourceText: 'Table draft { id int }', presentation: f.snapshot.presentation });
   await expect(applyChatProposal({ workspaceRoot: f.root, projectPath: 'shop.dbcd', store: f.store, proposalId: f.proposal.id })).rejects.toThrow(/draft/i);
+  const unchanged = await openDbcdProject({ workspaceRoot: f.root, projectPath: 'shop.dbcd' });
+  expect(unchanged.draft?.sourceText).toBe('Table draft { id int }');
+  expect(unchanged.generation).toBe(f.snapshot.generation);
+  expect(unchanged.sourceText).toBe(f.snapshot.sourceText);
 });
 it('marks hash changes stale even when revision and generation match', async () => {
   const f = await fixture(); reconcileProposals(f.store, { ...f.snapshot, sourceHash: hashDocument('changed') });

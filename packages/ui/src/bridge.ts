@@ -2,6 +2,9 @@ import type { DbcdProjectSnapshot } from "@dbcodex/core";
 
 export type DisplayMode = "inline" | "fullscreen";
 export interface WorkbenchBridge {
+  subscribeToLiveRequest?(handler: (request: { action: "read" | "navigate"; kind?: "table" | "column" | "relation"; id?: string }) => unknown): () => void;
+  saveAs?(input: { sourceText: string; presentation: import("@dbcodex/core").PresentationDocument }): Promise<void>;
+  subscribeToSaveRequest?(listener: (saveAs: boolean) => void): () => void;
   saveCopy?(input: { sourceText: string; presentation: import("@dbcodex/core").PresentationDocument }): Promise<void>;
   readonly refreshProjects?: boolean;
   subscribeToTeardown?(listener: () => Promise<void>): () => void;

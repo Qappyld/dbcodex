@@ -8,6 +8,8 @@ DBCodex possède sa propre interface de chat. Elle échange avec un moteur local
 
 Les moteurs peuvent être démarrés par DBCodex. Leur fenêtre desktop n’a pas besoin de rester ouverte. Installation, connexion authentifiée et accès Internet aux modèles sont nécessaires. L’éditeur doit rester utilisable hors ligne sans assistant.
 
+Décision confirmée le 13 octobre 2026 : si le moteur Codex ou Claude est absent du poste, le chat correspondant est indisponible. DBCodex affiche cet état et conserve les données de discussion existantes et l’éditeur utilisables ; il ne bascule pas silencieusement vers un autre fournisseur. Fournir ou installer automatiquement les moteurs IA n’est pas une exigence de l’archive portable.
+
 MCP peut fournir des outils contrôlés ; il ne remplace pas le transport de conversation.
 
 ## Abonnement et frais : ne pas promettre trop

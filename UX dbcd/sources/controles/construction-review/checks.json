@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "checks": [
+    "Lists and system columns; multivalue table-target Lookup; save to actual dbcd",
+    "Drag a real column handle to a table opens prefilled Lookup options and reuses the column",
+    "Search internal column names, no-results recovery and Escape clear",
+    "Persistent rail closes and reopens selected editor",
+    "Names display, dark theme and compact overlay",
+    "Delete target, keep unresolved Lookup and undo",
+    "Invalid DBML retains last valid structure in read-only Construction",
+    "dataverse: table creation, names, Lookup/relation and persistence",
+    "sql: table creation, names, Lookup/relation and persistence",
+    "New project form creates a fixed Dataverse profile before choosing file"
+  ],
+  "errors": []
+}

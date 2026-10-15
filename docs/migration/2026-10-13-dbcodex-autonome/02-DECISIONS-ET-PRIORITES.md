@@ -17,9 +17,14 @@ Le dossier ne transforme pas une hypothèse technique en capacité vérifiée.
 | Nom | DBCodex ; ne pas employer TB Codex | Confirmé explicitement |
 | Produit | Application indépendante, avec sa fenêtre | Nouvelle direction retenue |
 | Cible initiale | Windows | Recommandation adaptée au poste actuel |
+| Distribution locale | Archive ZIP portable ; lancement sous compte standard, sans installation ni élévation | Validé par l’utilisateur le 13 octobre 2026 |
+| Préférences personnelles | Thème et projets récents dans le répertoire portable ; valeurs par défaut et repli local si indisponible | Demande utilisateur du 13 octobre 2026 ; repli détaillé dans la spécification |
+| Projets récents et OneDrive | Chemins relatifs au dossier portable lorsque possible ; projets indisponibles gérés sans blocage global | Validé par l’utilisateur le 13 octobre 2026 |
 | Éditeur/diagramme | Réutiliser CodeMirror et React Flow | Contrainte de continuité |
 | Stockage du modèle | DBML exact comme vérité fonctionnelle ; projet SQLite .dbcd | Décision existante |
-| UI générale | Éditeur gauche repliable, diagramme centre, discussions droite | Recommandation retenue pour spécifier |
+| UI générale | Éditeur gauche repliable, diagramme centre, un seul panneau droit repliable avec onglets Vues / IA ; pas d’inspecteur Propriétés complet | Simplification demandée le 13 octobre 2026 |
+| Couleurs des tables et groupes | Commande Couleur dans la barre flottante du bas, ouvrant palette et couleur personnalisée pour la table ou le groupe sélectionné | Emplacement corrigé par l’utilisateur le 13 octobre 2026 |
+| Navigation diagramme vers DBML | Double-clic sur table, relation ou groupe : ouvrir le panneau gauche, faire défiler et sélectionner la définition exacte ; clic simple : sélection graphique | Demandé par l’utilisateur le 13 octobre 2026 |
 | Discussions | Plusieurs discussions nommées par projet | Accord de principe utilisateur |
 | Fournisseur | Assistant fixé par discussion | Recommandation présentée |
 | Changer d’assistant | Nouvelle discussion ; pas de transfert implicite de l’historique | Recommandation présentée |
@@ -33,10 +38,15 @@ Le dossier ne transforme pas une hypothèse technique en capacité vérifiée.
 | Proposition périmée | Bloquer, puis actualiser volontairement | Exigence de cohérence |
 | Versions | Chaque application crée une révision | Décision de continuité |
 | Restauration | Créer une nouvelle version ; conserver l’historique | Décision existante |
-| Discussions portables | Avec le projet, idéalement dans le même .dbcd | Dernière recommandation fonctionnelle |
+| Discussions portables | Toutes les données du projet, discussions et propositions comprises, dans un seul .dbcd | Validé par l’utilisateur le 13 octobre 2026 |
+| Commandes graphiques | Conserver les commandes graphiques existantes | Confirmé par l’utilisateur le 13 octobre 2026 |
+| Projets simultanés | Plusieurs projets ouverts dans des fenêtres ou instances distinctes | Validé par l’utilisateur le 13 octobre 2026 |
+| Fenêtres du même projet | Une seule fenêtre éditable ; ouvertures supplémentaires en lecture seule | Validé par l’utilisateur le 13 octobre 2026 |
+| Gestion des discussions | Archivage par défaut, suppression explicite, traces des modifications appliquées conservées | Validé par l’utilisateur le 13 octobre 2026 |
 | Discussions lors d’une restauration | Conservées ; seul modèle+présentation sont restaurés | Recommandation de cohérence |
 | Contexte IA lors d’un redémarrage | Reconstituer depuis les messages locaux et le projet actuel | Recommandation |
 | Absence d’IA | L’éditeur reste utilisable | Exigence produit |
+| Moteur Codex/Claude absent | Chat correspondant indisponible ; aucun embarquement ou installation automatique requis | Validé par l’utilisateur le 13 octobre 2026 |
 | Git | Aucun commit automatique | Contrainte utilisateur persistante |
 | Licence et distribution | Toujours à décider avant publication | Décisions historiquement différées |
 
@@ -44,7 +54,7 @@ Le dossier ne transforme pas une hypothèse technique en capacité vérifiée.
 
 Le code desktop partiel et le brouillon `2026-10-13-standalone-chat-design.md` supposent un compagnon `.dbcd.chat.sqlite`. Cette hypothèse a été choisie pendant le développement interrompu pour éviter de migrer le format.
 
-**La dernière recommandation présentée à l’utilisateur privilégie un fichier projet unique.** La reprise doit donc étudier une évolution du .dbcd conservant les discussions dans le même conteneur. Cette préférence fonctionnelle n’autorise pas une migration destructive.
+**L’utilisateur a confirmé le fichier projet unique le 13 octobre 2026.** La reprise doit faire évoluer le .dbcd pour conserver toutes les données du projet, dont les discussions et propositions, dans le même conteneur. Cette décision n’autorise pas une migration destructive.
 
 Si le fichier compagnon est conservé provisoirement, le mot « provisoire » et la procédure d’import ultérieure doivent être explicites. Ne pas simplement conserver l’architecture du brouillon parce qu’elle a déjà du code.
 

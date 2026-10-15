@@ -12,7 +12,7 @@ Les révisions actuelles ne contiennent pas de conversations. Les stores vérifi
 
 ## Cible fonctionnelle
 
-Un projet portable devrait regrouper modèle, présentation, historique, discussions et propositions dans un seul .dbcd. Ne pas inventer un schéma v2 définitif sans analyser les stores et la compatibilité v1.
+Un projet portable doit regrouper toutes ses données, dont modèle, présentation, vues, historique, brouillons de projet, discussions et propositions, dans un seul .dbcd. Ce choix a été confirmé par l’utilisateur le 13 octobre 2026. Ne pas inventer un schéma v2 définitif sans analyser les stores et la compatibilité v1.
 
 Un schéma logique pourrait introduire :
 - discussions : id, titre, fournisseur, dates, archivage, préférences de contexte ;
@@ -21,6 +21,20 @@ Un schéma logique pourrait introduire :
 - paramètres de projet spécifiques au chat, sans identifiants de connexion.
 
 Les comptes et tokens restent gérés par les mécanismes officiels des fournisseurs, hors du projet portable.
+
+## Préférences personnelles et chemins portables
+
+Le fichier .dbcd contient les données propres au projet. Le thème général et la liste des projets récents appartiennent aux préférences de l’application, sauvegardées par défaut dans un sous-dossier de données du répertoire portable. Elles ne contiennent aucun token fournisseur. Leur nom de fichier et leur schéma versionné seront définis pendant la conception technique.
+
+Les chemins récents sont typés comme relatifs ou absolus. La base des chemins relatifs est la racine du dossier portable, et non le répertoire courant du processus. Privilégier les chemins relatifs pour les projets dans ce dossier ou sa même arborescence transportable ; conserver un chemin absolu pour un emplacement extérieur lorsque le relatif ne serait pas pertinent ou possible. Un chemin relatif ne donne aucun droit d’accès : les vérifications de fichier et d’autorisation restent nécessaires.
+
+À l’ouverture, résoudre puis vérifier le fichier demandé. Si le dossier a été déplacé ou si la racine OneDrive change entre deux postes, une arborescence relative identique doit continuer de fonctionner. Les chemins absolus devenus invalides proposent une relocalisation volontaire ; vérifier le projet sélectionné avant d’actualiser l’entrée et ne pas confondre deux projets de même nom.
+
+Préférences absentes : utiliser les valeurs par défaut et une liste récente vide ; créer la configuration lors d’une sauvegarde si l’emplacement est accessible. Préférences malformées ou de version future inconnue : valeurs par défaut, information discrète et conservation du fichier original ; ne pas l’écraser automatiquement. Écriture des préférences : remplacement atomique après validation. Un dossier non accessible en écriture entraîne un repli dans les données locales du compte utilisateur, indiqué dans l’interface ; à défaut, mode session sans persistance des préférences. Le choix de repli ne doit pas déplacer les projets ni recopier leurs données.
+
+Les entrées indisponibles restent dans la liste récente jusqu’à retrait explicite ou relocalisation. Une entrée récente n’est ni une preuve d’existence ni une autorisation de créer un fichier. Un problème de préférences n’altère pas les .dbcd.
+
+La reprise depuis un dossier synchronisé doit être testée. Les fichiers non disponibles localement, erreurs de synchronisation, copies en conflit et remplacements externes sont des états à traiter ; aucune fusion silencieuse de bases .dbcd n’est prévue. Les caches, verrous actifs et identifiants propres au poste ne sont pas des préférences à transporter.
 
 ## Ce qui change de version, et ce qui n’en change pas
 
@@ -82,7 +96,8 @@ Un fichier projet partagé contenant le chat peut révéler des intentions méti
 - export DBML du modèle seul ;
 - export de projet sans conversations ;
 - explication claire lors d’un partage de projet complet ;
-- suppression/archivage volontaire d’une discussion, avec règles explicites pour ses propositions ;
+- archivage par défaut d’une discussion, réversible et sans suppression de ses messages ou propositions ;
+- suppression uniquement sur une action explicite indiquant les éléments supprimés ; elle ne supprime ni les révisions du modèle ni les traces des modifications appliquées (identité de proposition, opérations appliquées, date et révision résultante) ;
 - aucune clé API ou session fournisseur dans le fichier.
 
 ## Brouillons et stockage de message interrompu

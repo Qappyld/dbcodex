@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "middle pan",
+    "left drag multi selection",
+    "table linked animations",
+    "DBML header colors",
+    "colored relations and dots",
+    "28px routing handle",
+    "group drag moves members",
+    "hidden table hides relations"
+  ],
+  "errors": []
+}

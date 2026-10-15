@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { presentation, graph } from "./workbench-fixture.js";
 import { createView, duplicateView, renameView, deleteView, setActiveView, setViewDetail, setNodeDetail,
-  groupTables, updateGroup, setRelationRoute, resetRelationRoute, setNodeHidden, setNodePosition, setPanels, searchTables, reconcileDbmlPresentation } from "../src/presentation-commands.js";
+  groupTables, updateGroup, setRelationRoute, resetRelationRoute, setNodeHidden, setNodePosition, setNodePositions, setPanels, searchTables, reconcileDbmlPresentation } from "../src/presentation-commands.js";
 import { previewDbmlBlock, applyDbmlPatch } from "../src/dbml-patches.js";
 
 describe("presentation commands", () => {
+  it("moves a group atomically and preserves all other presentation properties", () => {
+    const initial = presentation(), before = structuredClone(initial);
+    const moves = [{ id: "public.users", position: { x: 90, y: 80 } }, { id: "public.teams", position: { x: 450, y: 200 } }];
+    expect(setNodePositions(initial, "all", moves)).toEqual(moves.reduce((value, item) => setNodePosition(value, "all", item.id, item.position), initial));
+    expect(() => setNodePositions(initial, "all", [...moves, { id: "public.users", position: { x: NaN, y: 0 } }])).toThrow(/présentation/);
+    expect(initial).toEqual(before);
+  });
   it("imports a DBML view named all without overwriting or hiding the system view", () => {
     const next = reconcileDbmlPresentation(presentation(), { ...graph, views: [
       { id: "all", name: "all", tableIds: ["public.users"] }, { id: "_dbml_all", name: "_dbml_all", tableIds: ["public.teams"] },

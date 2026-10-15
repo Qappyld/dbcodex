@@ -15,6 +15,38 @@ Tous les contrôles ci-dessous sont des exigences futures, sauf les preuves hist
 | Copier le projet complet | Discussions et propositions récupérables selon format final |
 | Import d’un compagnon ancien | Pas de doublons, aucun effacement silencieux |
 
+## Version portable Windows
+
+| Cas | Résultat exigé |
+| --- | --- |
+| ZIP extrait sur un poste sans outils de développement | DBCodex.exe démarre par double-clic, sans installation de Node.js ni élévation |
+| Compte Windows standard | Ouvrir/créer, éditer, enregistrer et rouvrir un .dbcd sans droits administrateur |
+| Aucun réseau ni moteur IA disponible | Éditeur, diagramme, brouillon et historique utilisables |
+| Paramètres et caches | Écriture uniquement dans des emplacements accessibles au compte ; emplacements documentés |
+| Remplacement du dossier applicatif | Projets et paramètres conservés ; migration éventuelle qualifiée |
+| Codex/Claude sous compte standard | Moteurs présents : connexion et restrictions vérifiées séparément ; moteur absent : chat correspondant indisponible, éditeur et données de discussion conservés |
+| Politique d’entreprise bloquant un moteur ou le réseau IA | Limite documentée, pas de contournement ni d’élévation ; éditeur disponible si son exécution est autorisée |
+| Archive, projet ou copie vers un autre poste | Aucun identifiant IA embarqué ; reconnexion selon le compte et le poste |
+
+Consigner la version de Windows, l’architecture, le type de compte et les dépendances présentes. Une validation sur le seul poste de développement ne suffit pas.
+
+## Préférences, chemins relatifs et dossier synchronisé
+
+| Cas | Résultat exigé |
+| --- | --- |
+| Préférences absentes au premier lancement | Accueil utilisable, thème par défaut, liste récente vide ; aucun blocage |
+| Préférences illisibles ou version future inconnue | Valeurs par défaut, information discrète ; original conservé sans écrasement automatique |
+| Répertoire portable non inscriptible | Repli local annoncé ; si repli impossible, préférences en mémoire pour la session |
+| Écriture des préférences interrompue | Ancienne configuration lisible ou nouvelle configuration complète ; pas de fichier partiel utilisé |
+| Dossier portable déplacé, racine OneDrive différente | Les chemins relatifs restent fonctionnels si l’arborescence est conservée |
+| Lancement depuis un autre répertoire courant | Résolution relative à la racine portable, sans dépendance au répertoire courant |
+| Projet externe référencé par chemin absolu devenu invalide | État indisponible et relocalisation volontaire ; aucun projet vide créé |
+| Projet récent absent, accès refusé ou téléchargement local impossible | Indisponible, Réessayer/Retrouver/Retirer accessibles ; autres projets utilisables |
+| Retirer une entrée récente | Aucun fichier supprimé |
+| Projet disparaissant pendant l’édition | Travail en mémoire conservé, écriture suspendue et récupération proposée ; aucune fausse confirmation de sauvegarde |
+| Copie en conflit ou remplacement externe par synchronisation | Conflit signalé ; aucune fusion ou écrasement silencieux du projet |
+| Deux instances mettent à jour les projets récents | Configuration valide, thème préservé et entrées distinctes conservées selon une règle documentée |
+
 ## Chat et confidentialité
 
 | Cas | Résultat exigé |
@@ -59,7 +91,21 @@ Tous les contrôles ci-dessous sont des exigences futures, sauf les preuves hist
 | Restauration avec discussions | Conversations gardées et propositions requalifiées |
 | Fermeture/réouverture | Modèle, vues, zoom, discussions, brouillons récupérés |
 | Arrêt forcé | Limite documentée au dernier état écrit |
-| Deux fenêtres | Conflits détectés ; pas de perte silencieuse |
+| Deux projets ouverts en parallèle | Sessions, messages, propositions et sauvegardes isolés par projet |
+| Même projet ouvert dans deux fenêtres/instances | Une seule fenêtre éditable ; seconde en lecture seule, sans écriture de chat, brouillon ni modèle |
+| Modification externe du projet | Conflit détecté ; pas de perte silencieuse |
+| Archiver une discussion | Retirée de la liste active, données conservées et réactivation possible |
+| Supprimer une discussion | Action explicite ; révisions et traces des modifications appliquées conservées |
+| Commandes graphiques existantes | Disponibles dans la fenêtre éditable et comportement conservé |
+| Panneau droit | Un seul panneau repliable avec onglets Vues / IA ; aucun panneau IA adjacent ni inspecteur Propriétés complet |
+| Changement d’onglet droit | Discussion, saisie et requête en cours conservées ; aucun appel IA déclenché |
+| Couleur de table ou groupe | Commande Couleur dans la barre flottante du bas, ouvrant palette et couleur personnalisée ; désactivée sans sélection compatible ou en lecture seule |
+| Création de groupe depuis la barre flottante | Sélection compatible requise ; validations existantes préservées, couleur accessible dans cette même barre |
+| Clic simple sur un objet graphique | Sélection graphique sans déplacement du focus ni défilement du DBML |
+| Double-clic sur table ou groupe | Éditeur gauche ouvert, bloc Table/TableGroup exact sélectionné et visible, focus éditeur ; aucune modification de source |
+| Double-clic sur relation | Déclaration Ref ou clause ref inline exacte sélectionnée et visible, y compris plusieurs relations entre mêmes tables |
+| Navigation avec schémas homonymes ou source modifiée | Bonne définition dans le texte courant ; si localisation impossible, information discrète sans sélection erronée ni perte de brouillon |
+| Double-clic avec panneau IA actif ou projet en lecture seule | Onglet, saisie et discussion conservés ; navigation permise sans écriture ni appel IA |
 
 ## Sécurité effective des moteurs
 

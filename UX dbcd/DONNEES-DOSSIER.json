@@ -1,0 +1,1018 @@
+{
+  "date": "2026-10-15",
+  "chapters": [
+    {
+      "id": "atelier",
+      "title": "Un atelier centré sur le travail",
+      "intro": "DBCodex sert à concevoir un schéma, lire ses relations et conserver les décisions dans un projet local. Les utilisateurs alternent entre texte DBML, exploration du diagramme et construction métier. Le parcours de référence est ouvrir ou créer un projet, comprendre son état, sélectionner un objet, modifier, vérifier puis enregistrer. L’interface doit garder le modèle et la prochaine action visibles pendant ce parcours.",
+      "sources": [
+        "README.md",
+        "docs/evidence/windows-ui-2026-10-13.md",
+        "packages/ui/src/DbcdWorkbench.tsx",
+        "packages/desktop/src/renderer/PortableApp.tsx"
+      ],
+      "patterns": [
+        {
+          "id": "UX01",
+          "title": "Réduire la place des commandes globales",
+          "problem": "Les commandes d’application et les commandes du schéma peuvent consommer l’espace nécessaire au diagramme ou se mélanger.",
+          "change": "La portable emploie une barre application de 36 px et une barre atelier de 40 px. Fichier, mises à jour et thème sont séparés des commandes Enregistrer, Annuler, Historique et Vues. Les outils graphiques restent au voisinage du canevas.",
+          "benefit": "L’utilisateur repère à la fois le projet actif et les opérations utiles sans traverser une page de présentation.",
+          "example": "Pour modifier une relation, sélectionner le lien puis utiliser le routage du diagramme ; pour changer de fichier, passer par Fichier.",
+          "rule": "Organiser les actions selon leur portée application, document et objet. Donner l’espace principal au contenu de travail.",
+          "limit": "36 et 40 px sont des choix de cet atelier desktop, pas une norme universelle de taille de cible."
+        },
+        {
+          "id": "UX02",
+          "title": "Garder les éditeurs accessibles après fermeture",
+          "problem": "Fermer un panneau peut rendre son point de réouverture introuvable.",
+          "change": "Un rail persistant donne accès à DBML et à SharePoint, Dataverse ou Construction. DBML est l’éditeur initial. Cliquer à nouveau sur l’éditeur actif ferme son contenu ; le rail reste visible.",
+          "benefit": "L’utilisateur gagne de la place sans perdre le chemin de retour.",
+          "example": "Fermer SharePoint pour explorer une grande table, puis rouvrir le même éditeur depuis le rail.",
+          "rule": "Une surface escamotable conserve un déclencheur stable et indique son état ouvert ou fermé.",
+          "limit": ""
+        },
+        {
+          "id": "UX03",
+          "title": "Ouvrir un projet sans perdre le travail",
+          "problem": "Le changement de fichier et l’ouverture simultanée peuvent faire perdre un brouillon ou autoriser deux écritures concurrentes.",
+          "change": "L’accueil et le menu Fichier proposent création, ouverture, récents et import. Ouvrir un autre projet conserve la fenêtre et son brouillon ; une seconde ouverture du même projet est en lecture seule. Ctrl+O ouvre un fichier ; Échap ferme le menu et restitue le focus.",
+          "benefit": "L’accès aux projets reste rapide tout en protégeant la session déjà ouverte.",
+          "example": "Deux fenêtres sur le même .dbcd ne donnent pas deux éditeurs concurrents.",
+          "rule": "Traiter la navigation entre documents comme une transition avec un état à préserver.",
+          "limit": ""
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/ui-review/file-menu.png",
+          "title": "Le menu Fichier dans l’atelier",
+          "caption": "Les actions de fichier et les récents restent accessibles dans l’environnement de travail. Capture du contrôle Windows du 13 octobre.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Menu global et conservation du contexte",
+          "file": "captures/01-file-menu.png",
+          "number": 1
+        },
+        {
+          "source": "build/construction-review/sharepoint-desktop.png",
+          "title": "L’atelier enrichi de Construction",
+          "caption": "Le rail, l’arbre, la fiche et le diagramme partagent une session. Capture du contrôle Construction du 15 octobre.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Organisation du travail courant",
+          "file": "captures/02-sharepoint-desktop.png",
+          "number": 2
+        }
+      ]
+    },
+    {
+      "id": "langage",
+      "title": "Hiérarchie visuelle et langage",
+      "intro": "L’identité de l’atelier vient surtout de la cohérence des composants et de la lisibilité. Le thème portable donne des valeurs communes aux surfaces, textes, bordures et accents. Les couleurs des objets ajoutent une information métier ; elles ne remplacent pas les libellés, les clés et les états.",
+      "sources": [
+        "packages/ui/src/styles.css",
+        "packages/desktop/src/renderer/portable.css",
+        "packages/ui/src/ActionIcon.tsx",
+        "docs/evidence/windows-ui-2026-10-13.md"
+      ],
+      "patterns": [
+        {
+          "id": "UX04",
+          "title": "Unifier les composants et leurs états",
+          "problem": "Des boutons, champs, panneaux et tables corrects isolément peuvent former un ensemble visuellement incohérent.",
+          "change": "Boutons, champs, panneaux, tables, notes et barre flottante ont été harmonisés. L’action Enregistrer disponible reçoit l’accent ; les commandes indisponibles, les sélections et les boutons bascule ont des états distincts. Les icônes SVG sont locales et accompagnées de noms accessibles et d’infobulles.",
+          "benefit": "La même apparence annonce la même catégorie de comportement.",
+          "example": "Grille et Relations exposent leur état actif ; Enregistrer reflète la possibilité réelle de conserver le travail.",
+          "rule": "Définir ensemble les états normal, survol, focus, actif, sélectionné, désactivé et en cours. Vérifier leur cohérence entre composants.",
+          "limit": ""
+        },
+        {
+          "id": "UX05",
+          "title": "Séparer nom affiché et identité technique",
+          "problem": "Un nom interne utile au stockage peut être difficile à lire pour le métier ; renommer un libellé peut casser une identité stable.",
+          "change": "Les noms techniques sont proposés à la création et personnalisables. Modifier ensuite le nom affiché conserve le nom interne. Le diagramme propose Affichés, Techniques ou Les deux. Les identifiants techniques des fiches utilisent une police monospace.",
+          "benefit": "Le métier lit ses propres termes et le développeur retrouve l’identité exacte sans mélange.",
+          "example": "« Client secondaire » reste associé au nom interne Clientsecondaire ; Dataverse propose des noms minuscules avec le préfixe choisi.",
+          "rule": "Conserver une identité stable et proposer plusieurs représentations adaptées au lecteur, sans multiplier les objets.",
+          "limit": ""
+        },
+        {
+          "id": "UX06",
+          "title": "Utiliser la couleur pour suivre les objets",
+          "problem": "Dans un graphe dense, suivre une relation et distinguer les groupes demande un effort visuel important.",
+          "change": "Les en-têtes colorés reprennent headercolor. La couleur individuelle prime sur celle du groupe ; le texte de l’en-tête est contrasté. Lignes et boules suivent la couleur de la table référencée. La sélection met en évidence les objets et champs liés.",
+          "benefit": "La couleur aide à suivre les voisinages et les ensembles du modèle.",
+          "example": "Dans Compliance, les groupes colorés séparent les domaines tandis qu’une relation sélectionnée ressort du reste du diagramme.",
+          "rule": "Attribuer un sens stable à la couleur et la compléter par texte, forme ou sélection.",
+          "limit": "Ce comportement ne constitue pas un audit exhaustif de contraste ni une certification d’accessibilité."
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/ui-review/compliance-overview.png",
+          "title": "Groupes et couleurs du modèle Compliance",
+          "caption": "Le cas de contrôle contient 19 tables, 37 relations et 4 groupes. Les couleurs structurent un modèle réel plutôt qu’un exemple à deux objets.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Lecture des domaines et relations",
+          "file": "captures/03-compliance-overview.png",
+          "number": 3
+        },
+        {
+          "source": "build/construction-review/sharepoint-dark.png",
+          "title": "Le même atelier en thème sombre",
+          "caption": "Le thème s’applique aux commandes, à l’arbre, aux champs et au diagramme. Le contrôle inclut l’affichage des deux formes de noms.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Continuité visuelle entre les thèmes",
+          "file": "captures/04-sharepoint-dark.png",
+          "number": 4
+        }
+      ]
+    },
+    {
+      "id": "diagramme",
+      "title": "Explorer et manipuler le diagramme",
+      "intro": "Le diagramme combine lecture d’ensemble, inspection d’une table et manipulation précise. Les gestes doivent différencier déplacement du point de vue, sélection et modification d’un objet. Les détails graphiques restent utiles seulement si l’on peut comprendre ce qui est sélectionné et revenir sur une action.",
+      "sources": [
+        "docs/evidence/dbcd-workbench.md",
+        "docs/evidence/windows-ui-2026-10-13.md",
+        "packages/ui/src/DiagramCanvas.tsx",
+        "packages/ui/src/TableNode.tsx",
+        "packages/ui/src/DbcdWorkbench.tsx"
+      ],
+      "patterns": [
+        {
+          "id": "UX07",
+          "title": "Séparer panoramique et sélection multiple",
+          "problem": "Un geste ambigu peut déplacer la vue alors que l’utilisateur tente de sélectionner plusieurs tables.",
+          "change": "Le bouton central maintenu déplace le diagramme. Le glissé gauche depuis le fond produit une sélection multiple partielle, sans déplacer le viewport. Les groupes possèdent un en-tête déplaçable et un bouton de réduction distinct.",
+          "benefit": "Chaque geste a une intention stable et les groupes ne se déplacent pas lorsque l’on veut seulement les réduire.",
+          "example": "Encadrer plusieurs tables, leur appliquer une couleur, puis déplacer un groupe entier par son en-tête.",
+          "rule": "Attribuer un geste explicite à chaque intention fréquente et rendre les affordances voisines distinctes.",
+          "limit": ""
+        },
+        {
+          "id": "UX08",
+          "title": "Adapter la quantité de détail",
+          "problem": "Afficher tous les champs sur un grand modèle masque la structure ; n’afficher que les noms peut masquer les relations utiles.",
+          "change": "Le diagramme propose Noms seulement, Clés seulement et Tous les champs. Les champs masqués disposent d’une zone récapitulative permettant de maintenir les raccordements. Zoom, adapter la vue, recherche et mini-carte complètent la navigation.",
+          "benefit": "L’utilisateur choisit le niveau nécessaire sans changer le modèle.",
+          "example": "Commencer par les noms pour lire les domaines, passer aux clés pour vérifier les relations puis afficher tous les champs pour contrôler une table.",
+          "rule": "Conserver le même objet et la même sélection quand on change sa représentation.",
+          "limit": "La mini-carte est présente dans le code actuel ; les notes historiques qui la reportaient ne décrivent plus cet état."
+        },
+        {
+          "id": "UX09",
+          "title": "Relier l’arbre le code et le diagramme",
+          "problem": "Le même objet existe dans plusieurs panneaux ; sans synchronisation, l’utilisateur doit le retrouver à chaque changement de vue.",
+          "change": "La sélection depuis Construction centre et sélectionne l’objet du diagramme. La sélection et la navigation source relient tables et colonnes à leur contexte. Les groupes réduits nécessaires à la navigation peuvent être développés.",
+          "benefit": "L’utilisateur poursuit une même tâche à travers plusieurs représentations.",
+          "example": "Choisir la colonne Client secondaire dans l’arbre pour retrouver son champ et ses relations sur le canevas.",
+          "rule": "Partager une identité de sélection entre les surfaces ; ne pas confondre cette sélection avec la sauvegarde ou le filtrage.",
+          "limit": "La localisation dans le texte dépend des plages disponibles ; ne pas promettre une navigation exhaustive pour toute syntaxe DBML."
+        },
+        {
+          "id": "UX10",
+          "title": "Rendre les transformations réversibles",
+          "problem": "Une réorganisation globale peut détruire une disposition manuelle laborieuse.",
+          "change": "Réorganiser annonce le remplacement des positions et routages de la vue courante. Les commandes du diagramme et de Construction passent par Annuler et Rétablir. Les recentrages programmatiques ne polluent pas cette pile.",
+          "benefit": "L’utilisateur peut essayer une transformation sans perdre sa disposition précédente.",
+          "example": "Réorganiser puis annuler pour comparer avec le placement manuel ; un simple recentrage n’ajoute pas une étape métier à annuler.",
+          "rule": "Distinguer manipulation de l’affichage, modification du document et enregistrement durable.",
+          "limit": ""
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/ui-review/selection-box.png",
+          "title": "Sélection multiple par le fond",
+          "caption": "Le contrôle souris vérifie une sélection de tables sans déplacement du point de vue.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Sémantique des gestes",
+          "file": "captures/05-selection-box.png",
+          "number": 5
+        },
+        {
+          "source": "build/ui-review/compliance-partial-group.png",
+          "title": "Visibilité partielle et groupes",
+          "caption": "Le panneau combine le regroupement, le nombre visible sur le total et l’état partiel des cases.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Lecture d’une sélection partielle",
+          "file": "captures/06-compliance-partial-group.png",
+          "number": 6
+        }
+      ]
+    },
+    {
+      "id": "routage",
+      "title": "Lire et corriger les relations",
+      "intro": "Le routage a été travaillé à la fois comme un problème de géométrie et comme une interaction. Les améliorations visent des liens lisibles, des manipulations précises et la préservation des ajustements manuels. L’étude de dbdiagram a porté sur des comportements observables ; les heuristiques et le code restent propres à DBCodex.",
+      "sources": [
+        "docs/evidence/relation-routing-2026-10-13.md",
+        "docs/evidence/routing-spikes-2026-10-14.md",
+        "docs/evidence/dbdiagram-routing-study-2026-10-14.md",
+        "docs/evidence/windows-ui-2026-10-13.md",
+        "packages/ui/src/DirectedRelationEdge.tsx",
+        "packages/ui/src/relation-routing.ts"
+      ],
+      "patterns": [
+        {
+          "id": "UX11",
+          "title": "Tracer depuis les champs avec des obstacles explicites",
+          "problem": "Les diagonales, liens traversant les tables et croisements confus rendent la lecture d’une relation incertaine.",
+          "change": "Les relations se raccordent aux champs ou à leur résumé. Les chemins orthogonaux arrondis contournent tables et titres de groupe, utilisent des voies parallèles et de petits ponts aux croisements. Les côtés gauche et droit s’adaptent à la position des tables ; les cardinalités restent à l’extérieur.",
+          "benefit": "Le lecteur identifie les extrémités et suit plus facilement une relation.",
+          "example": "Le survol d’une relation met en évidence les deux champs concernés, même lorsqu’une zone résumée porte leur raccordement.",
+          "rule": "Préserver d’abord la justesse des extrémités, puis optimiser la lisibilité du trajet.",
+          "limit": "Le routage ne garantit pas zéro croisement. Des tables superposées ou une sortie bloquée peuvent imposer un tracé de repli."
+        },
+        {
+          "id": "UX12",
+          "title": "Différencier déplacer un segment et créer un détour",
+          "problem": "Une poignée unique ne permet pas de comprendre si l’on déplace une portion existante ou si l’on ajoute une nouvelle géométrie.",
+          "change": "Les grandes poignées déplacent les segments et leurs coudes voisins ; les petits points créent un détour local. Les contrôles intermédiaires sont disposés aux quarts du segment. Les zones de saisie sont plus larges que le dessin et les poignées principales sont prioritaires en cas de recouvrement.",
+          "benefit": "Le geste reste précis même à faible zoom.",
+          "example": "Saisir un petit point au milieu d’une relation pour contourner un obstacle sans refaire tout le trajet.",
+          "rule": "Adapter l’affordance à la transformation et garder une zone de saisie stable à l’écran.",
+          "limit": "Le diamètre de 28 px documenté pour les poignées est une décision desktop ; il ne valide pas à lui seul un usage tactile."
+        },
+        {
+          "id": "UX13",
+          "title": "Aider le geste et permettre son annulation",
+          "problem": "Une correction manuelle devient fatigante si chaque alignement est fragile et chaque erreur irréversible.",
+          "change": "Aimantation et repères temporaires accompagnent le déplacement. Alt désactive l’aimantation ; les flèches et Maj permettent l’édition au clavier ; Échap annule le glissement. Les coudes inutiles sont simplifiés.",
+          "benefit": "L’utilisateur combine précision, vitesse et récupération immédiate.",
+          "example": "Commencer à déplacer un segment, constater que la trajectoire est mauvaise puis presser Échap pour revenir à l’état initial.",
+          "rule": "Fournir un moyen de correction pendant l’action, au clavier et après l’action.",
+          "limit": ""
+        },
+        {
+          "id": "UX14",
+          "title": "Conserver le travail manuel au recalcul",
+          "problem": "Un recalcul global qui écrase les retouches manuelles oblige à refaire un travail déjà validé.",
+          "change": "Le recalcul par défaut conserve les routes manuelles. La relation sélectionnée peut être recalculée ; une option explicite permet d’inclure toutes les routes manuelles. Les tracés automatiques recalculés sont enregistrés et participent à l’annulation et à la réouverture.",
+          "benefit": "Les automatismes assistent la disposition au lieu de rendre son résultat imprévisible.",
+          "example": "Réinitialiser un seul lien gênant, puis recalculer les autres routes automatiques sans perdre les détours choisis.",
+          "rule": "Une automatisation distingue l’intention manuelle des valeurs calculées et annonce la portée d’un remplacement.",
+          "limit": "Une route automatique déjà enregistrée peut nécessiter un recalcul explicite pour bénéficier d’un nouvel algorithme."
+        },
+        {
+          "id": "UX15",
+          "title": "Corriger les détours à partir de cas visibles",
+          "problem": "Des captures révélaient des demi-tours colinéaires et de grands crochets dans un espace libre.",
+          "change": "La simplification retire les segments retracés sur une même ligne sans supprimer les boucles rectangulaires. La pénalité de congestion dépend de la longueur partagée, plutôt que du nombre d’arêtes de grille ; le coût des croisements a été ajusté. Des tests reproduisent les deux défauts.",
+          "benefit": "La correction vise la cause géométrique plutôt qu’une retouche particulière du modèle Compliance.",
+          "example": "Un segment vertical qui dépasse son coude avant de revenir sur lui-même est supprimé du trajet.",
+          "rule": "Transformer une capture de défaut en invariant vérifiable et en cas de non-régression.",
+          "limit": ""
+        },
+        {
+          "id": "UX16",
+          "title": "Clarifier le sens des animations",
+          "problem": "Le bouton Relations et un bouton Animations séparé pouvaient sembler contrôler la visibilité du graphe de façon redondante.",
+          "change": "Le bouton Animations a été retiré. Relations commande les boules animées sur tous les liens, sans masquer les lignes. Quand il est désactivé, une relation sélectionnée ou les relations d’une table sélectionnée peuvent rester animées. Les boules suivent le chemin SVG exact.",
+          "benefit": "Le graphe reste lisible et l’animation sert de repère de direction ou de sélection.",
+          "example": "Désactiver Relations pour calmer la vue générale, puis sélectionner une table pour suivre son voisinage.",
+          "rule": "Un bouton doit annoncer précisément l’effet qu’il produit ; éviter deux contrôles proches pour un même comportement.",
+          "limit": "À la demande de l’utilisateur, la version documentée anime aussi sous prefers-reduced-motion. C’est une exception locale, à réévaluer dans un autre produit ; elle ne doit pas devenir une règle générique du futur skill."
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/routing-review/overview-light.png",
+          "title": "Routage sur le modèle dense",
+          "caption": "Les liens orthogonaux et les groupes sont vérifiés sur Compliance, pas seulement sur un graphe minimal.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Lecture globale",
+          "file": "captures/07-overview-light.png",
+          "number": 7
+        },
+        {
+          "source": "build/routing-review/manual-selected.png",
+          "title": "Une relation sélectionnée et ses contrôles",
+          "caption": "La relation sélectionnée expose des points de manipulation. Le nombre de contrôles dépend de sa géométrie.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Manipulation locale",
+          "file": "captures/08-manual-selected.png",
+          "number": 8
+        },
+        {
+          "source": "build/routing-review/pointer-detour-light.png",
+          "title": "Créer un détour à la souris",
+          "caption": "Capture issue du scénario réel de routage. Les petites poignées et les grandes poignées ont des fonctions distinctes.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Précision et automatisation explicite",
+          "file": "captures/09-pointer-detour-light.png",
+          "number": 9
+        }
+      ]
+    },
+    {
+      "id": "vues",
+      "title": "Choisir ce qui est visible sans perdre le contexte",
+      "intro": "Les vues sont des lectures du même modèle. Le chantier du 14 octobre a réduit les commandes permanentes et rendu explicite le cycle de prévisualisation de visibilité. Il distingue la sauvegarde des choix de visibilité d’une vue et l’enregistrement du projet.",
+      "sources": [
+        "docs/evidence/views-2026-10-14.md",
+        "docs/evidence/windows-ui-2026-10-13.md",
+        "packages/ui/src/ViewManager.tsx",
+        "packages/ui/src/TableVisibilityTree.tsx",
+        "packages/ui/src/view-visibility.ts"
+      ],
+      "patterns": [
+        {
+          "id": "UX17",
+          "title": "Protéger la vue complète et alléger le sélecteur",
+          "problem": "Une vue système supprimable et un formulaire permanent de renommage multiplient les erreurs et encombrent le panneau.",
+          "change": "La vue système all, libellée Default View, reste permanente et ne propose ni renommage ni suppression. Les vues personnalisées se choisissent dans un sélecteur compact ; la création peut partir d’une vue vide, le renommage se fait dans la liste et la suppression demande confirmation.",
+          "benefit": "L’utilisateur dispose d’un point de retour complet et de commandes adaptées à son choix courant.",
+          "example": "Créer une vue « Relations clients » sans retirer des tables du modèle global.",
+          "rule": "Garder un repère système fiable et déplacer les actions occasionnelles au niveau de l’objet sélectionné.",
+          "limit": "Default View est le libellé actuel ; les anciennes mentions Toutes les tables ou View All décrivent d’autres étapes du projet."
+        },
+        {
+          "id": "UX18",
+          "title": "Séparer prévisualiser valider et enregistrer",
+          "problem": "Déplacer une table ne devrait pas confirmer silencieusement une sélection provisoire de visibilité.",
+          "change": "La visibilité en prévisualisation est séparée de la présentation enregistrable. Enregistrer la vue la valide ; Réinitialiser revient au choix enregistré. Enregistrer comme nouvelle vue conserve le diagramme affiché. La section Tables du DiagramView DBML est synchronisée sans réécrire le texte extérieur.",
+          "benefit": "L’utilisateur peut essayer des sous-ensembles et conserver séparément ses positions et son niveau de détail.",
+          "example": "Masquer temporairement deux tables puis les réafficher avec Réinitialiser, sans perdre un déplacement de table.",
+          "rule": "Nommer chaque niveau d’engagement et empêcher les actions voisines de valider un brouillon implicite.",
+          "limit": ""
+        },
+        {
+          "id": "UX19",
+          "title": "Proposer trois sorties avant de quitter une vue modifiée",
+          "problem": "Une confirmation binaire ne distingue pas abandonner une modification et renoncer à naviguer.",
+          "change": "Le changement de vue avec visibilité modifiée propose Enregistrer, Abandonner ou Annuler. Cette protection couvre aussi une navigation DBML nécessitant le retour à Default View.",
+          "benefit": "L’utilisateur choisit entre conserver, perdre volontairement ou rester, avec une conséquence identifiable.",
+          "example": "Cliquer Annuler ferme la demande et maintient la vue courante avec son aperçu.",
+          "rule": "Aux transitions qui peuvent perdre un travail, séparer conserver les changements, les abandonner et interrompre la transition.",
+          "limit": ""
+        },
+        {
+          "id": "UX20",
+          "title": "Conserver la portée des actions de groupe malgré la recherche",
+          "problem": "Un filtre peut faire croire qu’une action de groupe touche seulement ses résultats visibles.",
+          "change": "La recherche porte sur l’ensemble des tables. Les cases de groupe agissent sur tous leurs membres malgré le filtre ; compteurs visible sur total et état partiel rendent le résultat perceptible. Les relations des tables masquées disparaissent avec elles.",
+          "benefit": "Les actions de groupe restent cohérentes et leur portée ne dépend pas accidentellement du filtre.",
+          "example": "Rechercher une table puis cocher son groupe conserve la sémantique du groupe entier.",
+          "rule": "Définir explicitement si une commande groupée porte sur le groupe, les résultats filtrés ou une sélection.",
+          "limit": "Dans un autre produit, une action sur résultats filtrés peut être préférable ; annoncer sa portée au lieu de recopier ce choix sans réflexion."
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/ui-review/workspace-1440.png",
+          "title": "Le panneau de vues avant sa simplification",
+          "caption": "Capture du contrôle Windows du 13 octobre. Le nom de vue, la duplication, le renommage, la suppression et le détail occupaient une zone permanente.",
+          "status": "État historique du 13 octobre",
+          "focus": "Point de comparaison réel",
+          "file": "captures/10-workspace-1440.png",
+          "number": 10
+        },
+        {
+          "source": "build/ui-review/views-final.png",
+          "title": "Le sélecteur compact après le chantier des vues",
+          "caption": "Capture du contrôle du 14 octobre. Le détail est dans la barre flottante et le panneau donne plus de place aux tables. Le jeu de données diffère de la capture précédente.",
+          "status": "État du chantier du 14 octobre",
+          "focus": "Après la simplification du panneau",
+          "file": "captures/11-views-final.png",
+          "number": 11
+        },
+        {
+          "source": "build/ui-review/views-unsaved.png",
+          "title": "La sortie explicite d’un aperçu modifié",
+          "caption": "Enregistrer, Abandonner et Annuler sont trois décisions différentes. La capture prouve la présence de ce choix.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Protection de la transition",
+          "file": "captures/12-views-unsaved.png",
+          "number": 12
+        },
+        {
+          "source": "build/ui-review/views-delete.png",
+          "title": "La suppression contextualisée d’une vue",
+          "caption": "La suppression est confirmée au niveau de la vue. Elle ne doit pas être confondue avec la suppression des tables du modèle.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Portée d’une action destructive",
+          "file": "captures/13-views-delete.png",
+          "number": 13
+        }
+      ]
+    },
+    {
+      "id": "construction",
+      "title": "Construire avec les concepts du métier",
+      "intro": "Construction ajoute une manière guidée de modifier la structure sans imposer à chaque utilisateur la syntaxe DBML. L’interface garde des concepts propres à SharePoint, Dataverse et SQL, plutôt qu’un formulaire générique qui cacherait leurs différences. Les changements entrent dans le brouillon commun et Enregistrer crée la révision.",
+      "sources": [
+        "docs/evidence/construction-modes-2026-10-14.md",
+        "docs/evidence/construction-panel-2026-10-15.md",
+        "packages/ui/src/ProjectTypeForm.tsx",
+        "packages/ui/src/SchemaBuilder.tsx",
+        "packages/ui/src/SchemaTree.tsx",
+        "packages/ui/src/model-commands.ts"
+      ],
+      "patterns": [
+        {
+          "id": "UX21",
+          "title": "Choisir le type avant de créer le fichier",
+          "problem": "Un type technique choisi trop tard peut imposer une conversion ambiguë du travail déjà saisi.",
+          "change": "Le formulaire demande SharePoint, Dataverse, SQL ou DBML générique avant le choix de destination. SQL révèle le moteur ; Dataverse révèle le préfixe avec sa contrainte de format. Le type reste fixe après création ; les anciens projets sans profil restent génériques.",
+          "benefit": "Les options suivantes correspondent immédiatement au bon environnement.",
+          "example": "Choisir Dataverse et le préfixe demo, puis créer le projet ; aucune conversion de projet existant n’est proposée.",
+          "rule": "Faire choisir les paramètres structurants avant les choix qui en dépendent, avec des champs conditionnels.",
+          "limit": "Un profil immuable est une décision propre au modèle de DBCodex, pas une obligation pour tous les outils."
+        },
+        {
+          "id": "UX22",
+          "title": "Associer un arbre de navigation à une fiche contextualisée",
+          "problem": "Un grand formulaire mélangeant tables, colonnes et relations rend l’objet actif difficile à identifier.",
+          "change": "Le panneau affiche un titre, le type de projet et le nombre d’objets. L’arbre utilise indentation, types et sélection visible, y compris pour les colonnes système. La fiche nomme le contexte et l’objet actif ; la suppression reste en pied de fiche.",
+          "benefit": "L’utilisateur parcourt la structure puis ne modifie que l’objet qu’il a choisi.",
+          "example": "« Commandes / Colonne », puis « Client secondaire », situe la fiche avant ses propriétés.",
+          "rule": "Séparer la navigation entre objets de l’édition détaillée d’un objet. Garder les actions destructrices dans ce contexte.",
+          "limit": ""
+        },
+        {
+          "id": "UX23",
+          "title": "Rechercher avec les deux vocabulaires",
+          "problem": "Une personne peut connaître le libellé métier tandis qu’une autre connaît seulement le nom technique.",
+          "change": "La recherche de Construction porte sur les noms affichés et techniques, sans sensibilité aux accents. L’absence de résultat indique qu’aucune table ni colonne ne correspond ; une récupération et Échap permettent de vider la recherche.",
+          "benefit": "Un même objet reste retrouvable depuis les mots employés par différents utilisateurs.",
+          "example": "Saisir Clientsecondaire retrouve « Client secondaire ». Une recherche vide de résultat ne fait pas croire que les données ont disparu.",
+          "rule": "Indexer les noms utiles au lecteur, expliquer l’état vide et offrir une sortie immédiate du filtre.",
+          "limit": ""
+        },
+        {
+          "id": "UX24",
+          "title": "Préremplir une relation depuis le geste graphique",
+          "problem": "Dessiner un lien puis ressaisir sa source et sa cible dans un formulaire duplique le travail et crée des erreurs.",
+          "change": "Tracer un lien depuis une colonne ou une table ouvre les options dans Construction avec le contexte prérempli. Une colonne existante peut être réutilisée pour devenir un Lookup plutôt qu’être dupliquée.",
+          "benefit": "Le diagramme initie la relation ; le formulaire précise les contraintes nécessaires.",
+          "example": "Glisser Client secondaire vers Clients ouvre Créer un Lookup avec Clients déjà choisi.",
+          "rule": "Transmettre l’intention et le contexte d’un geste à l’étape de configuration suivante.",
+          "limit": ""
+        },
+        {
+          "id": "UX25",
+          "title": "Respecter les différences entre plateformes",
+          "problem": "Assimiler toutes les relations à une clé étrangère de colonne masque des règles métier essentielles.",
+          "change": "SharePoint distingue listes, bibliothèques, champs système et Lookup simple ou multiple, avec colonne affichée et colonnes supplémentaires compatibles. Dataverse distingue préfixe, nom principal, Lookup et relations N:N indépendantes. SQL propose ses catalogues de types et une cible de colonne.",
+          "benefit": "Les réglages restent fidèles à l’objet que l’utilisateur cherche à concevoir.",
+          "example": "Une relation N:N Dataverse n’est pas présentée comme une simple colonne Lookup ; un Lookup SharePoint peut autoriser plusieurs valeurs.",
+          "rule": "Mutualiser la structure de l’interface tout en conservant les différences qui changent une décision utilisateur.",
+          "limit": "Le modèle est local : pas de création dans un tenant, pas de déploiement SQL et pas d’évaluation des expressions."
+        },
+        {
+          "id": "UX26",
+          "title": "Préserver les éléments protégés et les références à résoudre",
+          "problem": "Supprimer une table cible ou modifier un champ système peut produire une structure trompeuse ou incohérente.",
+          "change": "Les champs système techniques sont protégés dans Construction. Supprimer une table demande le sort des Lookup qui la ciblent : suppression ou conservation avec le statut À résoudre. L’annulation restaure ensemble source et propriétés métier.",
+          "benefit": "La conséquence de l’action est explicite et les dépendances ne disparaissent pas silencieusement.",
+          "example": "Conserver les Lookup d’une table supprimée permet de traiter leur cible ensuite ; Annuler rétablit l’opération complète.",
+          "rule": "Pour une suppression avec dépendances, présenter la portée réelle et conserver un état de récupération compréhensible.",
+          "limit": ""
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/construction-review/new-project.png",
+          "title": "Choisir les paramètres structurants",
+          "caption": "Le formulaire de création révèle le préfixe Dataverse avant le choix du fichier.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Divulgation progressive des champs",
+          "file": "captures/14-new-project.png",
+          "number": 14
+        },
+        {
+          "source": "build/construction-review/dataverse-desktop.png",
+          "title": "Construction Dataverse",
+          "caption": "L’interface conserve les concepts de table, de Lookup et de relations N:N du profil.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Adaptation au métier",
+          "file": "captures/15-dataverse-desktop.png",
+          "number": 15
+        },
+        {
+          "source": "build/construction-review/sql-desktop.png",
+          "title": "Construction SQL",
+          "caption": "Même structure générale de navigation et de fiche, avec les types et cibles propres au moteur SQL.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Réutilisation sans effacer les différences",
+          "file": "captures/16-sql-desktop.png",
+          "number": 16
+        }
+      ]
+    },
+    {
+      "id": "etats",
+      "title": "Préserver le travail et expliquer son état",
+      "intro": "La confiance ne vient pas seulement des confirmations. Elle dépend d’un modèle cohérent de brouillon, validation, enregistrement et récupération. L’utilisateur doit comprendre si son texte est en cours, si sa structure est valide et si le disque contient réellement son travail.",
+      "sources": [
+        "README.md",
+        "docs/evidence/dbcd-workbench.md",
+        "docs/evidence/construction-modes-2026-10-14.md",
+        "packages/ui/src/useDocumentSession.ts",
+        "packages/ui/src/DbcdWorkbench.tsx",
+        "skills/dbcodex/SKILL.md"
+      ],
+      "patterns": [
+        {
+          "id": "UX27",
+          "title": "Conserver le dernier graphe valide",
+          "problem": "Une erreur de syntaxe temporaire peut faire disparaître tout le diagramme et interrompre la compréhension.",
+          "change": "La validation DBML est différée. Un DBML invalide conserve la dernière structure valide en consultation ; Construction expose Corriger le DBML. L’enregistrement invalide est empêché et les résultats de validation obsolètes ne remplacent pas une saisie plus récente.",
+          "benefit": "L’utilisateur garde un repère visuel et un chemin de correction pendant une erreur de saisie.",
+          "example": "Ajouter une déclaration incomplète laisse l’ancien graphe visible ; Corriger le DBML ramène vers la source.",
+          "rule": "Conserver un résultat utile lors d’un échec provisoire, mais rendre explicite qu’il ne représente pas encore la nouvelle saisie.",
+          "limit": "Si aucun graphe valide n’a jamais existé, un état vide invite à corriger le DBML ; ne pas inventer un résultat valide."
+        },
+        {
+          "id": "UX28",
+          "title": "Distinguer brouillon et version enregistrée",
+          "problem": "Un autosave de récupération peut être confondu avec une version que l’utilisateur a volontairement conservée.",
+          "change": "Le brouillon est récupérable sans créer de révision. Chaque enregistrement explicite accepté crée une révision atomique. Le statut de sauvegarde et la disponibilité du bouton reflètent le travail courant ; les conflits de génération bloquent l’écriture.",
+          "benefit": "L’utilisateur sait quand il expérimente et quand il produit une nouvelle version de référence.",
+          "example": "Modifier une option dans Construction marque le travail comme non enregistré ; Enregistrer conserve source et propriétés dans une même version.",
+          "rule": "Nommer et représenter séparément persistance de secours et engagement explicite du document.",
+          "limit": ""
+        },
+        {
+          "id": "UX29",
+          "title": "Traiter les conflits comme une récupération",
+          "problem": "Une modification externe peut écraser un brouillon si le rafraîchissement est assimilé à une simple mise à jour visuelle.",
+          "change": "Le composant visible relit l’état enregistré toutes les deux secondes. Un brouillon local provoque un conflit au lieu d’être remplacé. La fermeture ordonnée peut préserver le brouillon si le client attend le teardown ; un arrêt forcé dépend de la dernière persistance réussie.",
+          "benefit": "Le travail local reste prioritaire face à une version externe et les limites de récupération sont compréhensibles.",
+          "example": "Une modification par assistant ne doit pas remplacer silencieusement une saisie locale non enregistrée.",
+          "rule": "Ne jamais présenter une récupération supposée comme une sauvegarde accomplie ; vérifier la version avant écriture.",
+          "limit": "La disponibilité du plein écran et le teardown du composant intégré dépendent de l’hôte. L’intégration native reste distincte de la portable testée."
+        },
+        {
+          "id": "UX30",
+          "title": "Expliquer ce qu’un export conserve",
+          "problem": "Un fichier d’échange peut être pris pour une sauvegarde complète du projet.",
+          "change": "Le .dbcd conserve texte exact, présentation, brouillons, versions et propriétés métier. Le .dbml exporte le texte enregistré, sans inclure le brouillon ni toutes les options SharePoint/Dataverse ou relations N:N. Import et export refusent l’écrasement de destination.",
+          "benefit": "L’utilisateur peut choisir le bon format selon son intention de transfert ou de sauvegarde.",
+          "example": "Garder le .dbcd pour reprendre le travail complet ; exporter .dbml pour échanger la structure textuelle.",
+          "rule": "Rendre les limites d’un format visibles au moment où elles changent la décision de l’utilisateur.",
+          "limit": ""
+        }
+      ],
+      "figures": []
+    },
+    {
+      "id": "historique",
+      "title": "Comprendre une version avant de la restaurer",
+      "intro": "Le chantier du 15 octobre a fait de l’historique un outil de compréhension. La comparaison donne d’abord les changements du schéma, puis permet d’ouvrir les compteurs de présentation et le texte avant/après. La direction est toujours de la version sélectionnée vers le travail courant, brouillon inclus.",
+      "sources": [
+        "docs/evidence/history-2026-10-15.md",
+        "packages/ui/src/HistoryPanel.tsx",
+        "packages/ui/src/history-changes.ts",
+        "packages/ui/src/revision-diff.ts"
+      ],
+      "patterns": [
+        {
+          "id": "UX31",
+          "title": "Rendre les versions identifiables",
+          "problem": "Une liste d’identifiants techniques oblige à ouvrir plusieurs versions pour comprendre ce qu’elles représentent.",
+          "change": "Les versions sont triées de la plus récente à la plus ancienne, avec date française, résumé, libellé éventuel, ID court et repère de dernière version. La sélection est visuellement distincte. L’épinglage protège de la rétention.",
+          "benefit": "Le lecteur choisit rapidement une référence avant de lancer une comparaison.",
+          "example": "Version 1 — Création du projet — 15 oct. 2026 donne un repère lisible ; l’ID court reste disponible pour identifier précisément la révision.",
+          "rule": "Donner aux éléments d’historique un repère humain et une identité persistante.",
+          "limit": "Les numéros suivent l’ordre de l’historique conservé ; l’identifiant reste la référence stable. La rétention vise 90 jours et 500 entrées, en conservant versions courantes et épinglées."
+        },
+        {
+          "id": "UX32",
+          "title": "Commencer par les changements compréhensibles",
+          "problem": "Un diff de lignes seul ne permet pas de comprendre rapidement la portée métier d’une version.",
+          "change": "Le panneau nomme tables, colonnes et relations ajoutées ou supprimées, changements de type, champs obligatoires et clés primaires. Les compteurs de présentation et le DBML avant/après restent accessibles dans des détails repliables. Le contenu sélectionné est chargé à la demande.",
+          "benefit": "L’utilisateur comprend d’abord ce qui a changé, puis consulte la preuve textuelle utile.",
+          "example": "« Colonne ajoutée : clients.email » et « Table ajoutée : commandes » précèdent le DBML complet.",
+          "rule": "Présenter le sens du changement avant son détail brut, avec une direction de comparaison explicite.",
+          "limit": "Le résumé sémantique ne couvre pas toutes les options DBML et métier ; les compteurs de présentation ne sont pas un audit complet de chaque propriété."
+        },
+        {
+          "id": "UX33",
+          "title": "Restaurer avec une conséquence claire",
+          "problem": "Un bouton Restaurer peut être compris comme une suppression du futur ou un simple aperçu.",
+          "change": "La restauration remplace le travail courant et crée une nouvelle révision. Remplacer un brouillon demande confirmation. L’historique prévoit chargement, erreur avec nouvelle tentative, aucune version, contenu identique et lecture seule.",
+          "benefit": "La récupération est explicite et les versions antérieures restent traçables selon la rétention.",
+          "example": "Après restauration de Version 1, une nouvelle version courante existe ; l’opération ne crée aucun commit Git.",
+          "rule": "Une récupération doit dire ce qu’elle remplace et ce qu’elle conserve, et proposer une reprise en cas d’échec.",
+          "limit": ""
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/history-review/desktop.png",
+          "title": "Comparer une version au travail courant",
+          "caption": "Le résumé structurel nomme les objets modifiés. La liste et le détail restent visibles avec le contexte de l’atelier.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Hiérarchie de la comparaison",
+          "file": "captures/17-desktop.png",
+          "number": 17
+        },
+        {
+          "source": "build/history-review/comparison.png",
+          "title": "Consulter la preuve textuelle",
+          "caption": "Le contrôle ouvre le DBML avant/après après avoir vérifié les changements structurels.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Divulgation progressive du détail",
+          "file": "captures/18-comparison.png",
+          "number": 18
+        },
+        {
+          "source": "build/history-review/narrow.png",
+          "title": "Historique dans une fenêtre étroite",
+          "caption": "Le contrôle à 480 px vérifie l’absence de débordement horizontal du panneau. La liste précède la comparaison.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Ordre de lecture compact",
+          "file": "captures/19-narrow.png",
+          "number": 19
+        }
+      ]
+    },
+    {
+      "id": "adaptation",
+      "title": "Adapter l’espace et l’accès aux commandes",
+      "intro": "Les contrôles portent sur l’atelier desktop et ses fenêtres compactes. Les thèmes et l’adaptation des panneaux ont été vérifiés dans Electron. Ces preuves montrent une interface adaptable ; elles ne suffisent pas à qualifier le produit comme une application mobile tactile complète.",
+      "sources": [
+        "docs/evidence/windows-ui-2026-10-13.md",
+        "docs/evidence/construction-panel-2026-10-15.md",
+        "docs/evidence/history-2026-10-15.md",
+        "packages/ui/src/DbcdWorkbench.tsx",
+        "packages/ui/src/styles.css",
+        "packages/desktop/src/renderer/portable.css"
+      ],
+      "patterns": [
+        {
+          "id": "UX34",
+          "title": "Adapter les panneaux plutôt que réduire tout le contenu",
+          "problem": "Des panneaux fixes peuvent écraser le diagramme sur une fenêtre étroite.",
+          "change": "Les panneaux se réduisent, se redimensionnent ou deviennent des tiroirs et superpositions. Construction se superpose au diagramme en fenêtre étroite. L’historique passe à une lecture séquentielle ; les contrôles de barre se compactent et les contenus longs ont des règles de retour ou de troncature.",
+          "benefit": "Le contenu principal garde un espace exploitable au lieu de diminuer uniformément.",
+          "example": "À 850 px, ouvrir Construction comme superposition ; à 480 px, lire les versions avant le détail de comparaison.",
+          "rule": "Définir une stratégie par zone et par tâche : garder, replier, superposer ou réordonner.",
+          "limit": "L’absence de débordement sur un panneau ne prouve pas que tous les gestes du diagramme sont adaptés au mobile."
+        },
+        {
+          "id": "UX35",
+          "title": "Rendre les commandes utilisables au clavier",
+          "problem": "Une interface à icônes et panneaux flottants peut cacher le focus ou perdre l’utilisateur à la fermeture d’un menu.",
+          "change": "Les commandes ont des noms accessibles ; les bascules exposent aria-pressed et les panneaux aria-expanded. Le focus visible est dessiné. Le menu Fichier rend le focus au déclencheur après Échap. Le formulaire de création prend le focus, le contient pendant la navigation Tab et le restitue à la fermeture.",
+          "benefit": "L’utilisateur peut se situer et poursuivre son parcours sans dépendre uniquement de la souris.",
+          "example": "Ouvrir Nouveau projet, parcourir ses champs au clavier puis annuler en retrouvant le déclencheur.",
+          "rule": "Vérifier ouverture, ordre de tabulation, focus visible, sortie et retour au contexte.",
+          "limit": "Aucun audit complet WCAG ni contrôle exhaustif au lecteur d’écran n’est attesté par ces vérifications ciblées."
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/construction-review/sharepoint-compact.png",
+          "title": "Construction dans une fenêtre compacte",
+          "caption": "Le scénario vérifie une superposition exploitable, le rail persistant et l’absence de débordement horizontal à 850 px.",
+          "status": "Capture de contrôle du projet",
+          "focus": "Préserver la tâche dans un espace limité",
+          "file": "captures/20-sharepoint-compact.png",
+          "number": 20
+        }
+      ]
+    },
+    {
+      "id": "fluidite",
+      "title": "Traiter la fluidité comme une qualité UX",
+      "intro": "La performance a été travaillée sur des gestes réels et sur des opérations répétées. Le résultat utile est le temps pendant lequel une action bloque ou désoriente l’utilisateur. Les mesures ci-dessous proviennent des rapports locaux ; elles ne sont pas une nouvelle campagne de benchmark réalisée pour ce dossier.",
+      "sources": [
+        "docs/evidence/performance-2026-10-13.md",
+        "docs/evidence/performance-2026-10-15.md",
+        "docs/evidence/dbdiagram-routing-study-2026-10-14.md"
+      ],
+      "patterns": [
+        {
+          "id": "UX36",
+          "title": "Alléger le geste et stabiliser au relâchement",
+          "problem": "Le déplacement recalculait les chemins complets sur les événements souris ; le renderer de développement et 800 raccordements DOM accentuaient le coût.",
+          "change": "Build de production, raccordements utiles seulement, index, mémorisation et caches réduisent le travail. Pendant le glissement, les raccordements s’adaptent légèrement ; le calcul complet et la réparation arrivent au relâchement. Les routes indépendantes valides sont réutilisées.",
+          "benefit": "L’utilisateur voit la table suivre son geste avec moins de longues interruptions.",
+          "example": "Sur Compliance, 800 raccordements DOM deviennent 176 et le 95e percentile des intervalles d’images du déplacement passe de 313 à 31 ms dans l’essai du 13 octobre.",
+          "rule": "Profiler une action représentative, retirer le travail inutile puis vérifier que le résultat et la sauvegarde restent exacts.",
+          "limit": "Une pointe de 109 ms reste mesurée au relâchement dans ce rapport ; il ne démontre pas 60 images par seconde sur tout modèle."
+        },
+        {
+          "id": "UX37",
+          "title": "Découper les calculs et rejeter les résultats périmés",
+          "problem": "Un calcul long peut bloquer l’interface ou appliquer un résultat devenu faux après un autre geste.",
+          "change": "Le recalcul global est découpé en tranches avec commandes temporairement indisponibles. Les résultats devenus obsolètes après modification, mouvement ou démontage sont ignorés. Le 15 octobre, parsing réutilisé, index métier et commande groupée ont réduit les opérations répétées.",
+          "benefit": "L’interface peut continuer à traiter des événements et n’applique pas un état dépassé.",
+          "example": "Déplacer 100 tables dans un document de 11 vues passe de 127,21 à 1,34 ms pour la commande de présentation mesurée.",
+          "rule": "Optimiser le travail récurrent sans supprimer les contrôles de validité, de conflit ou de transaction.",
+          "limit": "Le cache n’accélère pas systématiquement une première analyse : les textes modifiés mesurés deviennent un peu plus coûteux. Les optimisations du 15 octobre sont compilées en développement et ne sont pas attestées dans la portable 0.1.4 par ce rapport."
+        }
+      ],
+      "figures": []
+    },
+    {
+      "id": "miseajour",
+      "title": "Faire évoluer l’application sans perdre la session",
+      "intro": "L’amélioration de l’expérience inclut aussi les opérations autour de l’éditeur. La mise à jour et le regroupement des versions locales réduisent le risque d’utiliser un ancien exécutable ou de perdre un brouillon pendant un redémarrage.",
+      "sources": [
+        "docs/evidence/portable-updates-2026-10-14.md",
+        "docs/evidence/history-2026-10-15.md",
+        "README.md",
+        "packages/desktop/src/renderer/UpdatePanel.tsx"
+      ],
+      "patterns": [
+        {
+          "id": "UX38",
+          "title": "Séparer vérifier télécharger et redémarrer",
+          "problem": "Une mise à jour automatique opaque peut interrompre le travail ou laisser croire qu’elle est terminée alors que seul le téléchargement a réussi.",
+          "change": "Le menu Mises à jour expose attente, progression, disponibilité, erreur et récupération. Les nouveautés sont repliées ; l’utilisateur redémarre lorsque son travail est prêt. Le parcours de test vérifie conservation du brouillon, du thème et des récents après remplacement.",
+          "benefit": "L’utilisateur voit l’étape atteinte et garde la maîtrise du moment de redémarrage.",
+          "example": "Une version téléchargée propose l’étape suivante au lieu de prétendre que la session utilise déjà la nouvelle version.",
+          "rule": "Afficher l’état réellement atteint dans une opération à plusieurs phases, avec une reprise adaptée à la phase.",
+          "limit": "La récupération après interruption brutale reste manuelle ; le rollback de remplacement ne couvre pas toute panne fonctionnelle après démarrage."
+        },
+        {
+          "id": "UX39",
+          "title": "Avoir une référence locale identifiable",
+          "problem": "Plusieurs portables de test rendent incertaine la version réellement utilisée et peuvent disperser les projets récents.",
+          "change": "Les livraisons successives ont été regroupées vers une installation principale, avec sauvegardes et conservation des données. Le README et le rapport Historique identifient ensuite la portable locale 0.1.4 comme référence, après les étapes 0.1.2 et 0.1.3.",
+          "benefit": "L’utilisateur retrouve un seul point d’entrée à jour sans confondre les états de développement.",
+          "example": "Le parcours de référence utilise release/DBCodex-win32-x64/DBCodex.exe ; les sources compilées constituent un état distinct.",
+          "rule": "Nommer la version testée, l’exécutable livré et l’état du document ; une compilation seule ne prouve pas la livraison.",
+          "limit": ""
+        }
+      ],
+      "figures": [
+        {
+          "source": "build/update-available.png",
+          "title": "Une version disponible",
+          "caption": "Capture du contrôle de mise à jour du 14 octobre. Les étapes de disponibilité et de redémarrage sont distinguées.",
+          "status": "Capture de contrôle du projet",
+          "focus": "État réel de l’opération",
+          "file": "captures/21-update-available.png",
+          "number": 21
+        },
+        {
+          "source": "build/update-ready.png",
+          "title": "La mise à jour prête au redémarrage",
+          "caption": "Capture du contrôle de mise à jour du 14 octobre. Les étapes de disponibilité et de redémarrage sont distinguées.",
+          "status": "Capture de contrôle du projet",
+          "focus": "État réel de l’opération",
+          "file": "captures/22-update-ready.png",
+          "number": 22
+        }
+      ]
+    }
+  ],
+  "principles": [
+    [
+      "Comprendre avant de dessiner",
+      "Nommer utilisateur, objet métier, tâche, point d’entrée, première décision, résultat attendu et récupération. Exemple DBCodex : construire une relation et vérifier sa cible, pas simplement afficher une page de graphe.",
+      "UX01, UX24"
+    ],
+    [
+      "Construire autour des objets",
+      "Parcourir dans une liste ou un arbre, inspecter l’objet choisi dans une fiche et modifier dans ce contexte. Ne pas exposer tous les formulaires à égalité.",
+      "UX22, UX25"
+    ],
+    [
+      "Garder un point de retour",
+      "Un panneau fermé conserve son déclencheur ; un filtre sans résultat possède une sortie ; une vue personnalisée conserve une vue complète de référence.",
+      "UX02, UX17, UX23"
+    ],
+    [
+      "Nommer les engagements",
+      "Distinguer aperçu, brouillon, validation, enregistrement, publication ou déploiement selon le produit. Chaque bouton doit avoir une portée compréhensible.",
+      "UX18, UX28, UX38"
+    ],
+    [
+      "Préserver l’intention manuelle",
+      "Les automatismes conservent les retouches lorsqu’ils peuvent le faire ; remplacer un travail manuel se fait avec une portée annoncée et une récupération.",
+      "UX10, UX14"
+    ],
+    [
+      "Donner le sens avant le détail",
+      "Résultat humain puis détail utile puis diagnostic brut. Garder les termes techniques lorsqu’ils sont nécessaires à la tâche.",
+      "UX05, UX32"
+    ],
+    [
+      "Traiter les transitions",
+      "Le parcours comprend entrée, décision, action, retour, erreur, récupération et fin. Un bel écran sans transition sûre est insuffisant.",
+      "UX03, UX19, UX29"
+    ],
+    [
+      "Tester des cas difficiles",
+      "Prévoir noms longs, absence de résultat, données denses, brouillon invalide, lecture seule, conflit et fenêtre compacte ; choisir les cas pertinents au produit.",
+      "UX23, UX27, UX34"
+    ],
+    [
+      "Vérifier les gestes",
+      "Une capture montre l’apparence. Un test d’interaction prouve le clic, le glissement, le clavier, l’annulation et le résultat.",
+      "UX07, UX12, UX13"
+    ],
+    [
+      "Mesurer la sensation de blocage",
+      "Profiler une tâche réelle et le matériel du test. Mesurer les temps et vérifier la correction du document après optimisation.",
+      "UX36, UX37"
+    ],
+    [
+      "Codifier sans figer le style",
+      "Conserver les invariants UX et les critères observables. Les couleurs, dimensions et gestes particuliers restent des choix de contexte.",
+      "UX04, UX06, UX35"
+    ],
+    [
+      "Qualifier les preuves",
+      "Distinguer demandé, implémenté, testé, capturé et livré. Ne pas déduire une fonctionnalité d’un plan ou d’une comparaison avec un autre logiciel.",
+      "UX15, UX39"
+    ]
+  ],
+  "checklist": [
+    [
+      "Cadrage",
+      [
+        "Je sais qui utilise cette surface et quelle tâche elle termine.",
+        "La première décision et la réussite sont explicites.",
+        "Les objets métiers et leur identité sont stables.",
+        "Le parcours de retour et les modes d’échec sont décrits."
+      ]
+    ],
+    [
+      "Hiérarchie",
+      [
+        "L’action principale ressort sans masquer le contenu de travail.",
+        "Les actions de document et d’objet ont une portée distincte.",
+        "L’arbre ou la liste sert à parcourir ; la fiche sert à modifier.",
+        "Les identifiants et diagnostics restent au niveau utile à la tâche."
+      ]
+    ],
+    [
+      "Interaction",
+      [
+        "Les bascules affichent leur état et les sélections leur contexte.",
+        "La fermeture d’un panneau conserve un moyen stable de le rouvrir.",
+        "La portée d’une action de groupe reste compréhensible sous filtre.",
+        "Les gestes fréquents ont une alternative ou une récupération adaptée.",
+        "Annuler et Rétablir restaurent une opération cohérente."
+      ]
+    ],
+    [
+      "États et confiance",
+      [
+        "Chargement, vide, erreur, résultat identique et lecture seule ont un comportement prévu.",
+        "Une erreur conserve la saisie et donne une prochaine action.",
+        "Aperçu, brouillon et version enregistrée ne se confondent pas.",
+        "Une modification externe ne remplace pas silencieusement le travail local.",
+        "La suppression indique ce qui disparaît et les dépendances affectées.",
+        "Quitter un travail non enregistré offre des sorties distinctes et compréhensibles."
+      ]
+    ],
+    [
+      "Adaptation et accès",
+      [
+        "Le contenu long ne détruit pas la mise en page.",
+        "La fenêtre compacte conserve une action principale accessible.",
+        "Les panneaux se replient, se superposent ou se réordonnent selon la tâche.",
+        "Les commandes ont un nom accessible et un focus visible.",
+        "L’ouverture et la fermeture des menus et dialogues gèrent le focus.",
+        "La couleur et le mouvement ne sont pas les seuls moyens de comprendre."
+      ]
+    ],
+    [
+      "Validation",
+      [
+        "J’ai inspecté les captures des états clair, sombre et compact pertinents.",
+        "J’ai testé le véritable geste et son résultat, pas seulement la présence du bouton.",
+        "J’ai mesuré les lenteurs sur un cas représentatif avant de revendiquer un gain.",
+        "Je distingue la compilation, l’interface testée et l’exécutable livré.",
+        "Les sources, captures et limites sont reliées à chaque conclusion."
+      ]
+    ]
+  ],
+  "scenarios": [
+    {
+      "id": "E01",
+      "title": "Passer d’une vue provisoire à une autre",
+      "steps": [
+        "Créer une vue vide puis rendre quelques tables visibles.",
+        "Tenter de choisir une autre vue.",
+        "Essayer séparément Annuler, Abandonner et Enregistrer.",
+        "Déplacer une table pendant un autre aperçu puis réinitialiser la visibilité."
+      ],
+      "expected": "Annuler garde l’aperçu ; Abandonner quitte sans le valider ; Enregistrer le valide avant navigation. Réinitialiser la visibilité ne supprime pas la disposition.",
+      "lesson": "Séparer navigation, aperçu et engagement.",
+      "refs": [
+        "UX18",
+        "UX19"
+      ]
+    },
+    {
+      "id": "E02",
+      "title": "Créer un Lookup sans ressaisie inutile",
+      "steps": [
+        "Créer Clients puis Commandes en SharePoint.",
+        "Ajouter Client secondaire dans Commandes.",
+        "Glisser cette colonne vers Clients.",
+        "Valider les options puis enregistrer et rouvrir le projet."
+      ],
+      "expected": "Le formulaire connaît la cible et réutilise la colonne. Le type Lookup et les options sont conservés dans le .dbcd.",
+      "lesson": "Le contexte d’un geste doit alimenter son formulaire.",
+      "refs": [
+        "UX24",
+        "UX25"
+      ]
+    },
+    {
+      "id": "E03",
+      "title": "Se remettre d’une erreur DBML",
+      "steps": [
+        "Partir d’une structure valide.",
+        "Saisir une déclaration DBML incomplète.",
+        "Ouvrir Construction puis utiliser Corriger le DBML.",
+        "Corriger la source et enregistrer."
+      ],
+      "expected": "Le dernier graphe valide reste consultable ; l’erreur bloque l’enregistrement ; la correction retourne vers la source sans effacer la saisie.",
+      "lesson": "Maintenir un repère utile et un chemin de correction.",
+      "refs": [
+        "UX27",
+        "UX28"
+      ]
+    },
+    {
+      "id": "E04",
+      "title": "Corriger un seul lien et conserver les autres",
+      "steps": [
+        "Créer un détour manuel sur une relation.",
+        "Recalculer les routes automatiques.",
+        "Sélectionner un autre lien et le réinitialiser.",
+        "Annuler puis enregistrer et rouvrir."
+      ],
+      "expected": "Le recalcul par défaut préserve le détour manuel ; le recalcul local a une portée limitée ; annulation et persistance conservent la géométrie attendue.",
+      "lesson": "Préserver l’intention de l’utilisateur dans les automatismes.",
+      "refs": [
+        "UX12",
+        "UX14"
+      ]
+    },
+    {
+      "id": "E05",
+      "title": "Comprendre une ancienne version",
+      "steps": [
+        "Enregistrer une version avec Clients.",
+        "Ajouter clients.email et Commandes puis enregistrer.",
+        "Sélectionner la première version dans Historique.",
+        "Ouvrir le détail DBML et examiner Restaurer sans le déclencher sur un fichier réel."
+      ],
+      "expected": "Le résumé nomme les ajouts ; le sens Version sélectionnée vers travail courant est visible ; la conséquence de Restaurer est expliquée.",
+      "lesson": "Montrer le sens de la comparaison avant le texte.",
+      "refs": [
+        "UX31",
+        "UX32",
+        "UX33"
+      ]
+    },
+    {
+      "id": "E06",
+      "title": "Retrouver un objet après une recherche infructueuse",
+      "steps": [
+        "Rechercher le nom interne d’une colonne connue.",
+        "Rechercher une chaîne absente.",
+        "Effacer avec Échap puis choisir l’objet retrouvé."
+      ],
+      "expected": "Le nom interne retrouve le libellé ; aucun résultat est distingué de l’absence de données ; Échap restaure l’arbre.",
+      "lesson": "Une recherche doit toujours offrir une récupération.",
+      "refs": [
+        "UX23"
+      ]
+    },
+    {
+      "id": "E07",
+      "title": "Contrôler le clavier et la fenêtre compacte",
+      "steps": [
+        "Ouvrir Fichier au clavier puis fermer par Échap.",
+        "Ouvrir Nouveau projet et parcourir les champs avec Tab et Maj+Tab.",
+        "Annuler puis réduire la fenêtre à 850 px.",
+        "Ouvrir Construction et contrôler le panneau Historique à 480 px."
+      ],
+      "expected": "Le focus revient au bon déclencheur, ne se perd pas dans le fond du dialogue et la mise en page ciblée ne déborde pas horizontalement.",
+      "lesson": "L’adaptation se vérifie sur un parcours, pas uniquement sur une capture.",
+      "refs": [
+        "UX34",
+        "UX35"
+      ]
+    },
+    {
+      "id": "E08",
+      "title": "Mesurer une interaction dense",
+      "steps": [
+        "Copier le jeu Compliance dans un emplacement temporaire.",
+        "Mesurer déplacement, survol, recalcul et panoramique.",
+        "Répéter dans les mêmes conditions après une optimisation.",
+        "Contrôler routes, annulation, sauvegarde et absence d’erreur JavaScript."
+      ],
+      "expected": "Les mesures indiquent machine, jeu, état du build et phase ; un gain de commande ne devient pas une promesse générale de fluidité.",
+      "lesson": "Mesurer les gains avec leur périmètre et leur coût.",
+      "refs": [
+        "UX36",
+        "UX37"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "project": "C:\\Users\\quentin\\Documents\\ChatGPT\\DBCodex\\build\\routing-review\\compliance-1791968984904.dbcd",
+  "checks": [
+    "orthogonal routes",
+    "field handles",
+    "segment keyboard editing",
+    "undo redo",
+    "global preserves manual",
+    "save manual mode",
+    "explicit reset undo",
+    "Escape cancels pointer drag",
+    "pointer detour insertion",
+    "move table preserves orthogonality"
+  ],
+  "errors": []
+}

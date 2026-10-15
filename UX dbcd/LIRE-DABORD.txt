@@ -1,0 +1,30 @@
+UX dbcd
+Dossier des améliorations UX et UI au 15 octobre 2026
+
+OUVRIR
+Ouvrir « UX dbcd.html » dans un navigateur. Le sommaire mène aux chapitres.
+Cliquer une capture pour l’agrandir ; Échap ou Fermer revient au document.
+Les images sont embarquées et le document principal fonctionne hors ligne.
+Le bouton Imprimer applique une mise en page adaptée à l’impression.
+
+CONTENU
+39 fiches d’amélioration et leurs leçons.
+Captures authentiques des contrôles du projet, avec légendes et sources.
+Chronologie, choix visuels, mesures, principes transférables et huit exemples.
+Checklist et base de préparation du futur skill, sans installation d’un skill.
+Documents, code sélectionné, scripts et résultats de contrôle copiés.
+Skill ui-ux avec références et templates ; skill dbcodex du projet.
+
+POUR UN ASSISTANT
+DOSSIER-INTEGRAL.txt contient tout le contenu textuel du dossier illustré.
+DONNEES-DOSSIER.json contient les fiches, légendes, principes et scénarios structurés.
+MANIFESTE.json donne origines et empreintes des pièces rapatriées.
+exemples/ contient brief, revue, checklist, base de skill et DBML d’exercice.
+
+TRANSMETTRE
+L’archive « UX dbcd.zip » contient le dossier complet.
+Le HTML seul conserve les images ; les liens de sources exigent les fichiers voisins.
+
+Les dates et statuts historiques sont conservés. Le chat autonome envisagé, les exports
+PNG/SVG non certifiés et les capacités d’hôte non observées ne sont pas des acquis livrés.
+Les contrôles de rendu du dossier lui-même sont consignés séparément après génération.

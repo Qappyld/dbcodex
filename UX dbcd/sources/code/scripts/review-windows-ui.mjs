@@ -1,0 +1,42 @@
+import { _electron as electron } from 'file:///C:/Users/quentin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {createDbcdProject} from '../packages/core/dist/index.js';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {resolve,basename} from 'node:path';
+await mkdir('build/ui-review',{recursive:true});
+const root=resolve('build/ui-review'), first=resolve(root,`review-${Date.now()}.dbcd`), second=resolve(root,`second-${Date.now()}.dbcd`);
+for(const path of [first,second]) await createDbcdProject({workspaceRoot:root,projectPath:basename(path),sourceText:'Table users {\n id integer [pk]\n name varchar\n}\nTable orders {\n id integer [pk]\n user_id integer [ref: > users.id]\n}\n'});
+const app=await electron.launch({executablePath:resolve(process.env.DBCODEX_REVIEW_EXECUTABLE ?? 'node_modules/electron/dist/electron.exe'),args:process.env.DBCODEX_REVIEW_EXECUTABLE ? [first] : [resolve('packages/desktop/dist/main.js'),first],env:Object.fromEntries(Object.entries(process.env).filter(([key])=>key!=='ELECTRON_RUN_AS_NODE'))});
+try {
+const page=await app.firstWindow(); const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.locator('.react-flow__node-table').first().waitFor();
+const dot=page.locator('.relation-direction-dot').first();
+await dot.waitFor();
+const motionSample=()=>dot.evaluate(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y};});
+const a=await motionSample();await page.waitForTimeout(180);const b=await motionSample();
+if(Math.hypot(b.x-a.x,b.y-a.y)<2)throw Error('Relation dots do not move without hover');
+const path=await page.locator('.react-flow__edge-path').first().getAttribute('d');
+const vertices=[...path.matchAll(/[ML] (-?[\d.]+) (-?[\d.]+)/g)].map(m=>({x:+m[1],y:+m[2]}));
+const dotPath=await dot.locator('animateMotion').getAttribute('path');if(dotPath!==path)throw Error('Dot does not follow the relation path');
+await page.screenshot({path:resolve(root,'relations-animated.png')});
+await page.getByRole('button',{name:'Relations',exact:true}).click();await dot.waitFor({state:'hidden'});
+if(await page.locator('.relation-static-arrow').first().evaluate(e=>getComputedStyle(e).display==='none'||!e.getAttribute('marker-end')))throw Error('Paused direction missing');
+const midpoint=await page.locator('.react-flow__edge-interaction').first().evaluate(e=>{const p=e.getPointAtLength(e.getTotalLength()/2),m=e.getScreenCTM();return {x:m.a*p.x+m.c*p.y+m.e,y:m.b*p.x+m.d*p.y+m.f};});await page.mouse.click(midpoint.x,midpoint.y);await dot.waitFor({state:'visible'});
+const reset=page.getByRole('button',{name:'Routage automatique',exact:true});await reset.waitFor();const resetBox=await reset.boundingBox(),canvasBox=await page.locator('.flow-canvas').boundingBox();if(resetBox.y>canvasBox.y+30||Math.abs(resetBox.x+resetBox.width/2-(canvasBox.x+canvasBox.width/2))>5)throw Error('Reset is not top center');await reset.click();await page.screenshot({path:resolve(root,'selected-relation.png')});
+await page.locator('.react-flow__pane').click({position:{x:300,y:350}});await dot.waitFor({state:'hidden'});
+await page.locator('.react-flow__edge-path').first().waitFor({state:'attached'});
+await page.getByRole('button',{name:'Relations',exact:true}).click();await dot.waitFor({state:'visible'});
+await page.emulateMedia({reducedMotion:'reduce'});await dot.waitFor({state:'visible'});await page.waitForTimeout(100);const staticA=await motionSample();await page.waitForTimeout(180);const staticB=await motionSample();if(Math.hypot(staticB.x-staticA.x,staticB.y-staticA.y)<2)throw Error('Explicit relation animation must move even with Windows reduced motion');
+if(await page.locator('.relation-static-arrow').first().evaluate(e=>getComputedStyle(e).display==='none'||!e.getAttribute('marker-end')))throw Error('Reduced motion arrow missing');
+await page.emulateMedia({reducedMotion:'no-preference'});
+await page.setViewportSize({width:850,height:850});await page.screenshot({path:resolve(root,'relations-compact.png')});
+await page.setViewportSize({width:1440,height:940});
+await page.locator('.file-menu summary').click();await page.getByText('Ouvrir un fichier récent',{exact:true}).waitFor();await page.screenshot({path:resolve(root,'file-menu.png')});
+await page.keyboard.press('Escape');if(await page.locator('.file-menu').getAttribute('open')!==null) throw Error('Escape failed');
+await page.locator('.cm-content').fill('// Travail en cours\nTable users { id int [pk] }');
+await app.evaluate(({dialog},path)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[path]});},second);
+let next=app.waitForEvent('window');await page.locator('.file-menu summary').click();await page.getByRole('button',{name:'Ouvrir un fichier .dbcd…'}).click();const secondPage=await next;await secondPage.locator('.react-flow__node-table').first().waitFor();
+if(!(await page.locator('.cm-content').innerText()).includes('Travail en cours')) throw Error('Draft lost');
+await page.locator('.file-menu summary').click();next=app.waitForEvent('window');await page.locator('.recent-menu-list button').filter({hasText:basename(second)}).click();const recentPage=await next;await recentPage.getByText('Lecture seule',{exact:true}).waitFor();
+for(const width of [1440,1000,850]) {await page.setViewportSize({width,height:850});await page.screenshot({path:resolve(root,`workspace-${width}.png`)});const box=await page.locator('.workbench-body').boundingBox();if(box.y>100) throw Error(`Top too tall: ${box.y}`);const overflow=await page.locator('.workbench-toolbar').evaluate(e=>e.scrollWidth>e.clientWidth);if(overflow)throw Error(`Toolbar overflow ${width}`);}
+await page.getByRole('button',{name:/Thème (sombre|clair)/}).click();await page.screenshot({path:resolve(root,'workspace-dark.png')});
+if(errors.length)throw Error(errors.join('\n'));await writeFile(resolve(root,'result.json'),JSON.stringify({passed:true,widths:[1440,1000,850],checks:['continuous relation motion','source to target direction','pause and resume','reduced motion','menu','Escape','open dialog','recent project','draft retained','read only','compact toolbar','dark theme'],errors},null,2));console.log('Windows UI review passed');
+} finally {await app.close();}

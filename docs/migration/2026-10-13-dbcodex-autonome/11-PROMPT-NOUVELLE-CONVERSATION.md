@@ -37,10 +37,17 @@ Ne modifie pas main. Ne fais pas de reset/clean global. Ne supprime pas les fich
 - Plusieurs discussions utilisent le même modèle enregistré ; leurs messages et propositions restent distincts.
 - Chaque proposition repose sur une version vérifiée ; les propositions périmées sont bloquées.
 - Chaque application crée une révision ; restaurer crée une nouvelle version et garde l’historique.
-- Discussions conservées avec le projet, idéalement dans le même .dbcd ; prévoir une migration sûre du format v1.
+- Toutes les données du projet, discussions et propositions comprises, dans le même .dbcd ; prévoir une migration sûre du format v1.
+- Commandes graphiques existantes conservées ; plusieurs projets ouverts simultanément, avec une seule fenêtre éditable par projet et les ouvertures supplémentaires en lecture seule.
+- Un seul panneau droit repliable et redimensionnable avec onglets Vues / IA ; aucun panneau adjacent séparé ni inspecteur Propriétés complet. Commandes Couleur (table ou groupe sélectionné) et Créer un groupe dans la barre flottante du bas. Changer d’onglet conserve la saisie et les requêtes sans appel IA supplémentaire.
+- Clic simple : sélection graphique. Double-clic sur table, relation ou groupe : ouvrir le panneau DBML gauche, défiler et sélectionner la définition exacte (bloc Table/TableGroup, déclaration Ref ou clause ref inline), sans modifier le texte ni perdre le brouillon.
+- Archivage des discussions par défaut ; suppression explicite conservant les révisions et les traces des modifications appliquées.
 - Contexte IA visible, limité par défaut à la structure des tables de la vue active/sélection.
 - Aucun envoi implicite, aucune clé API imposée, aucune requête IA de test facturable silencieuse.
 - Éditeur utilisable même sans assistant ou hors ligne.
+- Moteur Codex/Claude absent : chat correspondant indisponible, données de discussion conservées ; aucun embarquement ou installation automatique des moteurs requis.
+- Distribution Windows portable en ZIP : décompresser puis lancer DBCodex.exe sous compte standard, sans installation ni élévation, avec les composants nécessaires embarqués. Tester sur un poste sans outils de développement et qualifier séparément Codex/Claude et leur authentification sans droits administrateur.
+- Préférences personnelles (thème et projets récents) dans le répertoire portable ; chemins relatifs basés sur ce dossier lorsque possible. Prévoir OneDrive et le déplacement entre postes ; gérer préférences absentes/illisibles/non inscriptibles, repli local ou session, projets indisponibles et relocalisation sans erreur globale ni perte de données. Les identifiants IA restent propres au poste.
 
 Le chat dialogue avec les moteurs locaux ; MCP n’est pas l’interface de chat. Prouve les permissions effectives afin que les assistants ne puissent pas écrire directement dans le projet.
 
@@ -52,7 +59,7 @@ Qualifie les échecs actuels, réutilise les éléments utiles, adapte ce qui co
 
 ## Livrables
 
-Une application locale exécutable, une procédure d’installation/lancement, des tests de migration/propositions/concurrence, une validation de fenêtre autonome, les preuves de connexion aux fournisseurs et les limitations restantes.
+Une archive ZIP portable avec application locale exécutable, une procédure d’extraction/lancement et de remplacement préservant les données, des tests de migration/propositions/concurrence, une validation de fenêtre autonome sous compte Windows standard, les preuves de connexion aux fournisseurs et les limitations restantes.
 
 Sépare tests simulés, tests de fichiers, rendu réel et inférence réelle. Ne marque aucune étape non exécutée comme validée. Garde les exports PNG/SVG, bases de production et fonctionnalités cloud hors de ce chantier.
 

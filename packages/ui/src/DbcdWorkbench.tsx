@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { PresentationDocument } from "@dbcodex/core";
 import { readDbcdProjectResult, type DisplayMode, type WorkbenchBridge } from "./bridge.js";
 import { useDocumentSession, type DocumentSession } from "./useDocumentSession.js";
@@ -8,10 +8,13 @@ import { previewVisibility, withoutVisibilityPreview, type VisibilityPreview } f
 import { ViewInspector } from "./ViewInspector.js";
 import type { ViewNavigation } from "./ViewManager.js";
 import { HistoryPanel } from "./HistoryPanel.js";
-import { defaultPosition, setNodePosition, setNodeHidden, setActiveView, updateGroup, dbmlViewIds, setPanels as changePanels } from "./presentation-commands.js";
+import { defaultPosition, setNodePosition, setNodePositions, setNodeHidden, setActiveView, updateGroup, dbmlViewIds, setPanels as changePanels } from "./presentation-commands.js";
 import { entityAtOffset, entityRange, type EntitySelection } from "./source-navigation.js";
 import { ActionIcon } from "./ActionIcon.js";
 import { SessionRecoveryPanel } from "./SessionRecoveryPanel.js";
+import { SchemaBuilder } from "./SchemaBuilder.js";
+import { modeLabel, modelDiagnostics, projectGraph } from "../../core/dist/project-model.js";
+import type { ModelDocument } from "./model-commands.js";
 
 const clamp = (width: number): number => Math.max(240, Math.min(600, width));
 type Panels = PresentationDocument["panels"];
@@ -64,16 +67,24 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
   const [copyPending, setCopyPending] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [editorTab,setEditorTab]=useState<"dbml"|"builder">("dbml");
+  const [lookupRequest,setLookupRequest]=useState<{tableId:string;columnId?:string;targetTableId:string;nonce:number}|null>(null);
+  const graph=useMemo(()=>session.graph?projectGraph(session.graph,session.presentation.model):null,[session.graph,session.presentation.model]);
+  const semanticDiagnostics=useMemo(()=>session.graph?modelDiagnostics(session.graph,session.presentation.model):[],[session.graph,session.presentation.model]);
   useEffect(() => { onSessionChange?.(session); }, [session, onSessionChange]);
   useEffect(() => { onSelectionChange?.(selectedIds); }, [selectedIds, onSelectionChange]);
   const [visibilityPreview, setVisibilityPreview] = useState<VisibilityPreview | null>(null);
   const viewNavigation = useRef<ViewNavigation | null>(null);
-  const displayedPresentation = session.graph ? previewVisibility(session.presentation, session.graph, visibilityPreview) : session.presentation;
+  const displayedPresentation = useMemo(() => session.graph ? previewVisibility(session.presentation, session.graph, visibilityPreview) : session.presentation,
+    [session.presentation, session.graph, visibilityPreview]);
   const [query, setQuery] = useState("");
   const [focusRequest, setFocusRequest] = useState<(EntitySelection & { nonce: number }) | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<EntitySelection | null>(null);
   const [sourceRequest, setSourceRequest] = useState<{ from: number; to: number; nonce: number } | null>(null);
-  const [diagramHistory, setDiagramHistory] = useState<{ past: PresentationDocument[]; future: PresentationDocument[] }>({ past: [], future: [] });
+  const [diagramHistory, setDiagramHistory] = useState<{ past: ModelDocument[]; future: ModelDocument[] }>({ past: [], future: [] });
+  const [historyBusy,setHistoryBusy]=useState(false);
+  const historyBusyRef=useRef(false);
+  const navigationPresentation=useRef(session.presentation);navigationPresentation.current=session.presentation;
   const [reorganizeOpen, setReorganizeOpen] = useState(false);
   const sourceOperation = useRef(false);
   const [panels, setPanels] = useState(session.presentation.panels);
@@ -92,20 +103,39 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
     if (readOnly) return;
     if (sourceOperation.current) { sourceOperation.current = false; setDiagramHistory({ past: [], future: [] }); }
     else if (JSON.stringify(next) !== JSON.stringify(session.presentation))
-      setDiagramHistory((history) => ({ past: [...history.past.slice(-99), session.presentation], future: [] }));
+      setDiagramHistory((history) => ({ past: [...history.past.slice(-99), {source:session.source,presentation:session.presentation}], future: [] }));
     session.setPresentation(next);
   };
-  const travelDiagram = (redo: boolean): void => {
-    if (readOnly) return;
+  const changeSchema=(doc:ModelDocument,g:import("@dbcodex/core").SchemaGraph):void=>{
+    if(readOnly||session.conflict)return;
+    setDiagramHistory(history=>({past:[...history.past.slice(-99),{source:session.source,presentation:session.presentation}],future:[]}));
+    if(session.applyDocument)session.applyDocument(doc.source,doc.presentation,g);
+    else {session.setSource(doc.source);session.setPresentation(doc.presentation);}
+  };
+  const travelDiagram = async (redo: boolean): Promise<void> => {
+    if (readOnly||session.saving||session.conflict||historyBusyRef.current) return;
     const stack = redo ? diagramHistory.future : diagramHistory.past, target = stack.at(-1);
     if (!target) return;
-    setDiagramHistory(redo ? { past: [...diagramHistory.past, session.presentation], future: stack.slice(0, -1) }
-      : { past: stack.slice(0, -1), future: [...diagramHistory.future, session.presentation] });
-    session.setPresentation({ ...target, panels: session.presentation.panels });
+    historyBusyRef.current=true;setHistoryBusy(true);
+    try {
+    const before=session.source;
+    const beforePresentation=session.presentation;
+    const presentation={...target.presentation,panels:session.presentation.panels};
+    if(target.source!==session.source){
+      const result=await bridge.callTool("validate_dbcd_draft",{path:projectPath,sourceText:target.source}) as {structuredContent?:{graph?:import("@dbcodex/core").SchemaGraph}};
+      if(navigationSource.current!==before||navigationPresentation.current!==beforePresentation||!result.structuredContent?.graph){setDisplayMessage("Impossible de rétablir cette modification. Le travail courant est conservé.");return;}
+      if(session.applyDocument)session.applyDocument(target.source,presentation,result.structuredContent.graph);
+      else {session.setSource(target.source);session.setPresentation(presentation);}
+    }else session.setPresentation(presentation);
+    setDiagramHistory(redo ? { past: [...diagramHistory.past,{source:session.source,presentation:session.presentation}], future: stack.slice(0, -1) }
+      : { past: stack.slice(0, -1), future: [...diagramHistory.future,{source:session.source,presentation:session.presentation}] });
+    }catch{setDisplayMessage("Annulation indisponible. Le travail courant est conservé.");}
+    finally{historyBusyRef.current=false;setHistoryBusy(false);}
   };
   const navigationSource = useRef(session.source); navigationSource.current = session.source;
   const selectSource = async (selection: EntitySelection): Promise<void> => {
     setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
+    if(editorTab==="builder"){if(panels.editorCollapsed)updatePanels({editorCollapsed:false});return;}
     const source = session.source;
     const result = await bridge.callTool("validate_dbcd_draft", { path: projectPath, sourceText: source }) as { structuredContent?: { graph?: import("@dbcodex/core").SchemaGraph } };
     if (navigationSource.current !== source) return;
@@ -138,7 +168,43 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
     setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
     setFocusRequest((previous) => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
   };
-  useEffect(() => { setDiagramHistory({ past: [], future: [] }); setReorganizeOpen(false);  setVisibilityPreview(null); }, [projectPath]);
+  useLayoutEffect(() => bridge.subscribeToLiveRequest?.(request => {
+    if (request.action === "read") return {
+      projectPath, sourceText: session.source, presentation: session.presentation, graph,
+      diagnostics: [...session.diagnostics, ...semanticDiagnostics], generation: session.generation,
+      dirty: session.dirty, validating: session.validating, saving: session.saving,
+      readOnly, conflict: !!session.conflict, recovery: !!session.recovery,
+      graphIsLastValid: session.validating || session.diagnostics.some(item => item.severity === "error"),
+      revisions: session.revisions, selectedIds, selectedEntity, editorTab, historyOpen,
+    };
+    if (request.action !== "navigate" || !graph) throw Error("Navigation indisponible.");
+    let selection: EntitySelection | undefined;
+    if (request.kind === "table") {
+      const table = graph.tables.find(table => table.id === request.id);
+      if (table) selection = { kind: "table", id: table.id, tableId: table.id };
+    } else if (request.kind === "column") {
+      const table = graph.tables.find(table => table.columns.some(column => column.id === request.id));
+      if (table) selection = { kind: "column", id: request.id!, tableId: table.id };
+    } else if (request.kind === "relation") {
+      const relation = graph.relations.find(relation => relation.id === request.id);
+      if (relation) selection = { kind: "relation", id: relation.id, tableId: relation.source.tableId };
+    }
+    if (!selection) throw Error("Cible introuvable dans le diagramme courant.");
+    const view = displayedPresentation.views[displayedPresentation.activeViewId];
+    const relation = selection.kind === "relation" ? graph.relations.find(item => item.id === selection.id) : undefined;
+    const targets = relation ? [relation.source.tableId, relation.target.tableId] : [selection.tableId];
+    const definition = graph.views?.find(item => dbmlViewIds(graph).get(item.id) === displayedPresentation.activeViewId);
+    if (!view || targets.some(id => (!view.system && !view.nodes[id]) || view.nodes[id]?.hidden
+      || (definition && !definition.tableIds.includes(id))
+      || Object.values(view.groups).some(group => group.collapsed && group.tableIds.includes(id)))) {
+      throw Error("Cible masquée dans la vue courante. Affichez-la dans l’atelier avant de naviguer.");
+    }
+    // Navigation is transient: unlike focusDiagram, it never reveals nodes or changes views.
+    setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
+    setFocusRequest(previous => ({ ...selection!, nonce: (previous?.nonce ?? 0) + 1 }));
+    return { accepted: true, selection };
+  }));
+  useEffect(() => { setDiagramHistory({ past: [], future: [] }); setReorganizeOpen(false); setEditorTab("dbml");setLookupRequest(null); setVisibilityPreview(null); }, [projectPath]);
   useEffect(() => { if (narrow && drawerOpen) drawerClose.current?.focus(); }, [narrow, drawerOpen]);
   const closeDrawer = (): void => {
     setDrawerOpen(false);
@@ -166,6 +232,33 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
   const editorWidth = panels.editorCollapsed ? 40 : clamp(panels.editor);
   const inspectorVisible = narrow ? drawerOpen : !panels.inspectorCollapsed;
   const invalid = session.diagnostics.some((diagnostic) => diagnostic.severity === "error");
+  const semanticInvalid=semanticDiagnostics.some(d=>d.severity==="error");
+  const canSave = !readOnly && !session.conflict && session.dirty && !session.saving && !copyPending && !session.validating && !invalid && !semanticInvalid;
+  const saveAsBusy = useRef(false);
+  // The session validates the latest text itself, including an edit whose debounce is still pending.
+  const saveCurrent = () => { if (!readOnly && !session.conflict && session.dirty && !session.saving && !saveAsBusy.current) void session.save(); };
+  const saveAs = async () => {
+    if (!bridge.saveAs || saveAsBusy.current || session.saving) return;
+    saveAsBusy.current = true;
+    setCopyPending(true); setDisplayMessage("");
+    try { await bridge.saveAs({ sourceText: session.source, presentation: session.presentation }); }
+    catch (error) { setDisplayMessage(error instanceof Error ? error.message : "Enregistrement impossible."); }
+    finally { saveAsBusy.current = false; setCopyPending(false); }
+  };
+  const saveActions = useRef({ saveCurrent, saveAs });
+  saveActions.current = { saveCurrent, saveAs };
+  useEffect(() => {
+    const keyboard = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s") return;
+      event.preventDefault(); event.stopPropagation();
+      if (!event.repeat) { if (event.shiftKey) void saveActions.current.saveAs(); else saveActions.current.saveCurrent(); }
+    };
+    window.addEventListener("keydown", keyboard, true);
+    const unsubscribe = bridge.subscribeToSaveRequest?.(as => { if (as) void saveActions.current.saveAs(); else saveActions.current.saveCurrent(); });
+    return () => { window.removeEventListener("keydown", keyboard, true); unsubscribe?.(); };
+  }, [bridge]);
+  const constructionLabel=session.presentation.model?.profile.mode==="sharepoint"?"SharePoint":session.presentation.model?.profile.mode==="dataverse"?"Dataverse":"Construction";
+  const toggleEditor=(tab:typeof editorTab)=>{setEditorTab(tab);updatePanels({editorCollapsed:tab===editorTab?!panels.editorCollapsed:false});};
 
   return <main ref={root} className="workbench" data-mode={displayMode} data-narrow={narrow} onKeyDownCapture={(event) => {
     if (!(event.ctrlKey || event.metaKey) || !(event.target instanceof Element) || !event.target.closest(".flow-canvas")) return;
@@ -173,12 +266,15 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
   }}>
     <header className="workbench-toolbar">
       <strong title={projectPath}>{projectPath}</strong>
+      <span className="project-mode" title="Type fixé à la création du projet">{modeLabel(session.presentation.model?.profile)}{session.presentation.model?.profile.mode==="sql"?` · ${session.presentation.model.profile.dialect}`:""}</span>
       <span role="status">{readOnly ? "Lecture seule" : session.saving ? "Enregistrement…" : session.dirty ? "Modifications non enregistrées" : "Enregistré"}</span>
       <span>{session.validating ? "Validation…" : invalid ? "DBML invalide" : "DBML valide"}</span>
-      <button type="button" disabled={readOnly || !!session.conflict || !session.dirty || session.saving || session.validating || invalid} onClick={() => void session.save()} title="Enregistrer" aria-label="Enregistrer"><ActionIcon name="save" /><span className="action-label">Enregistrer</span></button>
+      <button type="button" disabled={!canSave} onClick={saveCurrent} title="Enregistrer (Ctrl+S)" aria-label="Enregistrer"><ActionIcon name="save" /><span className="action-label">Enregistrer</span></button>
+      {bridge.saveAs && <button type="button" disabled={copyPending || session.saving || session.validating || invalid || semanticInvalid} onClick={() => void saveAs()} title="Enregistrer sous… (Ctrl+Maj+S)" aria-label="Enregistrer sous"><ActionIcon name="save" /><span className="action-label">Enregistrer sous…</span></button>}
       {bridge.saveCopy && <button disabled={copyPending || session.validating || invalid} onClick={() => { setCopyPending(true); void bridge.saveCopy!({ sourceText: session.source, presentation: session.presentation }).catch(error => setDisplayMessage(error instanceof Error ? error.message : "Copie impossible.")).finally(() => setCopyPending(false)); }} title="Enregistrer une copie" aria-label="Enregistrer une copie"><ActionIcon name="copy" /><span className="action-label">Enregistrer une copie</span></button>}
-      <button type="button" disabled={readOnly || !diagramHistory.past.length} onClick={() => travelDiagram(false)} title="Annuler le diagramme" aria-label="Annuler le diagramme"><ActionIcon name="undo" /><span className="action-label">Annuler le diagramme</span></button>
-      <button type="button" disabled={readOnly || !diagramHistory.future.length} onClick={() => travelDiagram(true)} title="Rétablir le diagramme" aria-label="Rétablir le diagramme"><ActionIcon name="redo" /><span className="action-label">Rétablir le diagramme</span></button>
+      <button type="button" disabled={readOnly || historyBusy || session.saving || !!session.conflict || !diagramHistory.past.length} onClick={() => void travelDiagram(false)} title="Annuler le diagramme ou la construction" aria-label="Annuler le diagramme"><ActionIcon name="undo" /><span className="action-label">Annuler</span></button>
+      <button type="button" disabled={readOnly || historyBusy || session.saving || !!session.conflict || !diagramHistory.future.length} onClick={() => void travelDiagram(true)} title="Rétablir le diagramme ou la construction" aria-label="Rétablir le diagramme"><ActionIcon name="redo" /><span className="action-label">Rétablir</span></button>
+      <label className="name-display">Noms <select aria-label="Noms du diagramme" value={session.presentation.nameDisplay??"display"} onChange={e=>changeDiagram({...session.presentation,nameDisplay:e.target.value as "display"|"technical"|"both"})} disabled={readOnly}><option value="display">Affichés</option><option value="technical">Techniques</option><option value="both">Les deux</option></select></label>
       <button type="button" disabled={readOnly || !session.graph} onClick={() => setReorganizeOpen(true)} title="Réorganiser" aria-label="Réorganiser"><ActionIcon name="layout" /><span className="action-label">Réorganiser</span></button>
       <button ref={historyTrigger} type="button" aria-expanded={historyOpen} onClick={() => setHistoryOpen(!historyOpen)} title="Historique" aria-label="Historique"><ActionIcon name="history" /><span className="action-label">Historique</span></button>
       <button ref={inspectorTrigger} type="button" aria-expanded={inspectorVisible}
@@ -192,33 +288,41 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
       <button type="button" onClick={() => {
         if (!session.graph || readOnly) return;
         const current = session.presentation.views[session.presentation.activeViewId]!;
-        let next = session.graph.tables.filter((table) => (current.system || current.nodes[table.id]) && !current.nodes[table.id]?.hidden)
-          .reduce((value, table, index) => setNodePosition(value, value.activeViewId, table.id, defaultPosition(index)), session.presentation);
+        let next = setNodePositions(session.presentation, session.presentation.activeViewId,
+          session.graph.tables.filter((table) => (current.system || current.nodes[table.id]) && !current.nodes[table.id]?.hidden)
+            .map((table, index) => ({ id: table.id, position: defaultPosition(index) })));
         next = structuredClone(next); next.views[next.activeViewId]!.edges = {};
         changeDiagram(next); setReorganizeOpen(false);
       }}>Confirmer la réorganisation</button><button type="button" onClick={() => setReorganizeOpen(false)}>Annuler</button></section>}
     {session.error && <p role="alert" className="workbench-message">{session.error}</p>}
     {displayMessage && <p role="status" className="workbench-message">{displayMessage}</p>}
+    {semanticDiagnostics.length>0&&<ul className="diagnostics" aria-label="Contrôles du modèle">{semanticDiagnostics.map((d,i)=><li key={i}>{d.message}</li>)}</ul>}
     {historyOpen && <HistoryPanel session={session} bridge={bridge} projectPath={projectPath} readOnly={readOnly}
       onClose={() => { setHistoryOpen(false); historyTrigger.current?.focus(); }} />}
     <section className="workbench-body">
       <section role="region" aria-label="Éditeur DBML" className="editor-panel" style={{ width: editorWidth } as CSSProperties}>
-        <button type="button" className="editor-toggle" aria-expanded={!panels.editorCollapsed}
+        <nav className="editor-rail" aria-label="Éditeurs du schéma"><button type="button" className="editor-toggle" aria-expanded={!panels.editorCollapsed&&editorTab==="dbml"} aria-pressed={!panels.editorCollapsed&&editorTab==="dbml"}
           aria-label={panels.editorCollapsed ? "Afficher l’éditeur" : "Réduire l’éditeur"}
-          onClick={() => updatePanels({ editorCollapsed: !panels.editorCollapsed })}>{panels.editorCollapsed ? "›" : "‹"}<span>DBML</span></button>
+          onClick={() => toggleEditor("dbml")}><span>DBML</span></button><button className="editor-toggle" type="button" aria-label={`Éditeur ${constructionLabel}`} aria-pressed={!panels.editorCollapsed&&editorTab==="builder"} aria-expanded={!panels.editorCollapsed&&editorTab==="builder"} onClick={()=>toggleEditor("builder")}><span>{constructionLabel}</span></button></nav>
         <div className="editor-content" hidden={panels.editorCollapsed}>
-          <DbmlEditor value={session.source} diagnostics={session.diagnostics} readOnly={readOnly} onChange={session.setSource} onSave={() => void session.save()}
+          <div className="dbml-pane" hidden={editorTab!=="dbml"}>
+          <DbmlEditor value={session.source} diagnostics={session.diagnostics} readOnly={readOnly} onChange={session.setSource} onSave={saveCurrent}
             selectionRequest={sourceRequest} onSelectionChange={(offset) => { const selection = session.graph && entityAtOffset(session.graph, offset); if (selection) focusDiagram(selection); }} />
           {session.diagnostics.length > 0 && <ul className="diagnostics" aria-label="Diagnostics">{session.diagnostics.map((diagnostic, index) => <li key={index}>
             {diagnostic.location ? `L${diagnostic.location.start.line}:${diagnostic.location.start.column} — ` : ""}{diagnostic.message}
           </li>)}</ul>}
+          </div>
+          {session.graph&&<div hidden={editorTab!=="builder"}><SchemaBuilder source={session.source} presentation={session.presentation} graph={session.graph} bridge={bridge} projectPath={projectPath} selection={selectedEntity}
+            onSelection={selection=>{setSelectedEntity(selection);setSelectedId(selection.tableId);setSelectedIds([selection.tableId]);setFocusRequest(previous=>({...selection,nonce:(previous?.nonce??0)+1}));}}
+            onDocument={changeSchema} invalid={invalid} validating={session.validating} readOnly={readOnly||!!session.conflict||session.saving} onCorrect={()=>{setEditorTab("dbml");updatePanels({editorCollapsed:false});}} lookupRequest={lookupRequest}/></div>}
         </div>
       </section>
       {!panels.editorCollapsed && <PanelSeparator region="editor" width={clamp(panels.editor)} onChange={(editor) => updatePanels({ editor })} />}
-      {session.graph ? <DiagramCanvas graph={session.graph} presentation={displayedPresentation} onPresentationChange={next => changeDiagram(withoutVisibilityPreview(next, session.presentation, visibilityPreview))} onSelectionChange={setSelectedId}
+      {graph ? <DiagramCanvas graph={graph} presentation={displayedPresentation} onPresentationChange={next => changeDiagram(withoutVisibilityPreview(next, session.presentation, visibilityPreview))} onSelectionChange={id=>{setSelectedId(id);if(editorTab==="builder"&&id)setSelectedEntity({kind:"table",id,tableId:id});}}
         onEntitySelect={(selection) => void selectSource(selection)} selectedEntity={selectedEntity}
         source={session.source} onSourceChange={session.setSource} onQueryChange={setQuery} onReorganize={() => setReorganizeOpen(true)}
-        onSelectedTablesChange={setSelectedIds} query={query} focusRequest={focusRequest} readOnly={readOnly} />
+        onSelectedTablesChange={setSelectedIds} query={query} focusRequest={focusRequest} readOnly={readOnly}
+        onCreateLookup={readOnly||invalid||session.validating||!!session.conflict?undefined:(tableId,columnId,targetTableId)=>{setEditorTab("builder");updatePanels({editorCollapsed:false});setSelectedEntity({kind:columnId?"column":"table",id:columnId??tableId,tableId});setLookupRequest(previous=>({tableId,...(columnId?{columnId}:{}),targetTableId,nonce:(previous?.nonce??0)+1}));}} />
         : <div className="flow-canvas empty-canvas">Corrigez le DBML pour afficher le diagramme.</div>}
       {<>
         {inspectorVisible && !narrow && <PanelSeparator region="inspector" width={clamp(panels.inspector)} onChange={(inspector) => updatePanels({ inspector })} />}
