@@ -54,8 +54,9 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $metadata.private) { throw 'Le dépôt de distribution doit être public et accessible.' }
           $tag = "v$($config.version)"
           $archive = "release/DBCodex-$($config.version)-win-x64.zip"
+          $portable = "release/DBCodex-$($config.version)-win-x64.exe"
           [IO.File]::WriteAllText((Join-Path $PWD 'build/release-notes.txt'), $env:RELEASE_NOTES)
-          gh release create $tag $archive release/update-manifest.json --repo $config.repository --title "DBCodex $($config.version)" --notes-file build/release-notes.txt --draft
+          gh release create $tag $portable release/portable-update-manifest.json $archive release/update-manifest.json --repo $config.repository --title "DBCodex $($config.version)" --notes-file build/release-notes.txt --draft
           if ($LASTEXITCODE -ne 0) { throw 'Publication du brouillon impossible. Une version existante ne sera pas remplacée.' }
           gh release edit $tag --repo $config.repository --draft=false --latest
           if ($LASTEXITCODE -ne 0) { throw 'Le brouillon est conservé. Vérifier les fichiers avant de le publier.' }

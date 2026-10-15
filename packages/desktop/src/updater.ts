@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { access, copyFile, mkdir, readFile, writeFile, open, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -18,7 +18,7 @@ export class PortableUpdater {
   private job: string | undefined;
   private lock: string;
   private busy = false;
-  constructor(private config: Config, private root: string, private helper: string, private enabled: boolean) {
+  constructor(private config: Config, private root: string, private helper: string, private enabled: boolean, private portableExecutable?: string) {
     this.status = { phase: 'idle', currentVersion: config.version, message: enabled ? 'Vérifiez si une nouvelle version est disponible.' : 'Mises à jour disponibles dans la version portable Windows.' };
     this.lock = join(root, '.dbcodex-update.lock');
   }
@@ -30,12 +30,13 @@ export class PortableUpdater {
     this.manifest = undefined;
     this.status = { phase: 'checking', currentVersion: this.config.version, message: 'Recherche de mises à jour…' };
     try {
-      const response = await fetch(`https://github.com/${this.config.repository}/releases/latest/download/update-manifest.json`, { signal: AbortSignal.timeout(30000) });
+      const response = await fetch(`https://github.com/${this.config.repository}/releases/latest/download/${this.portableExecutable ? 'portable-update-manifest.json' : 'update-manifest.json'}`, { signal: AbortSignal.timeout(30000) });
       if (response.status === 404) { this.set({ phase: 'idle', message: 'Aucune mise à jour publiée pour le moment.' }); return this.status; }
       if (!response.ok) throw Error('Impossible de joindre GitHub. Réessayez plus tard.');
       const reader = response.body!.getReader(); let bytes = 0; const chunks: Uint8Array[] = [];
       while (true) { const { done, value } = await reader.read(); if (done) break; bytes += value.byteLength; if (bytes > 300000) { await reader.cancel(); throw Error('Manifeste de mise à jour trop volumineux.'); } chunks.push(value); }
       const manifest = readSignedManifest(Buffer.concat(chunks).toString('utf8'), this.config.publicKey, this.config.repository);
+      if ((manifest.schema === 2) !== Boolean(this.portableExecutable)) throw Error('Format de mise à jour incompatible avec cette édition.');
       this.manifest = isNewerVersion(manifest.version, this.config.version) ? manifest : undefined;
       this.set(this.manifest ? { phase: 'available', version: manifest.version, notes: manifest.notes, message: `La version ${manifest.version} est disponible.` } : { phase: 'idle', message: 'Vous utilisez la dernière version.' });
     } catch (error) {
@@ -57,7 +58,7 @@ export class PortableUpdater {
       const probe = join(this.root, `.update-probe-${randomUUID()}`);
       await writeFile(probe, '', { flag: 'wx' }); await unlink(probe);
       const staging = join(tmpdir(), `dbcodex-update-${randomUUID()}`); await mkdir(staging);
-      const archive = join(staging, 'update.zip');
+      const archive = join(staging, manifest.schema === 2 ? 'update.exe' : 'update.zip');
       const response = await fetch(manifest.url, { signal: AbortSignal.timeout(10 * 60 * 1000) });
       if (!response.ok || !response.body) throw Error('Téléchargement impossible. Réessayez plus tard.');
       let bytes = 0; const hash = createHash('sha256');
@@ -68,7 +69,7 @@ export class PortableUpdater {
       if (bytes !== manifest.size || hash.digest('hex') !== manifest.sha256) throw Error('La mise à jour est incomplète ou endommagée. Réessayez.');
       const script = join(staging, 'apply-update.ps1'); await copyFile(this.helper, script);
       this.job = join(staging, 'job.json');
-      await writeFile(this.job, JSON.stringify({ root: this.root, archive, parentPid: process.pid, manifest }));
+      await writeFile(this.job, JSON.stringify({ root: this.root, archive, parentPid: process.pid, manifest, ...(this.portableExecutable ? { executable: basename(this.portableExecutable), runtimeRoot: process.execPath } : {}) }));
       this.set({ phase: 'ready', progress: 100, message: 'Mise à jour prête. Vous pouvez redémarrer quand votre travail est prêt.' });
     } catch (error) { this.set({ phase: 'error', message: error instanceof Error && !('code' in error) ? error.message : 'Téléchargement impossible. Vérifiez la connexion et les droits d’écriture du dossier.' }); }
     finally { this.busy = false; }

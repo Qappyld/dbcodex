@@ -1,7 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DbcdProjectSnapshot, DbcdRevisionSummary, Diagnostic, PresentationDocument, SchemaGraph } from "@dbcodex/core";
 import { readDbcdProjectResult, type McpAppsBridge } from "./bridge.js";
 import { reconcileDbmlPresentation } from "./presentation-commands.js";
+import { reconcileProjectModel } from "../../core/dist/project-model.js";
+
+function reconcilePresentation(presentation:PresentationDocument, graph:SchemaGraph):PresentationDocument {
+  const next=reconcileDbmlPresentation(presentation,graph);
+  const model=reconcileProjectModel(graph,next.model);
+  return model?{...next,model}:next;
+}
 type LocalCopy = { sourceText: string; presentation: PresentationDocument };
 type RecoverableCopy = LocalCopy & { recover(): void };
 
@@ -23,13 +30,14 @@ export interface DocumentSession {
   error: string | null;
   setSource(value: string): void;
   setPresentation(value: PresentationDocument): void;
+  applyDocument?(source: string, presentation: PresentationDocument, graph: SchemaGraph): void;
   save(): Promise<void>;
   restore(revisionId: string): Promise<void>;
   pin(revisionId: string, pinned: boolean): Promise<void>;
 }
 
 type Bridge = Pick<McpAppsBridge, "callTool"> & { refreshProjects?: boolean; subscribeToTeardown?(listener: () => Promise<void>): () => void };
-type SessionState = Omit<DocumentSession, "setSource" | "setPresentation" | "save" | "restore" | "pin" | "recovery" | "conflict" | "retainedLocal" | "retainedCopies">;
+type SessionState = Omit<DocumentSession, "setSource" | "setPresentation" | "applyDocument" | "save" | "restore" | "pin" | "recovery" | "conflict" | "retainedLocal" | "retainedCopies">;
 type Conflict = Pick<NonNullable<DocumentSession["conflict"]>, "baseSource" | "localSource" | "localPresentation" | "disk">;
 class ToolFailure extends Error { constructor(message: string, readonly code?: string) { super(message); } }
 
@@ -47,7 +55,7 @@ function message(error: unknown): string {
 }
 
 export function useDocumentSession(openResult: unknown, bridge: Bridge): DocumentSession {
-  const opened = readDbcdProjectResult(openResult);
+  const opened = useMemo(() => readDbcdProjectResult(openResult), [openResult]);
   if (!opened) throw new Error("A valid .dbcd project result is required.");
   const initial = useRef(opened);
   const externalResult = useRef(openResult);
@@ -59,7 +67,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   const identity = useRef({ expectedProjectId: opened.projectId, expectedRevisionId: opened.currentRevisionId });
   const [state, setState] = useState<SessionState>(() => ({
     source: initial.current.sourceText,
-    presentation: initial.current.graph ? reconcileDbmlPresentation(initial.current.presentation, initial.current.graph) : initial.current.presentation,
+    presentation: initial.current.graph ? reconcilePresentation(initial.current.presentation, initial.current.graph) : initial.current.presentation,
     graph: initial.current.graph,
     diagnostics: initial.current.diagnostics,
     generation: initial.current.generation,
@@ -68,7 +76,8 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     validating: false, saving: false, error: null,
   }));
   const stateRef = useRef(state);
-  const loaded = useRef({ source: opened.sourceText, presentation: JSON.stringify(state.presentation) });
+  const loaded = useRef<{ source: string; presentation: string }>(null!);
+  if (!loaded.current) loaded.current = { source: opened.sourceText, presentation: JSON.stringify(state.presentation) };
   const validationId = useRef(0);
   const validatedSource = useRef<string | null>(opened.sourceText);
   const editId = useRef(0);
@@ -125,7 +134,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
       validatedSource.current = source;
       update({ diagnostics, validating: false,
         ...(nextGraph && !diagnostics.some((item) => item.severity === "error") ? { graph: nextGraph,
-          presentation: reconcileDbmlPresentation(stateRef.current.presentation, nextGraph) } : {}),
+          presentation: reconcilePresentation(stateRef.current.presentation, nextGraph) } : {}),
       });
       return diagnostics;
     } catch (error) {
@@ -214,10 +223,22 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     scheduleDraft();
   };
 
+  const applyDocument = (source: string, presentation: PresentationDocument, graph: SchemaGraph): void => {
+    if (initial.current.readOnly || pendingRef.current || conflictRef.current || savingRef.current) return;
+    if (validationTimer.current) clearTimeout(validationTimer.current);
+    validationTimer.current = null;
+    ++validationId.current; ++editId.current;
+    validatedSource.current = source;
+    update({ source, presentation: reconcilePresentation(presentation, graph), graph,
+      diagnostics: [], validating: false, error: null,
+      dirty: source !== loaded.current.source || JSON.stringify(presentation) !== loaded.current.presentation });
+    scheduleDraft();
+  };
+
   const applySnapshot = (snapshot: DbcdProjectSnapshot, preserveEdits: boolean,
     graph = preserveEdits ? stateRef.current.graph : snapshot.graph,
     diagnostics = preserveEdits ? stateRef.current.diagnostics : snapshot.diagnostics): void => {
-    const presentation = snapshot.graph ? reconcileDbmlPresentation(snapshot.presentation, snapshot.graph) : snapshot.presentation;
+    const presentation = snapshot.graph ? reconcilePresentation(snapshot.presentation, snapshot.graph) : snapshot.presentation;
     loaded.current = { source: snapshot.sourceText, presentation: JSON.stringify(presentation) };
     identity.current = { expectedProjectId: snapshot.projectId, expectedRevisionId: snapshot.currentRevisionId };
     if (!preserveEdits) validatedSource.current = snapshot.sourceText;
@@ -389,7 +410,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
     rememberLocal({ sourceText: stateRef.current.source, presentation: stateRef.current.presentation });
     setPresentation(copy.presentation); setSource(copy.sourceText);
   } }));
-  return { ...state, setSource, setPresentation, save, restore, pin,
+  return { ...state, setSource, setPresentation, applyDocument, save, restore, pin,
     recovery: pendingDraft ? { draft: pendingDraft, resume: resumeDraft, discard: discardDraft } : null,
     conflict: conflict ? { ...conflict, localSource: state.source, localPresentation: state.presentation, retain: () => update({ error: "Brouillon local conservé. Résolvez le conflit avant d’enregistrer." }),
       reload: () => adoptDisk(), merge: (source, presentation) => adoptDisk(source, presentation) } : null,

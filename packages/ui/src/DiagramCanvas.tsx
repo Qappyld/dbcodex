@@ -5,7 +5,7 @@ import { GroupCreation } from "./GroupCreation.js";
 import { ActionIcon } from "./ActionIcon.js";
 import { TableNode, fieldHandle, tableHeaderTextColor, type TableFlowNode } from "./TableNode.js";
 import { DirectedRelationEdge, type RelationEdge } from "./DirectedRelationEdge.js";
-import { defaultPosition, searchTables, setNodePosition, setRelationRoute, resetRelationRoute, setViewport, updateGroup, setViewDetail } from "./presentation-commands.js";
+import { defaultPosition, searchTables, setNodePosition, setNodePositions, setRelationRoute, resetRelationRoute, setViewport, updateGroup, setViewDetail } from "./presentation-commands.js";
 import { setDbmlGroupColor } from "./dbml-patches.js";
 import { allocateDbmlIdentifier } from "./dbml-identifiers.js";
 import "@xyflow/react/dist/style.css";
@@ -57,9 +57,10 @@ export interface DiagramCanvasProps {
   onSourceChange?(source: string): void;
   onQueryChange?(query: string): void;
   onReorganize?(): void;
+  onCreateLookup?: ((sourceTableId:string,sourceColumnId:string|undefined,targetTableId:string)=>void)|undefined;
 }
 
-export function DiagramCanvas({ graph, presentation, onPresentationChange: notifyPresentation, onSelectionChange, onSelectedTablesChange, onEntitySelect, selectedEntity, query = "", focusRequest, readOnly = false, source = "", onSourceChange, onQueryChange, onReorganize }: DiagramCanvasProps) {
+export function DiagramCanvas({ graph, presentation, onPresentationChange: notifyPresentation, onSelectionChange, onSelectedTablesChange, onEntitySelect, selectedEntity, query = "", focusRequest, readOnly = false, source = "", onSourceChange, onQueryChange, onReorganize, onCreateLookup }: DiagramCanvasProps) {
   const notifyRef=useRef(notifyPresentation);notifyRef.current=notifyPresentation;
   const onPresentationChange=useCallback((value:PresentationDocument)=>notifyRef.current(value),[]);
   const view = presentation.views[presentation.activeViewId]!;
@@ -81,7 +82,14 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
   const colorSelection = (color: string) => mutate(() => {
     if (readOnly) return;
     if (selectedGroup) { onSourceChange?.(setDbmlGroupColor(source, selectedGroup, color)); let next = presentation; for (const [id, current] of Object.entries(presentation.views)) if (current.groups[selectedGroup]) next = updateGroup(next, id, selectedGroup, { color }); onPresentationChange(next); }
-    else { let next = presentation; for (const id of selected.current) next = setNodePosition(next, presentation.activeViewId, id, view.nodes[id] ?? defaultPosition(graph.tables.findIndex(t => t.id === id))); next = structuredClone(next); for (const id of selected.current) next.views[presentation.activeViewId]!.nodes[id]!.color = color; onPresentationChange(next); }
+    else {
+      const indices = new Map(graph.tables.map((table, index) => [table.id, index]));
+      const next = setNodePositions(presentation, presentation.activeViewId, selected.current.map(id => ({
+        id, position: view.nodes[id] ?? defaultPosition(indices.get(id) ?? -1),
+      })));
+      for (const id of selected.current) next.views[presentation.activeViewId]!.nodes[id]!.color = color;
+      onPresentationChange(next);
+    }
   });
   const noteChange = (id: string, change: { text?: string; x?: number; y?: number } | null) => { const next = structuredClone(presentation), current = next.views[next.activeViewId]!; current.notes ??= {}; if (change === null) delete current.notes[id]; else current.notes[id] = { ...(current.notes[id] ?? { x: 100, y: 100, text: "" }), ...change }; onPresentationChange(next); };
   const selected = useRef<string[]>([]);
@@ -93,8 +101,8 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
   const selectionCallbacks = useRef({ onEntitySelect, onSelectionChange, onSelectedTablesChange, selectedEntity });
   selectionCallbacks.current = { onEntitySelect, onSelectionChange, onSelectedTablesChange, selectedEntity };
   const graphIndex=useMemo(()=>{
-    const foreignKeys=new Map<string,string[]>(),connections=new Map<string,{source:string[];target:string[]}>(),actions=new Map<string,()=>void>();
-    for(const table of graph.tables){foreignKeys.set(table.id,[]);connections.set(table.id,{source:[],target:[]});actions.set(table.id,()=>selectionCallbacks.current.onSelectionChange?.(table.id));}
+    const foreignKeys=new Map<string,string[]>(),connections=new Map<string,{source:string[];target:string[]}>(),actions=new Map<string,(columnId:string)=>void>();
+    for(const table of graph.tables){foreignKeys.set(table.id,[]);connections.set(table.id,{source:[],target:[]});actions.set(table.id,(columnId)=>{selectionCallbacks.current.onSelectionChange?.(table.id);selectionCallbacks.current.onEntitySelect?.({kind:"column",id:columnId,tableId:table.id});});}
     for(const relation of graph.relations){
       const fk=foreignKeyEndpoint(relation);if(fk)foreignKeys.get(fk.tableId)?.push(...fk.columnNames);
       connections.get(relation.source.tableId)?.source.push(...relation.source.columnNames);
@@ -107,6 +115,8 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
     lastEntity.current = key; selectionCallbacks.current.onEntitySelect?.(selection);
   }, []);
   const [instance, setInstance] = useState<ReactFlowInstance<CanvasNode, RelationEdge> | null>(null);
+  const programmaticMoves=useRef(0);
+  const programmaticViewports=useRef<Array<{x:number;y:number;zoom:number}>>([]);
   const instanceRef = useRef(instance); instanceRef.current = instance;
   const { x: viewportX, y: viewportY, zoom: viewportZoom } = view.viewport;
   const viewportKey = `${presentation.activeViewId}:${viewportX}:${viewportY}:${viewportZoom}`;
@@ -115,8 +125,11 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
     if (!instance || appliedViewport.current === viewportKey) return;
     appliedViewport.current = viewportKey;
     const live = instance?.getViewport();
-    if (instance && live && (live.x !== viewportX || live.y !== viewportY || live.zoom !== viewportZoom))
-      void instance.setViewport({ x: viewportX, y: viewportY, zoom: viewportZoom }, { duration: 0 });
+    if (instance && live && (live.x !== viewportX || live.y !== viewportY || live.zoom !== viewportZoom)) {
+      programmaticMoves.current++;
+      programmaticViewports.current.push({x:viewportX,y:viewportY,zoom:viewportZoom});
+      void instance.setViewport({ x: viewportX, y: viewportY, zoom: viewportZoom }, { duration: 0 }).finally(()=>{programmaticMoves.current--;});
+    }
   }, [instance, viewportKey, viewportX, viewportY, viewportZoom]);
   const [minimap, setMinimap] = useState(graph.tables.length > 25);
   const largeGraph = graph.tables.length > 25;
@@ -144,6 +157,7 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
     hidden: (!view.system && !saved) || (saved?.hidden ?? false) || Object.values(view.groups).some((group) => group.collapsed && group.tableIds.includes(table.id)),
     ariaLabel: `Table ${table.id}`, selected: selected.current.includes(table.id), style: { opacity: !matches.has(table.id) ? 0.25 : relatedTables.size && !relatedTables.has(table.id) ? 0.4 : 1 },
     data: { table, detail: selectedEntity?.kind === "column" && selectedEntity.tableId === table.id ? "all" : saved?.detail ?? view.defaultDetail,
+      nameDisplay:presentation.nameDisplay??"display",connectable:!!onCreateLookup&&!readOnly,
       color: saved?.color ?? table.headerColor ?? Object.values(view.groups).find(group => group.tableIds.includes(table.id))?.color ?? "#326b91",
       selectedColumnId: selectedEntity?.kind === "column" ? selectedEntity.id : undefined,
       highlightedColumns: relatedRelations.flatMap(relation => [relation.source,relation.target].filter(end => end.tableId === table.id).flatMap(end => end.columnNames)),
@@ -164,9 +178,12 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
     });
     const notes: NoteFlowNode[] = Object.entries(view.notes ?? {}).map(([id, note]) => ({ id: `note:${id}`, type: "note", position: { x: note.x, y: note.y }, draggable: !readOnly, data: { text: note.text, readOnly, onChange: text => noteChange(id, { text }), onDelete: () => noteChange(id, null) } }));
     return [...groups, ...tables, ...notes];
-  }, [graph, view, query, readOnly, presentation, onPresentationChange, selectedEntity, selectEntity, activeRelation, selectionVersion, graphIndex]);
+  }, [graph, view, query, readOnly, presentation, onPresentationChange, selectedEntity, selectEntity, activeRelation, selectionVersion, graphIndex, onCreateLookup]);
   const [nodes, setNodes] = useState(mappedNodes);
-  useEffect(() => { setNodes((current) => mappedNodes.map((node) => ({ ...current.find((item) => item.id === node.id), ...node }))); }, [mappedNodes]);
+  useEffect(() => { setNodes((current) => {
+    const byId = new Map(current.map(node => [node.id, node]));
+    return mappedNodes.map(node => ({ ...byId.get(node.id), ...node }));
+  }); }, [mappedNodes]);
   const mappedEdges = useMemo<RelationEdge[]>(() => {
     const obstacles = routingObstacles(nodes);
     const obstaclesKey=JSON.stringify(obstacles);
@@ -181,12 +198,13 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
     const color = savedNodes.get(colorTable)?.data as TableFlowNode["data"] | undefined;
     const forward = relation.source.tableId === relation.target.tableId || !sourceNode || !targetNode || sourceNode.position.x <= targetNode.position.x;
     const saved = view.edges[relation.id];
-    const hidden = mappedNodes.some(node => (node.id===relation.source.tableId||node.id===relation.target.tableId)&&node.hidden);
+    const hidden = !!(savedNodes.get(relation.source.tableId)?.hidden || savedNodes.get(relation.target.tableId)?.hidden);
     const legacySides:{sourceSide:Side;targetSide:Side}={sourceSide:forward?"right":"left",targetSide:forward?"left":"right"};
     const defaultSides=sourceNode&&targetNode&&sourceNode.id!==targetNode.id&&(!saved||saved.format==="orthogonal"||saved.mode==="automatic") ? connectionSides({...sourceNode.position,width:sourceNode.measured?.width??222,height:sourceNode.measured?.height??140},{...targetNode.position,width:targetNode.measured?.width??222,height:targetNode.measured?.height??140},obstacles) : legacySides;
     const sourceSide: Side = saved?.sourceSide ?? defaultSides.sourceSide, targetSide: Side = saved?.targetSide ?? defaultSides.targetSide;
     const endpoint = (node: CanvasNode | undefined, end: GraphRelationEnd, side: Side, type: "source" | "target"): Point => {
-      const handle = instanceRef.current?.getInternalNode(end.tableId)?.internals.handleBounds?.[type]?.find(handle => handle.id === fieldHandle(type,side,end.columnNames[0]??""));
+      const handleId=end.columnNames.length?fieldHandle(type,side,end.columnNames[0]!):`${type}-${side}`;
+      const handle = instanceRef.current?.getInternalNode(end.tableId)?.internals.handleBounds?.[type]?.find(handle => handle.id === handleId);
       const tableData = node?.type === "table" ? node.data : undefined;
       const columns = tableData?.table.columns.filter(column => tableData.detail === "all" || tableData.detail === "keys" && (column.primaryKey || tableData.foreignKeys.includes(column.name))) ?? [];
       const index = columns.findIndex(column => column.name === end.columnNames[0]);
@@ -285,7 +303,8 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
     setSelectionVersion(value => value+1);
     setNodes((current) => current.map((item) => ({ ...item, selected: focusRequest.kind !== "relation" && item.id === node.id })));
     setEdges((current) => current.map((item) => ({ ...item, selected: item.id === selectedEdge.current })));
-    void instance.setCenter(node.position.x + 110, node.position.y + 50, { zoom: 1, duration: 0 });
+    programmaticMoves.current++;
+    void instance.setCenter(node.position.x + 110, node.position.y + 50, { zoom: 1, duration: 0 }).then(()=>{programmaticViewports.current.push(instance.getViewport());programmaticViewports.current=programmaticViewports.current.slice(-8);}).finally(()=>{programmaticMoves.current--;});
   }, [focusRequest, instance, mappedNodes]);
 
   const commitPosition = (id: string, position: { x: number; y: number }): void => {
@@ -313,11 +332,12 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
     const position = { x: node.position.x + offset[0], y: node.position.y + offset[1] };
     if (node.type === "note") { noteChange(node.id.slice(5), position); return; }
     setNodes((current) => current.map((item) => item.id === node.id ? { ...item, position } : item));
-    if (node.type === "tableGroup") onPresentationChange(groupPositions({ ...node, position }).reduce((value, item) => setNodePosition(value, presentation.activeViewId, item.id, item.position), presentation));
+      if (node.type === "tableGroup") onPresentationChange(setNodePositions(presentation, presentation.activeViewId, groupPositions({ ...node, position })));
     else commitPosition(node.id, position);
   }}>
     <ReactFlow<CanvasNode, RelationEdge> key={presentation.activeViewId} nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onInit={setInstance}
-      nodesConnectable={false} edgesReconnectable={false} nodesDraggable={!readOnly}
+      nodesConnectable={!!onCreateLookup&&!readOnly} edgesReconnectable={false} nodesDraggable={!readOnly}
+      onConnect={connection=>{if(!readOnly&&onCreateLookup&&connection.source&&connection.target){const handle=connection.sourceHandle??"";const name=handle.includes(":")?decodeURIComponent(handle.slice(handle.indexOf(":")+1)):undefined;const c=graph.tables.find(t=>t.id===connection.source)?.columns.find(c=>c.name===name);onCreateLookup(connection.source,c?.id,connection.target);}}}
       deleteKeyCode={null} selectionKeyCode={null} multiSelectionKeyCode="Shift"
       panOnDrag={[1]} selectionOnDrag selectionMode={SelectionMode.Partial} autoPanOnSelection={false}
       elevateNodesOnSelect={false}
@@ -350,7 +370,7 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
         if (readOnly) return;
         if (node.type === "note") { noteChange(node.id.slice(5), node.position); return; }
         const targets = node.type === "tableGroup" ? groupPositions(node) : moved.length ? moved : [node];
-        const next = targets.filter((item) => item.type === "table").reduce((value, item) => setNodePosition(value, presentation.activeViewId, item.id, item.position), presentation);
+        const next = setNodePositions(presentation, presentation.activeViewId, targets.filter((item) => item.type === "table"));
         onPresentationChange(next);
       }}
       onNodeClick={(_event, node) => { setSelectedGroup(node.type === "tableGroup" ? node.id.slice(6) : null); if (node.type === "table") onSelectionChange?.(node.id); }}
@@ -359,7 +379,9 @@ export function DiagramCanvas({ graph, presentation, onPresentationChange: notif
       onEdgeMouseEnter={(_event,edge)=>{if(!draggingNodes.current)setHoveredRelation(edge.id);}}
       onEdgeMouseLeave={()=>{if(!draggingNodes.current)setHoveredRelation(null);}}
       onMoveEnd={(_event, viewport) => {
-        if (!readOnly && (viewport.x !== view.viewport.x || viewport.y !== view.viewport.y || viewport.zoom !== view.viewport.zoom))
+        const index=programmaticViewports.current.findIndex(v=>Math.abs(v.x-viewport.x)<.1&&Math.abs(v.y-viewport.y)<.1&&Math.abs(v.zoom-viewport.zoom)<.001);
+        if(index>=0){programmaticViewports.current.splice(index,1);return;}
+        if (!readOnly && !programmaticMoves.current && (viewport.x !== view.viewport.x || viewport.y !== view.viewport.y || viewport.zoom !== view.viewport.zoom))
           onPresentationChange(setViewport(presentation, presentation.activeViewId, viewport));
       }}
       onPaneClick={() => { selected.current = []; selectedEdge.current=null;setHoveredRelation(null);setSelectionVersion(value=>value+1);lastEntity.current = null; onSelectionChange?.(null); onSelectedTablesChange?.([]); }}>

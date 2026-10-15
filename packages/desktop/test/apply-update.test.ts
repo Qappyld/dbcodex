@@ -26,7 +26,47 @@ function apply(job: string, command?: string) {
   const helper = resolve('packages/desktop/src/apply-update.ps1');
   return spawnSync('powershell.exe', command ? ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command.replaceAll('{helper}', psQuote(helper)).replaceAll('{job}', psQuote(job))] : ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', helper, '-JobPath', job], { windowsHide: true, encoding: 'utf8', timeout: 30000 });
 }
+
+async function prepareSingle() {
+  const value = await prepare();
+  const executable = 'Mon DBCodex portable.exe';
+  const previous = await readFile(join(value.root, 'DBCodex.exe'));
+  const next = Buffer.concat([value.exe, Buffer.from('single new')]);
+  await writeFile(join(value.root, executable), previous);
+  const archive = join(value.root, 'update.exe'); await writeFile(archive, next);
+  await writeFile(value.job, JSON.stringify({ root: value.root, archive, executable, parentPid: 2147483647, manifest: { schema: 2, version: '0.1.2', size: next.length, sha256: hash(next) } }));
+  return { ...value, executable, previous, next, archive };
+}
 describe.skipIf(!windows)('remplacement Windows réel', () => {
+  it('remplace uniquement le portable renommé et sauvegarde son ancienne version', async () => {
+    const { root, job, executable, next, previous } = await prepareSingle();
+    const result = apply(job); expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(await readFile(join(root, executable))).toEqual(next);
+    const backup = (await readdir(root)).find(name => name.startsWith('.dbcodex-update-previous-'))!;
+    expect(await readFile(join(root, backup, executable))).toEqual(previous);
+    expect(await readFile(join(root, 'data/preferences.json'), 'utf8')).toBe('preferences');
+    expect(await readFile(join(root, 'project.dbcd'), 'utf8')).toBe('project');
+    expect(await readFile(join(root, 'resources/app.asar'), 'utf8')).toBe('old app');
+  }, 30000);
+  it('refuse un EXE altéré avant tout remplacement', async () => {
+    const { root, job, executable, previous, archive } = await prepareSingle();
+    await writeFile(archive, 'corrupted'); expect(apply(job).status).toBe(1);
+    expect(await readFile(join(root, executable))).toEqual(previous);
+  }, 30000);
+  it('préserve l’EXE occupé et restaure après échec', async () => {
+    const { root, job, executable, previous } = await prepareSingle();
+    const target = psQuote(join(root, executable));
+    const result = apply(job, `$stream=[IO.File]::Open(${target},'Open','Read','Read'); try { & {helper} -JobPath {job} } finally { $stream.Dispose() }; exit $LASTEXITCODE`);
+    expect(result.status).toBe(1); expect(await readFile(join(root, executable))).toEqual(previous);
+  }, 30000);
+  it('récupère le portable seul depuis son journal après interruption', async () => {
+    const { root, job, executable, previous, next } = await prepareSingle();
+    const backup = join(root, '.dbcodex-update-backup'); await mkdir(backup);
+    await writeFile(join(backup, executable), previous); await writeFile(join(root, executable), next);
+    await writeFile(join(backup, 'journal.json'), JSON.stringify({ root, job, changes: [{ path: executable, existed: true }] }));
+    expect(apply(job, '& {helper} -JobPath {job} -Recover').status).toBe(0);
+    expect(await readFile(join(root, executable))).toEqual(previous);
+  }, 30000);
   it('remplace les fichiers applicatifs, préserve les projets et sauvegarde la version précédente', async () => {
     const { root, job } = await prepare(); const result = apply(job);
     expect(result.status, result.stderr || result.stdout).toBe(0);

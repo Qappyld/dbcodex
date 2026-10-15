@@ -11,6 +11,7 @@ import { assertByteLength, boundedUtf8Length, DbcdResourceLimitError, DBCD_MAX_C
 import type { DbcdExpectedState, DbcdProjectSnapshot, DbcdRevisionSnapshot, DbcdRevisionSummary, SaveDbcdInput } from "./document-contract.js";
 import { hashDocument } from "./document-hash.js";
 import { decodePresentation, emptyPresentation, encodePresentation, type PresentationDocument } from "./presentation.js";
+import { modelDiagnostics } from "./project-model.js";
 
 export type DbcdProjectStoreCode = "INVALID_DBML" | "INVALID_PRESENTATION" | "NOT_DBCD" | "CORRUPT_PROJECT"
   | "CREATE_FAILED" | "PATH_CHANGED" | "CONFLICT" | "READ_ONLY" | "REVISION_NOT_FOUND" | "WRITE_FAILED";
@@ -339,6 +340,13 @@ function validatedPresentation(presentation: PresentationDocument): string {
   }
 }
 
+function assertFixedProfile(saved: PresentationDocument, next: PresentationDocument): void {
+  const left = saved.model?.profile ?? { mode: "generic" };
+  const right = next.model?.profile ?? { mode: "generic" };
+  if (JSON.stringify(left) !== JSON.stringify(right))
+    throw new DbcdProjectStoreError("INVALID_PRESENTATION", "Le type de base et ses paramètres sont fixés à la création du projet.");
+}
+
 function assertExpectedState(actual: DbcdProjectSnapshot, expected: DbcdExpectedState): void {
   if (actual.generation !== expected.expectedGeneration || actual.projectId !== expected.expectedProjectId
     || actual.currentRevisionId !== expected.expectedRevisionId) {
@@ -533,6 +541,7 @@ export async function saveDbcdDraft(input: SaveDbcdDraftInput): Promise<DbcdProj
   const presentationJson = validatedPresentation(input.presentation);
   return writeProject(input, (db, snapshot) => {
     assertExpectedState(snapshot, input);
+    assertFixedProfile(snapshot.presentation, input.presentation);
     if (input.baseGeneration !== input.expectedGeneration) {
       throw new DbcdProjectStoreError("CONFLICT", "The project has changed. Reload it before saving.");
     }
@@ -573,16 +582,20 @@ async function saveProject(
 ): Promise<DbcdProjectSnapshot> {
   // DBML validation and compression happen before acquiring the write transaction.
   boundedUtf8Length(input.sourceText, DBCD_MAX_SOURCE_BYTES);
-  if (!parseDbml(input.sourceText, input.projectPath).graph) {
+  const graph = parseDbml(input.sourceText, input.projectPath).graph;
+  if (!graph) {
     throw new DbcdProjectStoreError("INVALID_DBML", "Unable to parse DBML.");
   }
   const presentationJson = validatedPresentation(input.presentation);
+  if (modelDiagnostics(graph, input.presentation.model).some(d => d.severity === "error"))
+    throw new DbcdProjectStoreError("INVALID_PRESENTATION", "Les propriétés du schéma contiennent des erreurs. Corrigez-les avant d’enregistrer.");
   const sourceHash = hashDocument(input.sourceText);
   const presentationHash = hashDocument(presentationJson);
   const sourceGzip = compressPayload(input.sourceText, DBCD_MAX_SOURCE_BYTES);
   const presentationGzip = compressPayload(presentationJson, DBCD_MAX_PRESENTATION_BYTES);
   const save = (db: DatabaseSync, snapshot: DbcdProjectSnapshot) => {
     assertExpectedState(snapshot, input);
+    assertFixedProfile(snapshot.presentation, input.presentation);
     if (input.rejectDraft && snapshot.draft) {
       throw new DbcdProjectStoreError("CONFLICT", "The project has a recoverable draft. Resolve it before editing externally.");
     }

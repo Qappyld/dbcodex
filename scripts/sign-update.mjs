@@ -3,7 +3,7 @@ import { createHash, createPrivateKey, createPublicKey, sign } from 'node:crypto
 import { resolve, join } from 'node:path';
 const config = JSON.parse(await readFile('release-config.json', 'utf8'));
 const out = resolve(process.env.DBCODEX_RELEASE_OUT || 'release');
-const folder = join(out, 'DBCodex-win32-x64');
+const folder = resolve('build/portable-package/DBCodex-win32-x64');
 const files = [];
 const allowed = /^(DBCodex\.exe|chrome_(100|200)_percent\.pak|d3dcompiler_47\.dll|dxcompiler\.dll|dxil\.dll|ffmpeg\.dll|icudtl\.dat|LICENSE|LICENSES\.chromium\.html|LIRE-MOI\.md|UPDATES\.md|resources\.pak|snapshot_blob\.bin|v8_context_snapshot\.bin|version|vk_swiftshader_icd\.json|vk_swiftshader\.dll|vulkan-1\.dll|resources\/app\.asar|locales\/[a-zA-Z0-9_-]+\.pak)$/;
 const hash = data => createHash('sha256').update(data).digest('hex');
@@ -23,3 +23,8 @@ const notes = process.env.UPDATE_RELEASE_NOTES || 'Améliorations et corrections
 const payload = Buffer.from(JSON.stringify({ schema: 1, version: config.version, platform: 'win32', arch: 'x64', url: `https://github.com/${config.repository}/releases/download/v${config.version}/${name}`, size: archive.length, sha256: hash(archive), notes, files }));
 await writeFile(join(out, 'update-manifest.json'), JSON.stringify({ payload: payload.toString('base64'), signature: sign(null, payload, privateKey).toString('base64') }));
 console.log(`Manifeste signé : ${join(out, 'update-manifest.json')}`);
+const executableName = `DBCodex-${config.version}-win-x64.exe`;
+const executable = await readFile(join(out, executableName));
+const portablePayload = Buffer.from(JSON.stringify({ schema: 2, version: config.version, platform: 'win32', arch: 'x64', url: `https://github.com/${config.repository}/releases/download/v${config.version}/${executableName}`, size: executable.length, sha256: hash(executable), notes }));
+await writeFile(join(out, 'portable-update-manifest.json'), JSON.stringify({ payload: portablePayload.toString('base64'), signature: sign(null, portablePayload, privateKey).toString('base64') }));
+console.log(`Manifeste portable signé : ${join(out, 'portable-update-manifest.json')}`);

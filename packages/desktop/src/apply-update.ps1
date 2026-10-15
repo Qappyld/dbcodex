@@ -12,6 +12,13 @@ $changes = [Collections.Generic.List[object]]::new()
 $mutating = $false
 $rollbackFailed = $false
 $allowed = '^(DBCodex\.exe|chrome_(100|200)_percent\.pak|d3dcompiler_47\.dll|dxcompiler\.dll|dxil\.dll|ffmpeg\.dll|icudtl\.dat|LICENSE|LICENSES\.chromium\.html|LIRE-MOI\.md|UPDATES\.md|resources\.pak|snapshot_blob\.bin|v8_context_snapshot\.bin|version|vk_swiftshader_icd\.json|vk_swiftshader\.dll|vulkan-1\.dll|resources/app\.asar|locales/[a-zA-Z0-9_-]+\.pak)$'
+$singleFile = $job.manifest.schema -eq 2
+if ($singleFile) {
+  if (-not $job.executable -or $job.executable -cnotmatch '^[^<>:"/\\|?*\x00-\x1f]+\.exe$') { throw 'Unsafe executable name.' }
+  $exe = Join-Path $root $job.executable
+  $allowed = '^' + [Regex]::Escape($job.executable) + '$'
+  $files = @(@{ path = $job.executable; sha256 = $job.manifest.sha256 })
+} else { $files = $job.manifest.files }
 function Assert-NoLink([string]$path) {
   $current = $path
   while ($current) {
@@ -56,7 +63,7 @@ try {
   }
   $deadline = [DateTime]::UtcNow.AddSeconds(10)
   do {
-    $running = @(Get-Process -Name DBCodex -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe })
+    $running = @(Get-Process | Where-Object { $_.Path -and ($_.Path -eq $exe -or ($singleFile -and $_.Path -eq $job.runtimeRoot)) })
     if ($running.Count -eq 0) { break }
     Start-Sleep -Milliseconds 250
   } while ([DateTime]::UtcNow -lt $deadline)
@@ -73,12 +80,17 @@ try {
   }
   if (Test-Path -LiteralPath $backup) { throw 'A previous backup exists. Recover or archive it before updating.' }
   if ((File-Hash $job.archive) -ne $job.manifest.sha256) { throw 'Archive integrity check failed.' }
+  if ($singleFile -and (Get-Item -LiteralPath $job.archive).Length -ne $job.manifest.size) { throw 'Executable size mismatch.' }
   New-Item -ItemType Directory -Path $stage | Out-Null
   $expected = @{}
-  foreach ($file in $job.manifest.files) {
+  foreach ($file in $files) {
     if ($file.path -cnotmatch $allowed -or $expected.ContainsKey($file.path)) { throw 'Unsafe file inventory.' }
     $expected[$file.path] = $file.sha256
   }
+  if ($singleFile) {
+    Copy-Item -LiteralPath $job.archive -Destination (Join-Path $stage $job.executable)
+    if ((File-Hash (Join-Path $stage $job.executable)) -ne $job.manifest.sha256) { throw 'Staged executable integrity check failed.' }
+  } else {
   if (-not $expected.ContainsKey('DBCodex.exe') -or -not $expected.ContainsKey('resources/app.asar')) { throw 'Missing application files.' }
   $zip = [IO.Compression.ZipFile]::OpenRead($job.archive)
   $seen = @{}
@@ -102,9 +114,10 @@ try {
     }
     if ($seen.Count -ne $expected.Count) { throw 'Incomplete archive.' }
   } finally { $zip.Dispose() }
+  }
   # Back up every affected file before changing any application file.
   New-Item -ItemType Directory -Path $backup | Out-Null
-  foreach ($file in $job.manifest.files) {
+  foreach ($file in $files) {
     $target = Join-Path $root $file.path
     Assert-NoLink $target
     $existed = Test-Path -LiteralPath $target
@@ -117,7 +130,7 @@ try {
   }
   Save-Json $journalPath @{ root = $root; job = $JobPath; changes = @($changes.ToArray()) }
   $mutating = $true
-  foreach ($file in $job.manifest.files) {
+  foreach ($file in $files) {
     $target = Join-Path $root $file.path
     Assert-NoLink $target
     [IO.Directory]::CreateDirectory((Split-Path -Parent $target)) | Out-Null

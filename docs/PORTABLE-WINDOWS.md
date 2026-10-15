@@ -2,7 +2,9 @@
 
 ## Lancement
 
-Décompresser entièrement l’archive `DBCodex-X.Y.Z-win-x64.zip` dans un dossier accessible, puis lancer `DBCodex.exe`. Conserver tous les fichiers extraits. Aucun Node.js, installation ou droit administrateur n’est demandé par l’application.
+Télécharger `DBCodex-X.Y.Z-win-x64.exe` dans un dossier accessible puis double-cliquer dessus. Ce fichier unique lance l’application sans installation, Node.js ou droit administrateur. Ses composants sont extraits temporairement puis supprimés à la fermeture normale ; le démarrage peut prendre quelques secondes. Il peut être renommé, y compris avec des espaces.
+
+Le dossier `data/` est créé à côté de cet EXE pour conserver les préférences. Déplacer l’EXE avec ce dossier pour les retrouver sur un autre emplacement. Les projets `.dbcd` restent des fichiers distincts. Pour passer de l’ancienne version ZIP au fichier unique, placer le nouvel EXE dans l’ancien dossier portable : le même `data/` et les mêmes chemins récents seront réutilisés. L’ancien ZIP reste produit pour assurer les mises à jour des éditions déjà distribuées.
 
 Créer un projet, ouvrir un `.dbcd` ou importer un `.dbml`. Enregistrer avec le bouton ou Ctrl+S. L’export DBML contient le modèle enregistré ; enregistrer les modifications avant l’export. Ouvrir un autre projet crée une autre fenêtre.
 
@@ -40,7 +42,7 @@ Les préférences se trouvent dans `data/preferences.json` à côté de l’exé
 
 À partir de la version 0.1.1, ouvrir **Mises à jour** dans l’en-tête : télécharger la nouvelle version, puis choisir **Mettre à jour et redémarrer**. Les fichiers sont vérifiés et remplacés automatiquement après conservation des brouillons. Fermer les autres instances avant le redémarrage. Les détails de publication et de récupération sont dans `UPDATES.md`.
 
-Pour les anciennes versions, fermer toutes les fenêtres, extraire la nouvelle archive dans un dossier temporaire, puis remplacer les fichiers applicatifs dans le dossier existant. **Conserver le sous-dossier `data/` et les projets** : ne pas supprimer l’ancien dossier complet. L’archive ne contient pas de préférences préremplies.
+Pour une mise à jour manuelle du fichier unique, fermer toutes les fenêtres puis remplacer uniquement l’EXE. **Conserver le sous-dossier `data/` et les projets**. L’EXE distribué ne contient pas de préférences préremplies. Les éditions ZIP continuent à recevoir leur format de mise à jour habituel ; le passage au fichier unique se fait manuellement.
 
 Une configuration illisible ou de version inconnue est conservée intacte ; les changements de préférences restent alors dans la session. Si `data/` ne peut pas être créé, l’application essaie le dossier de préférences du compte Windows ; le repli est annoncé dans l’interface. Les caches Electron restent dans les données du compte Windows.
 
@@ -58,7 +60,7 @@ Les notes/couleurs enrichissent la présentation v1. Cette application ouvre les
 
 La version a été essayée sur l’hôte de développement Windows Server 2025 x64. Un compte Windows standard distinct, un PC sans outils de développement et OneDrive n’ont pas été testés.
 
-1. Sous un compte standard, extraire le ZIP dans Documents puis lancer l’exécutable sans terminal. Vérifier l’absence de demande d’élévation.
+1. Sous un compte standard, placer l’EXE unique dans Documents puis le lancer sans terminal. Vérifier l’absence de demande d’élévation.
 2. Créer un projet fictif, importer un DBML, modifier un commentaire et une table, créer une vue et un groupe, changer leur couleur et ajouter une note. Enregistrer puis exporter le DBML.
 3. Fermer et rouvrir ; vérifier texte, vues, groupe, couleur, note et historique. Restaurer une ancienne révision : les versions suivantes doivent rester consultables.
 4. Lancer deux fois le même projet : la seconde fenêtre doit afficher Lecture seule. Ouvrir un autre projet : ses modifications doivent rester isolées.

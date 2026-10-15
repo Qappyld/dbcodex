@@ -3,6 +3,7 @@ import { defaultPosition } from "./presentation-commands.js";
 
 type Revision = { sourceText: string; presentation: PresentationDocument };
 export interface RevisionDiffSummary {
+  changedModel?: boolean;
   /** Only source-line counts are estimated; presentation counts remain exact. */
   approximate?: true;
   addedLines: number; removedLines: number; changedLines: number;
@@ -96,5 +97,6 @@ export function summarizeRevisionDiff(previous: Revision, next: Revision, graph?
     }
   }
   for (const id of Object.keys(next.presentation.views)) if (!previous.presentation.views[id]) result.addedViews++;
+  if(JSON.stringify(previous.presentation.model)!==JSON.stringify(next.presentation.model))result.changedModel=true;
   return result;
 }

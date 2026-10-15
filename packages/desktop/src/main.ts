@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
 import { dirname, join, basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, realpathSync } from "node:fs";
-import { createDbcdProject, openDbcdProject, parseDbml } from "@dbcodex/core";
+import { createDbcdProject, openDbcdProject, parseDbml, newProjectTemplate, projectProfileSchema } from "@dbcodex/core";
 import { createHandlers } from "../../mcp/src/handlers.js";
 import { PreferencesStore } from "./preferences.js";
 import { acquireProjectLock } from "./project-lock.js";
@@ -11,6 +11,8 @@ import { PortableUpdater } from "./updater.js";
 import releaseConfig from "../../../release-config.json" with { type: "json" };
 import { existsSync } from "node:fs";
 const here = dirname(fileURLToPath(import.meta.url));
+const portableExecutable = app.isPackaged ? process.env.PORTABLE_EXECUTABLE_FILE : undefined;
+const portableRoot = portableExecutable ? dirname(portableExecutable) : dirname(process.execPath);
 type Session = { path?: string; root?: string; lock?: Server | null; closing?: boolean };
 const sessions = new Map<number, Session>();
 let preferences: PreferencesStore;
@@ -29,9 +31,9 @@ function windowFor(path?: string) {
 }
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
-  preferences = new PreferencesStore(app.isPackaged ? dirname(process.execPath) : resolve(here, "../../.."), join(app.getPath("userData"), "preferences"));
-  updater = new PortableUpdater(releaseConfig, dirname(process.execPath), join(here, "apply-update.ps1"), app.isPackaged && process.platform === "win32" && process.arch === "x64");
-  if (app.isPackaged && existsSync(join(dirname(process.execPath), '.dbcodex-update.lock'))) {
+  preferences = new PreferencesStore(app.isPackaged ? portableRoot : resolve(here, "../../.."), join(app.getPath("userData"), "preferences"));
+  updater = new PortableUpdater(releaseConfig, portableRoot, join(here, "apply-update.ps1"), app.isPackaged && process.platform === "win32" && process.arch === "x64", portableExecutable);
+  if (app.isPackaged && existsSync(join(portableRoot, '.dbcodex-update.lock'))) {
     dialog.showErrorBox('Mise à jour interrompue', 'Une mise à jour est en cours ou a été interrompue. Fermez les autres instances. Si le problème persiste, suivez la récupération décrite dans UPDATES.md, à côté de DBCodex.exe.');
     app.quit(); return;
   }
@@ -66,15 +68,16 @@ app.whenReady().then(() => {
     if (["open", "create", "import", "locate"].includes(name)) {
       let path = typeof args.path === "string" ? args.path : undefined;
       if (name === "create" || name === "import") {
-        let sourceText = "// Nouveau projet\nTable exemple {\n  id integer [pk]\n}\n";
+        const template = name === "create" ? newProjectTemplate(projectProfileSchema.parse(args.profile)) : null;
+        let sourceText = template?.sourceText ?? "";
         if (name === "import") { const input = await dialog.showOpenDialog(window, { filters: [{ name: "DBML", extensions: ["dbml"] }], properties: ["openFile"] }); if (input.canceled) return null; sourceText = readFileSync(input.filePaths[0]!, "utf8"); if (!parseDbml(sourceText, input.filePaths[0]!).graph) throw Error("DBML invalide : import annulé."); }
         const output = await dialog.showSaveDialog(window, { filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }] }); if (output.canceled || !output.filePath) return null;
-        path = output.filePath; await createDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path), sourceText });
+        path = output.filePath; await createDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path), sourceText, ...(template ? {presentation:template.presentation} : {}) });
       } else if (!path) { const result = await dialog.showOpenDialog(window, { filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }], properties: ["openFile"] }); if (result.canceled) return null; path = result.filePaths[0]!; }
       path = realpathSync(path!);
       await openDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path) });
       if (name === "locate" && typeof args.entry === "string") preferences.remove(args.entry);
-      if (session.path) { windowFor(path); return null; }
+      if (session.path) { windowFor(path); return name === "create" ? { openedInNewWindow: true } : null; }
       session.path = path; session.root = dirname(path); session.lock = await acquireProjectLock(path);
       window.setTitle(`${basename(path)} — DBCodex${session.lock ? "" : " · Lecture seule"}`); preferences.add(path);
       const result = await createHandlers(session.root).openDbcd({ path: basename(path) });
