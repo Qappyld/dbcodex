@@ -46,6 +46,10 @@ La mise à jour du 14 octobre ajuste les raccordements lorsque les tables bougen
 
 ## Données et mise à jour
 
+La 0.1.7 corrige le contrôle des emplacements OneDrive : les marqueurs Cloud Files reconnus sont autorisés après vérification du chemin, tandis que les liens symboliques et jonctions restent refusés. Si une ancienne version annule déjà les mises à jour sur OneDrive, installer cette version une fois manuellement en remplaçant uniquement l’EXE après fermeture, sans supprimer `data/` ni les projets.
+
+**Mises à jour → Ouvrir les journaux** ouvre les diagnostics locaux, normalement dans `data/logs/`. Les étapes et erreurs de mise à jour restent disponibles après redémarrage. **Détails du dernier échec** affiche la cause technique, l’étape et la référence de tentative. En cas de dossier du portable non accessible en écriture, les journaux utilisent le dossier local de données utilisateur. Aucun journal n’est envoyé automatiquement ; vérifier les chemins personnels avant de partager un fichier. Voir `UPDATES.md` pour les formats et la conservation.
+
 La livraison du 13 octobre inclut l'optimisation de la fluidité : React en mode production, raccordements limités aux relations utilisées, conservation des calculs valides et adaptation légère pendant les déplacements. Le recalcul global est réparti en petites étapes ; ses boutons sont temporairement désactivés pendant le calcul. Si la disposition change entre-temps, un résultat devenu obsolète est écarté.
 
 Les préférences se trouvent dans `data/preferences.json` à côté de l’exécutable. Les projets placés sous ce dossier portable utilisent des chemins récents relatifs ; les projets extérieurs utilisent des chemins absolus. Déplacer toute l’arborescence conserve les références relatives. Les projets `.dbcd` restent à l’emplacement choisi.

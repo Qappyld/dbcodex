@@ -18,6 +18,26 @@ async function setup(body = Buffer.from('download'), archive = body, portable = 
   return { updater, root };
 }
 describe('téléchargement portable', () => {
+  it('archives the exact helper failure before consuming the banner and keeps it after another check', async () => {
+    const { updater, root } = await setup();
+    const result = { message: 'Mise a jour annulee.', detail: 'Archive integrity check failed.', stage: 'verification-telechargement', attemptId: 'attempt-1' };
+    await writeFile(join(root, '.dbcodex-update-result.json'), JSON.stringify(result));
+    expect(await updater.recoveryNotice()).toBe(result.message);
+    expect(updater.status.lastFailure).toEqual(result);
+    expect(JSON.parse(await readFile(join(root, 'data/logs/last-update-result.json'), 'utf8'))).toEqual(result);
+    await expect(readFile(join(root, '.dbcodex-update-result.json'))).rejects.toThrow();
+    await updater.check(); expect(updater.status.lastFailure).toEqual(result);
+    const records = (await readFile(join(root, 'data/logs/application.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+    expect(records).toContainEqual(expect.objectContaining({ event: 'update.previous-result', detail: result.detail }));
+  });
+  it('preserves the original result when its diagnostic archive cannot be written', async () => {
+    const { updater, root } = await setup();
+    await mkdir(join(root, 'data/logs/last-update-result.json.tmp'));
+    const result = { message: 'Annulée', detail: 'failure' };
+    await writeFile(join(root, '.dbcodex-update-result.json'), JSON.stringify(result));
+    expect(await updater.recoveryNotice()).toBe('Annulée');
+    expect(JSON.parse(await readFile(join(root, '.dbcodex-update-result.json'), 'utf8'))).toEqual(result);
+  });
   it('télécharge un EXE et conserve le nom choisi par l’utilisateur', async () => {
     const { updater, root } = await setup(Buffer.from('download'), Buffer.from('download'), true);
     expect((await updater.check()).phase).toBe('available');
@@ -26,6 +46,7 @@ describe('téléchargement portable', () => {
     const jobPath = (updater as any).job as string; folders.push(join(jobPath, '..'));
     const job = JSON.parse(await readFile(jobPath, 'utf8'));
     expect(job.executable).toBe('Mon DBCodex.exe'); expect(job.root).toBe(root);
+    expect(job.logPath).toBe(join(root, 'data/logs', `update-${job.attemptId}.jsonl`));
     expect(job.archive).toMatch(/update\.exe$/); expect(job.manifest.schema).toBe(2);
     await updater.prepareRestart();
     expect(await readFile(join(root, '.dbcodex-update.lock'), 'utf8')).toBe(jobPath);

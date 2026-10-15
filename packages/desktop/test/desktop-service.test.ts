@@ -44,6 +44,7 @@ vi.mock("../src/preferences.js", () => ({ PreferencesStore: class {
 } }));
 vi.mock("../src/project-lock.js", () => ({ acquireProjectLock: async () => host.writable ? { close: vi.fn() } : null }));
 vi.mock("../src/updater.js", () => ({ PortableUpdater: class { recoveryNotice = async () => ""; } }));
+vi.mock("../src/diagnostic-log.js", () => ({ DiagnosticLog: class { directory = null; write = vi.fn(); }, diagnosticError: () => ({}) }));
 vi.mock("../../mcp/src/live-session.js", () => ({
   liveEndpoint: () => "test-pipe", liveToken: async () => "test-token",
   serveLive: async (_endpoint: string, handle: typeof host.live) => { host.live = handle; return { close: vi.fn() }; },

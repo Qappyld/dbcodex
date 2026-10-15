@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { dirname, join, basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, realpathSync } from "node:fs";
@@ -13,6 +13,7 @@ import { existsSync } from "node:fs";
 import { liveEndpoint, liveToken, serveLive, writeLiveConnection, type LiveRequest } from "../../mcp/src/live-session.js";
 import { serveLiveHttp } from "../../mcp/src/live-http.js";
 import { randomUUID } from "node:crypto";
+import { DiagnosticLog, diagnosticError } from "./diagnostic-log.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const portableExecutable = app.isPackaged ? process.env.PORTABLE_EXECUTABLE_FILE : undefined;
 const portableRoot = portableExecutable ? dirname(portableExecutable) : dirname(process.execPath);
@@ -21,6 +22,8 @@ const sessions = new Map<number, Session>();
 let preferences: PreferencesStore;
 let updater: PortableUpdater;
 let updateClosing = false;
+let diagnostics: DiagnosticLog | undefined;
+process.on("uncaughtExceptionMonitor", error => diagnostics?.write("app.uncaught-exception", { errorName: error.name }));
 const mcpMode = process.argv.includes("--mcp");
 const endpoint = liveEndpoint(app.isPackaged ? portableRoot : resolve(here, "../../.."));
 const pendingLive = new Map<string, { senderId: number; resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
@@ -56,6 +59,10 @@ function windowFor(path?: string) {
   return window;
 }
 app.whenReady().then(() => {
+  diagnostics = new DiagnosticLog(join(app.isPackaged ? portableRoot : resolve(here, "../../.."), "data", "logs"), releaseConfig.version, join(app.getPath("userData"), "logs"));
+  diagnostics.write("app.started", { platform: process.platform, arch: process.arch, packaged: app.isPackaged, mcpEnabled: mcpMode });
+  app.on("render-process-gone", (_event, _contents, details) => diagnostics?.write("app.renderer-exited", { reason: details.reason, exitCode: details.exitCode }));
+  app.on("before-quit", () => diagnostics?.write("app.quitting", { updating: updateClosing }));
   ipcMain.on("dbcodex:live-response", (event, response) => {
     const pending = pendingLive.get(response?.id);
     if (!pending || pending.senderId !== event.sender.id) return;
@@ -70,13 +77,14 @@ app.whenReady().then(() => {
       if (address && typeof address === "object") await writeLiveConnection(endpoint, token, address.port, app.isPackaged ? portableRoot : resolve(here, "../../.."));
     }
   }).catch(error => {
+    diagnostics?.write("mcp.start.failed", diagnosticError(error));
     // Another instance retains its endpoint; never steal it or close a user's window.
     process.stderr.write(`Passerelle MCP indisponible : ${error instanceof Error ? error.message : "erreur locale"}\n`);
     if (mcpMode) dialog.showErrorBox("Connexion MCP indisponible", "La passerelle locale n’a pas pu démarrer. Vérifiez que cette version de DBCodex et le port MCP ne sont pas déjà utilisés.");
   });
   Menu.setApplicationMenu(null);
   preferences = new PreferencesStore(app.isPackaged ? portableRoot : resolve(here, "../../.."), join(app.getPath("userData"), "preferences"));
-  updater = new PortableUpdater(releaseConfig, portableRoot, join(here, "apply-update.ps1"), app.isPackaged && process.platform === "win32" && process.arch === "x64", portableExecutable);
+  updater = new PortableUpdater(releaseConfig, portableRoot, join(here, "apply-update.ps1"), app.isPackaged && process.platform === "win32" && process.arch === "x64", portableExecutable, diagnostics);
   if (app.isPackaged && existsSync(join(portableRoot, '.dbcodex-update.lock'))) {
     dialog.showErrorBox('Mise à jour interrompue', 'Une mise à jour est en cours ou a été interrompue. Fermez les autres instances. Si le problème persiste, suivez la récupération décrite dans UPDATES.md, à côté de DBCodex.exe.');
     app.quit(); return;
@@ -96,6 +104,12 @@ app.whenReady().then(() => {
     const window = BrowserWindow.fromWebContents(event.sender)!; const session = sessions.get(event.sender.id)!;
     if (!session) throw Error("Fenêtre inconnue.");
     if (name === 'update_status') return updater.status;
+    if (name === 'open_logs') {
+      if (!diagnostics?.directory) throw Error("Les journaux sont indisponibles : aucun dossier accessible en écriture.");
+      const error = await shell.openPath(diagnostics.directory);
+      if (error) throw Error("Impossible d’ouvrir le dossier des journaux.");
+      return updater.status;
+    }
     if (name === 'update_check') return updater.check();
     if (name === 'update_download') return updater.download();
     if (name === 'update_restart') {

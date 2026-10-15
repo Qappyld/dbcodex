@@ -16,6 +16,12 @@ Les projets `.dbcd`, `data/` et les fichiers personnels ne figurent jamais parmi
 
 ## Publication depuis le dépôt privé
 
+### Compatibilité OneDrive à partir de la 0.1.7
+
+Les marqueurs Windows Cloud Files de OneDrive (`IO_REPARSE_TAG_CLOUD` à `CLOUD_F`) sont distingués des jonctions et liens symboliques. La balise est lue via Windows et le chemin résolu doit correspondre au chemin attendu ; les points de réanalyse inconnus et les redirections restent refusés. Cela corrige le refus systématique d’un EXE placé dans un Bureau OneDrive portant le marqueur `0x9000601A`. Les refus réels de lecture ou d’écriture du système restent possibles et sont journalisés. Ce correctif ne fournit ni verrou distribué ni synchronisation de projets entre ordinateurs.
+
+Pour installer ce correctif depuis une version antérieure dont le programme de remplacement refuse déjà OneDrive, fermer normalement l’application puis remplacer manuellement l’EXE par la 0.1.7 en conservant `data/` et les projets. Les mises à jour lancées ensuite utiliseront le contrôle corrigé et les journaux persistants. La présence d’une nouvelle version sur GitHub ne modifie pas le programme de remplacement de la version actuellement installée.
+
 1. Sauvegarder `.update-signing/private.pem` dans un emplacement sûr. Ce fichier est ignoré par Git, hors des dossiers de build, et ne doit jamais être inclus dans une release, un log ou le dépôt. La clé publique correspondante figure dans `release-config.json`. Ne pas régénérer la clé après distribution : les applications existantes ne feraient plus confiance aux mises à jour.
 2. Dans les secrets GitHub Actions du dépôt **privé**, ajouter `UPDATE_SIGNING_PRIVATE_KEY` avec le contenu PEM de cette clé.
 3. Créer un token GitHub à permissions fines, limité au dépôt **public** `dbcodex-releases`, permission **Contents: Read and write**. Le stocker dans le secret `RELEASES_TOKEN` du dépôt privé. Prévoir son renouvellement avant expiration. Le `GITHUB_TOKEN` du dépôt privé ne suffit pas pour écrire dans un autre dépôt.
@@ -27,6 +33,22 @@ Le workflow ne publie pas les sources, les projets de test, les données locales
 En local : compiler le cœur, puis `node scripts/build-desktop.mjs`, `node scripts/package-desktop.mjs`, puis `node scripts/sign-update.mjs`. La signature lit la clé locale ignorée ou la variable `UPDATE_SIGNING_PRIVATE_KEY`. L'audit public s'exécute avec `node scripts/audit-portable-release.mjs` en renseignant `DBCODEX_RELEASE_OUT` si les fichiers ne sont pas dans `build/update-release`. L'hébergement public n'est utilisable qu'après publication d'une première release.
 
 ## Récupération après interruption brutale
+
+### Journaux de diagnostic
+
+Dans une version construite avec la journalisation, **Mises à jour → Ouvrir les journaux** ouvre le dossier utilisé par l’application. Il se trouve normalement dans `data/logs/` à côté de l’EXE. Si ce dossier n’est pas accessible en écriture, l’application utilise `logs/` dans son dossier local de données utilisateur. Si aucun emplacement n’est disponible, le panneau le signale et l’application reste utilisable.
+
+`application.jsonl` enregistre les démarrages, incidents du renderer, erreurs de démarrage MCP et étapes de recherche/téléchargement/redémarrage d’une mise à jour. La rotation conserve trois fichiers d’environ 1 Mio chacun. Chaque ligne contient une date UTC, la version, le processus, l’événement et les informations de diagnostic utiles.
+
+Chaque tentative possède une référence commune entre le téléchargement et le programme de remplacement Windows. Son fichier `update-<référence>.jsonl` conserve les étapes, les processus qui bloquent la fermeture, les chemins refusés, l’erreur et sa ligne, ainsi que le résultat d’une restauration. Les vingt tentatives les plus récentes sont conservées au prochain démarrage ; chaque fichier est limité à environ 256 Kio. Une copie de secours `update-helper.jsonl` reste dans le dossier temporaire de cette tentative, même si le dossier des journaux du portable est inaccessible ou que le job est illisible.
+
+Le résultat du remplacement est archivé dans `last-update-result.json` **avant** la suppression du message temporaire. S’il ne peut pas être archivé, l’original `.dbcodex-update-result.json` est conservé. **Détails du dernier échec** reste consultable dans le panneau après un redémarrage et après une nouvelle vérification des mises à jour.
+
+Ces fichiers restent locaux : aucune transmission automatique. Le contenu DBML, les modèles et les arguments MCP ne sont pas journalisés ; les identifiants d’authentification usuels sont masqués dans les diagnostics. Les journaux peuvent contenir des chemins locaux et le nom du compte Windows : les relire avant de les partager.
+
+Cette évolution ne peut pas récupérer un diagnostic déjà supprimé par la 0.1.4. Elle doit être installée une première fois pour tracer les tentatives suivantes ; une mise à jour lancée depuis une ancienne version utilise encore son ancien programme de remplacement.
+
+### Procédure de récupération
 
 Si `.dbcodex-update.lock` existe, l'application refuse de démarrer pour éviter d'ouvrir un projet pendant le remplacement. Patienter d'abord et fermer les autres instances. Le fichier lock contient le chemin du fichier temporaire `job.json`.
 

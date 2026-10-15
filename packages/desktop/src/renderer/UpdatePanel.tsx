@@ -25,11 +25,19 @@ export function UpdatePanel({ api }: { api: Api }) {
       <p role={status?.phase === 'error' ? 'alert' : 'status'}>{status?.message || 'Chargement…'}</p>
       {status?.phase === 'downloading' && <progress aria-label="Téléchargement de la mise à jour" max={100} value={status.progress || 0} />}
       {status?.notes && <details className="update-notes"><summary>Nouveautés de la version {status.version}</summary><p>{status.notes}</p></details>}
+      {status?.lastFailure && <details className="update-notes"><summary>Détails du dernier échec</summary>
+        <p>{status.lastFailure.message}</p>
+        {status.lastFailure.stage && <p>Étape : {status.lastFailure.stage}</p>}
+        <p>{status.lastFailure.detail}</p>
+        {status.lastFailure.attemptId && <p>Référence : {status.lastFailure.attemptId}</p>}
+      </details>}
       {error && <p role="alert">{error}</p>}
       {status?.phase === 'ready' ? <button disabled={busy} onClick={() => void run('update_restart')}>Mettre à jour et redémarrer</button> : <>
         {status?.version && ['available', 'error'].includes(status.phase) && <button disabled={busy} onClick={() => void run('update_download')}>Télécharger la mise à jour</button>}
         <button disabled={busy} onClick={() => void run('update_check')}>{status?.phase === 'error' ? 'Réessayer la vérification' : 'Vérifier les mises à jour'}</button>
       </>}
+      <button disabled={pending || !status?.logDirectory} onClick={() => void run('open_logs')}>Ouvrir les journaux</button>
+      {status && !status.logDirectory && <p>Journaux indisponibles : aucun dossier accessible en écriture.</p>}
     </section>
   </details>;
 }
