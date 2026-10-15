@@ -29,12 +29,13 @@ describe("MCP tool definitions", () => {
 
     expect(Object.keys(definitions).sort()).toEqual([
       "threadWorkbench", "globalWorkbench", "fileWorkbench", "resolveFile", "editDbcd",
-      "openDbcd", "openDbml", "importDbml", "exportDbml", "validateDraft", "saveDraft", "discardDraft",
+      "readAssistant", "validateAssistant", "updateAssistant",
+      "createDbcd", "openDbcd", "openDbml", "importDbml", "exportDbml", "validateDraft", "saveDraft", "discardDraft",
       "saveDbcd", "listRevisions", "readRevision", "restoreRevision", "pinRevision", "saveLayout",
     ].sort());
     for (const [name, definition] of Object.entries(definitions)) {
       expect(definition.annotations.openWorldHint, name).toBe(false);
-      expect(definition._meta.ui.resourceUri, name).toBe(UI_RESOURCE_URI);
+      if ("ui" in definition._meta) expect(definition._meta.ui.resourceUri, name).toBe(UI_RESOURCE_URI);
     }
     for (const name of ["resolveFile", "validateDraft", "saveDraft", "discardDraft", "saveDbcd", "listRevisions", "readRevision", "restoreRevision", "pinRevision", "saveLayout"] as const) {
       expect(definitions[name]._meta.ui.visibility).toEqual(["app"]);

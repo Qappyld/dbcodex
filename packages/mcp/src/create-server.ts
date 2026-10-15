@@ -162,7 +162,50 @@ export const buildToolDefinitions = () => ({
     annotations: writeOnce,
     _meta: appUi,
   },
-  pinRgisterAppTool(server, "apply_dbcd_edits", definitions.editDbcd, native.edit);
+  pinRevision: {
+    title: "Pin DBCodex revision",
+    description: "Set the retention pin on a revision.",
+    inputSchema: pathInput.extend({ ...expectedState, revisionId: z.string().min(1), pinned: z.boolean() }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: appUi,
+  },
+  saveLayout: {
+    title: "Save DBML table position",
+    description: "Persist one table position for a DBML diagram view.",
+    inputSchema: z.object({
+      path: z.string().min(1),
+      view: z.string().min(1),
+      tableId: z.string().min(1),
+      x: z.number().finite(),
+      y: z.number().finite(),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: appUi,
+  },
+});
+
+export function createServer(trustedFallbackRoot?: string): McpServer {
+  const server = new McpServer({
+    name: "dbcodex",
+    version: "0.1.0-dev.0",
+  });
+  const roots = createWorkspaceRootProvider(server.server, trustedFallbackRoot);
+  const handlers = createHandlers(roots);
+  const assistant = createAssistantHandlers(roots);
+  const native = createNativeIntegration(roots, handlers);
+  const definitions = buildToolDefinitions();
+
+  server.registerTool("read_dbcd", definitions.readAssistant, assistant.read);
+  server.registerTool("validate_dbcd_changes", definitions.validateAssistant, assistant.validate);
+  server.registerTool("update_dbcd", definitions.updateAssistant, assistant.update);
+
+  registerAppTool(server, "open_dbcd_workbench", definitions.threadWorkbench, native.launch);
+  registerAppTool(server, "open_dbcd_app", definitions.globalWorkbench, native.launch);
+  registerAppTool(server, "open_dbcd_file", definitions.fileWorkbench, async (input: OpenAIFileEntrypointInput) => ({
+    content: [], structuredContent: { dbcodexFile: OpenAIFileEntrypointInputSchema.parse(input).file },
+  }));
+  registerAppTool(server, "resolve_dbcd_file", definitions.resolveFile, (_input: Record<string, never>, extra: { _meta?: Record<string, unknown> }) => native.openFile({ file: { name: "", resourceUri: "" } }, extra._meta));
+  registerAppTool(server, "apply_dbcd_edits", definitions.editDbcd, native.edit);
 
   registerAppTool(server, "open_dbcd", definitions.openDbcd, handlers.openDbcd);
   registerAppTool(server, "create_dbcd", definitions.createDbcd, handlers.createDbcd);

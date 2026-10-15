@@ -1,4 +1,172 @@
-import { pathToFileURLsetFocusRequest((previous) => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import type { PresentationDocument } from "@dbcodex/core";
+import { readDbcdProjectResult, type DisplayMode, type WorkbenchBridge } from "./bridge.js";
+import { useDocumentSession, type DocumentSession } from "./useDocumentSession.js";
+import { DbmlEditor } from "./DbmlEditor.js";
+import { DiagramCanvas } from "./DiagramCanvas.js";
+import { previewVisibility, withoutVisibilityPreview, type VisibilityPreview } from "./view-visibility.js";
+import { ViewInspector } from "./ViewInspector.js";
+import type { ViewNavigation } from "./ViewManager.js";
+import { HistoryPanel } from "./HistoryPanel.js";
+import { defaultPosition, setNodePosition, setNodePositions, setNodeHidden, setActiveView, updateGroup, dbmlViewIds, setPanels as changePanels } from "./presentation-commands.js";
+import { entityAtOffset, entityRange, type EntitySelection } from "./source-navigation.js";
+import { ActionIcon } from "./ActionIcon.js";
+import { SessionRecoveryPanel } from "./SessionRecoveryPanel.js";
+import { SchemaBuilder } from "./SchemaBuilder.js";
+import { modeLabel, modelDiagnostics, projectGraph } from "../../core/dist/project-model.js";
+import type { ModelDocument } from "./model-commands.js";
+
+const clamp = (width: number): number => Math.max(240, Math.min(600, width));
+type Panels = PresentationDocument["panels"];
+
+function PanelSeparator({ region, width, onChange }: { region: "editor" | "inspector"; width: number; onChange(width: number): void }) {
+  const drag = useRef<{ id: number; x: number; width: number } | null>(null);
+  const direction = region === "editor" ? 1 : -1;
+  return <div className="panel-separator" role="separator" tabIndex={0} aria-orientation="vertical"
+    aria-label={region === "editor" ? "Largeur de l’éditeur" : "Largeur des vues"}
+    aria-valuemin={240} aria-valuemax={600} aria-valuenow={width}
+    onKeyDown={(event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      onChange(clamp(width + (event.key === "ArrowRight" ? 10 : -10) * direction));
+    }}
+    onPointerDown={(event) => {
+      event.currentTarget.setPointerCapture(event.pointerId);
+      drag.current = { id: event.pointerId, x: event.clientX, width };
+    }}
+    onPointerMove={(event) => {
+      if (drag.current?.id !== event.pointerId) return;
+      onChange(clamp(drag.current.width + (event.clientX - drag.current.x) * direction));
+    }}
+    onPointerUp={(event) => { if (drag.current?.id === event.pointerId) { drag.current = null; event.currentTarget.releasePointerCapture(event.pointerId); } }}
+    onPointerCancel={() => { drag.current = null; }} />;
+}
+
+export function ProjectWorkbench({ result, bridge, onSessionChange, onSelectionChange }: {
+  result: unknown; bridge: WorkbenchBridge; onSessionChange?(session: DocumentSession): void; onSelectionChange?(ids: string[]): void;
+}) {
+  const snapshot = readDbcdProjectResult(result)!;
+  const session = useDocumentSession(result, bridge);
+  return <DbcdWorkbench session={session} bridge={bridge} projectPath={snapshot.projectPath} readOnly={snapshot.readOnly}
+    {...(onSessionChange ? { onSessionChange } : {})} {...(onSelectionChange ? { onSelectionChange } : {})} />;
+}
+
+export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, onSessionChange, onSelectionChange }: {
+  session: DocumentSession; bridge: WorkbenchBridge; projectPath: string; readOnly?: boolean;
+  onSessionChange?(session: DocumentSession): void; onSelectionChange?(ids: string[]): void;
+}) {
+  readOnly ||= !!session.recovery;
+  const root = useRef<HTMLElement>(null);
+  const [narrow, setNarrow] = useState(window.innerWidth < 900);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyTrigger = useRef<HTMLButtonElement>(null);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("inline");
+  const [displayPending, setDisplayPending] = useState(false);
+  const [displayMessage, setDisplayMessage] = useState("");
+  const [copyPending, setCopyPending] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [editorTab,setEditorTab]=useState<"dbml"|"builder">("dbml");
+  const [lookupRequest,setLookupRequest]=useState<{tableId:string;columnId?:string;targetTableId:string;nonce:number}|null>(null);
+  const graph=useMemo(()=>session.graph?projectGraph(session.graph,session.presentation.model):null,[session.graph,session.presentation.model]);
+  const semanticDiagnostics=useMemo(()=>session.graph?modelDiagnostics(session.graph,session.presentation.model):[],[session.graph,session.presentation.model]);
+  useEffect(() => { onSessionChange?.(session); }, [session, onSessionChange]);
+  useEffect(() => { onSelectionChange?.(selectedIds); }, [selectedIds, onSelectionChange]);
+  const [visibilityPreview, setVisibilityPreview] = useState<VisibilityPreview | null>(null);
+  const viewNavigation = useRef<ViewNavigation | null>(null);
+  const displayedPresentation = useMemo(() => session.graph ? previewVisibility(session.presentation, session.graph, visibilityPreview) : session.presentation,
+    [session.presentation, session.graph, visibilityPreview]);
+  const [query, setQuery] = useState("");
+  const [focusRequest, setFocusRequest] = useState<(EntitySelection & { nonce: number }) | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<EntitySelection | null>(null);
+  const [sourceRequest, setSourceRequest] = useState<{ from: number; to: number; nonce: number } | null>(null);
+  const [diagramHistory, setDiagramHistory] = useState<{ past: ModelDocument[]; future: ModelDocument[] }>({ past: [], future: [] });
+  const [historyBusy,setHistoryBusy]=useState(false);
+  const historyBusyRef=useRef(false);
+  const navigationPresentation=useRef(session.presentation);navigationPresentation.current=session.presentation;
+  const [reorganizeOpen, setReorganizeOpen] = useState(false);
+  const sourceOperation = useRef(false);
+  const [panels, setPanels] = useState(session.presentation.panels);
+  const savedPanels = JSON.stringify(session.presentation.panels);
+  const inspectorTrigger = useRef<HTMLButtonElement>(null);
+  const drawerClose = useRef<HTMLButtonElement>(null);
+  // Value-based reconciliation preserves transient read-only changes across ordinary
+  // session renders, but accepts restored panel values and a different document.
+  useEffect(() => { setPanels(JSON.parse(savedPanels) as Panels); }, [savedPanels, projectPath]);
+  const updatePanels = (change: Partial<Panels>): void => {
+    const next = { ...panels, ...change };
+    setPanels(next);
+    if (!readOnly) session.setPresentation(changePanels(session.presentation, next));
+  };
+  const changeDiagram = (next: PresentationDocument): void => {
+    if (readOnly) return;
+    if (sourceOperation.current) { sourceOperation.current = false; setDiagramHistory({ past: [], future: [] }); }
+    else if (JSON.stringify(next) !== JSON.stringify(session.presentation))
+      setDiagramHistory((history) => ({ past: [...history.past.slice(-99), {source:session.source,presentation:session.presentation}], future: [] }));
+    session.setPresentation(next);
+  };
+  const changeSchema=(doc:ModelDocument,g:import("@dbcodex/core").SchemaGraph):void=>{
+    if(readOnly||session.conflict)return;
+    setDiagramHistory(history=>({past:[...history.past.slice(-99),{source:session.source,presentation:session.presentation}],future:[]}));
+    if(session.applyDocument)session.applyDocument(doc.source,doc.presentation,g);
+    else {session.setSource(doc.source);session.setPresentation(doc.presentation);}
+  };
+  const travelDiagram = async (redo: boolean): Promise<void> => {
+    if (readOnly||session.saving||session.conflict||historyBusyRef.current) return;
+    const stack = redo ? diagramHistory.future : diagramHistory.past, target = stack.at(-1);
+    if (!target) return;
+    historyBusyRef.current=true;setHistoryBusy(true);
+    try {
+    const before=session.source;
+    const beforePresentation=session.presentation;
+    const presentation={...target.presentation,panels:session.presentation.panels};
+    if(target.source!==session.source){
+      const result=await bridge.callTool("validate_dbcd_draft",{path:projectPath,sourceText:target.source}) as {structuredContent?:{graph?:import("@dbcodex/core").SchemaGraph}};
+      if(navigationSource.current!==before||navigationPresentation.current!==beforePresentation||!result.structuredContent?.graph){setDisplayMessage("Impossible de rétablir cette modification. Le travail courant est conservé.");return;}
+      if(session.applyDocument)session.applyDocument(target.source,presentation,result.structuredContent.graph);
+      else {session.setSource(target.source);session.setPresentation(presentation);}
+    }else session.setPresentation(presentation);
+    setDiagramHistory(redo ? { past: [...diagramHistory.past,{source:session.source,presentation:session.presentation}], future: stack.slice(0, -1) }
+      : { past: stack.slice(0, -1), future: [...diagramHistory.future,{source:session.source,presentation:session.presentation}] });
+    }catch{setDisplayMessage("Annulation indisponible. Le travail courant est conservé.");}
+    finally{historyBusyRef.current=false;setHistoryBusy(false);}
+  };
+  const navigationSource = useRef(session.source); navigationSource.current = session.source;
+  const selectSource = async (selection: EntitySelection): Promise<void> => {
+    setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
+    if(editorTab==="builder"){if(panels.editorCollapsed)updatePanels({editorCollapsed:false});return;}
+    const source = session.source;
+    const result = await bridge.callTool("validate_dbcd_draft", { path: projectPath, sourceText: source }) as { structuredContent?: { graph?: import("@dbcodex/core").SchemaGraph } };
+    if (navigationSource.current !== source) return;
+    const range = result.structuredContent?.graph && entityRange(result.structuredContent.graph, selection);
+    if (range) {
+      if (panels.editorCollapsed) updatePanels({ editorCollapsed: false });
+      setSourceRequest((previous) => ({ from: range.start.offset, to: range.end.offset, nonce: (previous?.nonce ?? 0) + 1 }));
+    } else setDisplayMessage("Définition introuvable dans le texte courant. Le brouillon est conservé.");
+  };
+  const focusDiagram = (selection: EntitySelection): void => {
+    if (!readOnly) {
+      let next = session.presentation;
+      let viewId = next.activeViewId, current = next.views[viewId]!;
+      const relation = selection.kind === "relation" ? session.graph?.relations.find((item) => item.id === selection.id) : undefined;
+      const tableIds = relation ? [relation.source.tableId, relation.target.tableId] : [selection.tableId];
+      const definition = session.graph?.views?.find(view => dbmlViewIds(session.graph!).get(view.id) === viewId);
+      const outsideView = tableIds.some(id => definition ? !definition.tableIds.includes(id) : !current.nodes[id]);
+      if (!current.system && outsideView && visibilityPreview && viewNavigation.current) {
+        viewNavigation.current("all", tableIds, () => {
+          setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
+          setFocusRequest(previous => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
+        });
+        return;
+      }
+      if (!current.system && outsideView) { next = setActiveView(next, "all"); viewId = "all"; current = next.views.all!; }
+      for (const id of tableIds) if (current.nodes[id]?.hidden) next = setNodeHidden(next, viewId, id, false);
+      for (const [groupId, group] of Object.entries(current.groups)) if (group.collapsed && tableIds.some((id) => group.tableIds.includes(id))) next = updateGroup(next, viewId, groupId, { collapsed: false });
+      if (next !== session.presentation) changeDiagram(next);
+    }
+    setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
+    setFocusRequest((previous) => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
   };
   useEffect(() => { setDiagramHistory({ past: [], future: [] }); setReorganizeOpen(false); setEditorTab("dbml");setLookupRequest(null); setVisibilityPreview(null); }, [projectPath]);
   useEffect(() => { if (narrow && drawerOpen) drawerClose.current?.focus(); }, [narrow, drawerOpen]);
