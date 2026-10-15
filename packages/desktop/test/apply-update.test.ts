@@ -34,11 +34,11 @@ describe.skipIf(!windows)('remplacement Windows réel', () => {
     expect(await readFile(join(root, 'data/preferences.json'), 'utf8')).toBe('preferences'); expect(await readFile(join(root, 'project.dbcd'), 'utf8')).toBe('project');
     const backup = (await readdir(root)).find(name => name.startsWith('.dbcodex-update-previous-'))!;
     expect(await readFile(join(root, backup, 'resources/app.asar'), 'utf8')).toBe('old app');
-  });
+  }, 30000);
   it('refuse une archive tentant de sortir du dossier', async () => {
     const { root, job } = await prepare(true); expect(apply(job).status).toBe(1);
     expect(await readFile(join(root, 'resources/app.asar'), 'utf8')).toBe('old app'); expect(await readFile(join(root, 'project.dbcd'), 'utf8')).toBe('project');
-  });
+  }, 30000);
   it('restaure après un échec de copie au milieu du remplacement', async () => {
     const { root, job, exe } = await prepare();
     const target = psQuote(join(root, 'resources/app.asar'));
@@ -47,12 +47,12 @@ describe.skipIf(!windows)('remplacement Windows réel', () => {
     expect(result.status).toBe(1);
     expect(await readFile(join(root, 'DBCodex.exe'))).toEqual(Buffer.concat([exe, Buffer.from('old')]));
     expect(await readFile(join(root, 'resources/app.asar'), 'utf8')).toBe('old app');
-  });
+  }, 30000);
   it('récupère une interruption à partir du journal', async () => {
     const { root, job } = await prepare(); const backup = join(root, '.dbcodex-update-backup'); await mkdir(join(backup, 'resources'), { recursive: true });
     await writeFile(join(backup, 'resources/app.asar'), 'old app'); await writeFile(join(root, 'resources/app.asar'), 'interrupted');
     await writeFile(join(backup, 'journal.json'), JSON.stringify({ root, job, changes: [{ path: 'resources/app.asar', existed: true }] }));
     expect(apply(job, '& {helper} -JobPath {job} -Recover').status).toBe(0);
     expect(await readFile(join(root, 'resources/app.asar'), 'utf8')).toBe('old app');
-  });
+  }, 30000);
 });

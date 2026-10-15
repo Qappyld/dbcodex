@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, realpath, writeFile } from "node:fs/promises";
 import { join, parse, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { PathPolicyError, resolveWorkspaceDbml } from "../src/path-policy.js";
@@ -17,7 +17,7 @@ describe("resolveWorkspaceDbml", () => {
     await writeFile(join(root, "schemas", "main.dbml"), "Table users { id int [pk] }");
 
     await expect(resolveWorkspaceDbml(root, "schemas/main.dbml")).resolves.toEqual({
-      absolutePath: join(root, "schemas", "main.dbml"),
+      absolutePath: await realpath(join(root, "schemas", "main.dbml")),
       relativePath: "schemas/main.dbml",
     });
   });
