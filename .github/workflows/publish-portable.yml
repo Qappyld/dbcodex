@@ -32,11 +32,15 @@ jobs:
       - run: npm run build:desktop
       - run: npm run package:desktop
       - name: Signer la mise à jour
-        if: inputs.publish
         run: node scripts/sign-update.mjs
         env:
           UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
           UPDATE_RELEASE_NOTES: ${{ inputs.notes }}
+      - name: Vérifier le paquet public signé
+        shell: pwsh
+        env:
+          DBCODEX_RELEASE_OUT: release
+        run: node scripts/audit-portable-release.mjs
       - name: Publier les fichiers compilés dans le dépôt public
         if: inputs.publish
         shell: pwsh
@@ -44,9 +48,6 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           RELEASE_NOTES: ${{ inputs.notes }}
         run: |
-          $env:DBCODEX_RELEASE_OUT = 'release'
-          node scripts/audit-portable-release.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Audit du paquet public en échec.' }
           $config = Get-Content -LiteralPath release-config.json -Raw | ConvertFrom-Json
           $metadata = gh api "repos/$($config.repository)" | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0 -or $metadata.private) { throw 'Le dépôt de distribution doit être public et accessible.' }
