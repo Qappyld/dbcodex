@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "jsx": "react-jsx", "resolveJsonModule": true, "noEmit": true, "typeRoots": ["../ui/node_modules/@types", "../../node_modules/@types"] },
+  "include": ["src/main.ts", "src/preferences.ts", "src/project-lock.ts", "src/renderer/PortableApp.tsx", "../ui/src/styles.d.ts" ]
+}

@@ -114,6 +114,7 @@ export function parseDbml(source: string, sourcePath: string): ParseResult {
           id: tableId,
           schema: schema.name,
           name: table.name,
+          ...(tableTokens.get(table.id)?.headerColor ? { headerColor: tableTokens.get(table.id)!.headerColor } : {}),
           columns,
           sourceRange: range(tableTokens.get(table.id)?.token),
         };

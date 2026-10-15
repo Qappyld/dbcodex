@@ -171,6 +171,7 @@ export function useDocumentSession(openResult: unknown, bridge: Bridge): Documen
   async function flushDraft(): Promise<void> {
     if (savingRef.current) await new Promise<void>((resolve) => savingWaiters.current.add(resolve));
     if (draftTimer.current) { clearTimeout(draftTimer.current); draftTimer.current = null; }
+    if (conflictRef.current && stateRef.current.dirty) throw new Error("Résolvez le conflit ou enregistrez une copie avant de fermer.");
     if (!stateRef.current.dirty || initial.current.readOnly || pendingRef.current || conflictRef.current) {
       await draftQueue.current; return;
     }

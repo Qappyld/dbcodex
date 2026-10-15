@@ -2,6 +2,7 @@ import type { DbcdProjectSnapshot } from "@dbcodex/core";
 
 export type DisplayMode = "inline" | "fullscreen";
 export interface WorkbenchBridge {
+  saveCopy?(input: { sourceText: string; presentation: import("@dbcodex/core").PresentationDocument }): Promise<void>;
   readonly refreshProjects?: boolean;
   subscribeToTeardown?(listener: () => Promise<void>): () => void;
   callTool(name: string, input: Record<string, unknown>): Promise<unknown>;

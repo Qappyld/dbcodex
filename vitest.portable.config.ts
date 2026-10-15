@@ -1,0 +1,2 @@
+import { defineConfig } from "vitest/config";
+export default defineConfig({ test: { include: ["packages/core/test/**/*.test.ts", "packages/ui/test/**/*.test.{ts,tsx}", "packages/mcp/test/**/*.test.ts", "test/**/*.test.ts", "packages/desktop/test/portable-storage.test.ts", "packages/desktop/test/update-manifest.test.ts", "packages/desktop/test/updater.test.ts", "packages/desktop/test/apply-update.test.ts"], maxWorkers: 2 } });

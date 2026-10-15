@@ -7,6 +7,11 @@ import { DBCD_MAX_SOURCE_BYTES } from "../src/dbcd-resource-limits.js";
 const fixtureUrl = new URL("../../../fixtures/basic.dbml", import.meta.url);
 
 describe("parseDbml", () => {
+  it("preserves the table header color supplied by DBML", () => {
+    const parsed = parseDbml("Table Section [headercolor: #CA4242] {\n Id uuid [pk]\n}\n", "colors.dbml");
+    expect(parsed.diagnostics).toEqual([]);
+    expect(parsed.graph!.tables[0]!.headerColor).toBe("#CA4242");
+  });
   it("rejects oversized UTF-8 input before invoking the DBML parser", () => {
     expect(() => parseDbml("é".repeat(DBCD_MAX_SOURCE_BYTES / 2 + 1), "large.dbml")).toThrow(/size limit/);
   });

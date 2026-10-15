@@ -3,6 +3,9 @@
   "version": "0.1.0-dev.0",
   "private": true,
   "type": "module",
+  "main": "dist/main.js",
+  "scripts": { "build": "node ../../scripts/build-desktop.mjs", "typecheck": "tsc -p tsconfig.portable.json --noEmit" },
+  "devDependencies": { "@types/react": "19.3.0", "@types/react-dom": "19.3.0", "@testing-library/react": "16.3.3" },
   "dependencies": {
     "@dbcodex/core": "0.1.0-dev.0",
     "@dbcodex/ui": "0.1.0-dev.0",

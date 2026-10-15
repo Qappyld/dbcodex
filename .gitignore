@@ -3,3 +3,10 @@ dist/
 coverage/
 .dbcodex/
 *.tsbuildinfo
+build/
+release/
+data/
+.pnpm-store/
+*-tests.txt
+*-types.txt
+.update-signing/

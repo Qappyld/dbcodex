@@ -10,6 +10,9 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "build:desktop": "node scripts/build-desktop.mjs",
+    "package:desktop": "node scripts/package-desktop.mjs",
+    "typecheck:desktop": "tsc -p packages/desktop/tsconfig.portable.json --noEmit",
     "build": "npm run build --workspace @dbcodex/core && npm run build --workspace @dbcodex/ui && npm run build --workspace @dbcodex/mcp",
     "test": "vitest run",
     "typecheck": "tsc -b packages/core packages/ui packages/mcp",

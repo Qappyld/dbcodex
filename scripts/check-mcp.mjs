@@ -3,8 +3,10 @@ import { copyFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { createRequire } from "node:module";
+const requireMcp = createRequire(new URL("../packages/mcp/package.json", import.meta.url));
+const { Client } = requireMcp("@modelcontextprotocol/sdk/client/index.js");
+const { StdioClientTransport } = requireMcp("@modelcontextprotocol/sdk/client/stdio.js");
 
 const root = path.resolve(import.meta.dirname, "..");
 const serverEntry = process.argv[2]

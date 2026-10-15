@@ -114,6 +114,25 @@ export function dbmlTableReference(table: TableReference): string {
   const quote = (value: string): string => `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
   return `${quote(table.schema)}.${quote(table.name)}`;
 }
+/** Replace only the Tables section; preserve view notes, settings and outside source. */
+export function setDbmlViewTables(source: string, name: string, tables: TableReference[]): string {
+  const patch = previewDbmlBlock(source, "DiagramView", name, "");
+  if (patch.ambiguous || patch.from === source.length) throw new Error("Déclaration de vue introuvable ou ambiguë.");
+  const block = source.slice(patch.from, patch.to), all = tokens(block).tokens;
+  const open = all.findIndex(token => token.text === "{");
+  const close = closingToken(all, open);
+  const newline = source.includes("\r\n") ? "\r\n" : "\n";
+  const insert = `Tables {${newline}${tables.map(table => `    ${dbmlTableReference(table)}`).join(newline)}${newline}  }`;
+  let from = all[close]!.from, to = from;
+  let sections = 0;
+  for (let index = open + 1; index < close; index++) {
+    if (all[index]!.text.toLowerCase() === "tables" && all[index + 1]?.text === "{") {
+      sections++; from = all[index]!.from; const end = closingToken(all, index + 1); to = all[end]!.to; index = end;
+    } else if (all[index]!.text === "{") index = closingToken(all, index);
+  }
+  if (sections > 1) throw new Error("Plusieurs sections Tables : modification ambiguë.");
+  return applyDbmlPatch(source, { ...patch, insert: block.slice(0, from) + (sections ? insert : `  ${insert}${newline}`) + block.slice(to) });
+}
 export function previewDbmlBlock(source: string, kind: "TableGroup" | "DiagramView", name: string, block: string): DbmlPatch {
   const parsed = tokens(source), all = parsed.tokens; const ranges: Array<{ from: number; to: number }> = [];
   let depth = 0; let incomplete = parsed.incomplete;

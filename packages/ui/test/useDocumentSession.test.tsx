@@ -53,6 +53,20 @@ describe("useDocumentSession", () => {
     await act(async () => vi.advanceTimersByTimeAsync(4000));
     expect(bridge.callTool).not.toHaveBeenCalled();
   });
+  it("refuses orderly close while a conflicting local draft has not been recovered", async () => {
+    let teardown: () => Promise<void> = async () => {};
+    const bridge = { ...makeBridge(), subscribeToTeardown: (listener: typeof teardown) => { teardown = listener; return () => {}; } };
+    bridge.callTool.mockImplementation(async (name: string) => name === "save_dbcd"
+      ? { isError: true, content: [{ type: "text", text: "Conflict" }], structuredContent: { errorCode: "CONFLICT" } } as any
+      : name === "open_dbcd" ? { ...openResult, structuredContent: { ...openResult.structuredContent, generation: 4 } } as any
+      : { structuredContent: { graph: nextGraph, diagnostics: [], saved: true } } as any);
+    const { result } = renderHook(() => useDocumentSession(openResult, bridge));
+    act(() => result.current.setSource("Table local { id int }"));
+    await act(async () => result.current.save());
+    expect(result.current.conflict).toBeTruthy();
+    await expect(teardown()).rejects.toThrow("Résolvez le conflit");
+    expect(result.current.source).toBe("Table local { id int }");
+  });
   it("flushes a recent draft before orderly teardown, without creating a revision", async () => {
     let teardown: () => Promise<void> = async () => {};
     const bridge = { ...makeBridge(), subscribeToTeardown: (listener: typeof teardown) => { teardown = listener; return () => {}; } };

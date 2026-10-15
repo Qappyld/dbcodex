@@ -1,8 +1,9 @@
 import type { SchemaGraph, SourceRange } from "@dbcodex/core";
 
-export type EntitySelection = { kind: "table" | "column" | "relation"; id: string; tableId: string };
+export type EntitySelection = { kind: "table" | "column" | "relation" | "group"; id: string; tableId: string };
 export function sourceEntities(graph: SchemaGraph): Array<EntitySelection & { range: SourceRange }> {
   return [
+    ...(graph.tableGroups ?? []).flatMap(group => group.sourceRange ? [{ kind: "group" as const, id: group.id, tableId: group.tableIds[0] ?? "", range: group.sourceRange }] : []),
     ...graph.tables.flatMap((table) => [
       ...(table.sourceRange ? [{ kind: "table" as const, id: table.id, tableId: table.id, range: table.sourceRange }] : []),
       ...table.columns.flatMap((column) => column.sourceRange ? [{ kind: "column" as const, id: column.id, tableId: table.id, range: column.sourceRange }] : []),

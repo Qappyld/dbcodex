@@ -23,6 +23,7 @@ export interface GraphColumn {
 }
 
 export interface GraphTable {
+  headerColor?: string;
   sourceRange?: SourceRange | undefined;
   id: string;
   schema: string;

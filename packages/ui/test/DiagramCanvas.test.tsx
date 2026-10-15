@@ -11,6 +11,47 @@ beforeEach(setupFlowDom);
 afterEach(async () => { cleanup(); await act(() => new Promise((resolve) => setTimeout(resolve, 0))); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("DiagramCanvas", () => {
+  it("keeps minimap and routing controls in the floating toolbar", async () => {
+    const { container } = render(<DiagramCanvas graph={graph} presentation={presentation()} onPresentationChange={vi.fn()} />);
+    const tools = screen.getByRole("group", { name: "Outils du diagramme" });
+    const minimap = screen.getByRole("button", { name: "Afficher la mini-carte" });
+    expect(tools.contains(minimap)).toBe(true);
+    expect(minimap.textContent).toBe("");
+    expect(tools.contains(screen.getByRole("button", { name: "Routage automatique" }))).toBe(true);
+    fireEvent.click(minimap);
+    await waitFor(() => expect(container.querySelector(".react-flow__minimap")).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Masquer la mini-carte" }).getAttribute("aria-pressed")).toBe("true");
+  });
+  it("changes group color from the canvas without changing its note or membership", async () => {
+    const source = "Table users { id int }\nTableGroup people [color: #16a34a] {\n users\n Note: 'Preserve me'\n}\n// tail";
+    const value = presentation();
+    value.views.all!.groups.people = { name: "People", color: "#16a34a", tableIds: ["public.users"] };
+    const sourceChange = vi.fn(), change = vi.fn();
+    render(<DiagramCanvas graph={parseDbml(source, "groups.dbml").graph!} source={source} presentation={value} onPresentationChange={change} onSourceChange={sourceChange} />);
+    fireEvent.click(await screen.findByRole("group", { name: "Groupe People" }));
+    fireEvent.click(screen.getByRole("button", { name: "Couleur", exact: true }));
+    fireEvent.change(screen.getByLabelText("Couleur personnalisée"), { target: { value: "#123456" } });
+    expect(sourceChange).toHaveBeenCalledExactlyOnceWith(source.replace("#16a34a", "#123456"));
+    expect(change.mock.calls[0]![0].views.all.groups.people).toMatchObject({ color: "#123456", tableIds: ["public.users"] });
+  });
+  it("mounts field anchors only for endpoints used by relations",async()=>{
+    const {container}=render(<DiagramCanvas graph={graph} presentation={presentation()} onPresentationChange={vi.fn()}/>);
+    await screen.findByRole("group",{name:/Edge from public.users/});
+    expect(container.querySelectorAll('[data-nodeid="public.users"][data-handleid$=":team_id"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-nodeid="public.users"][data-handleid$=":name"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-nodeid="public.users"][data-handleid$=":id"]')).toHaveLength(0);
+  });
+  it("discards an asynchronous recalculation if the presentation changes meanwhile",async()=>{
+    const change=vi.fn(),value=presentation(),props={graph,presentation:value,onPresentationChange:change};
+    const {rerender}=render(<DiagramCanvas {...props}/>);
+    await screen.findByRole("group",{name:/Edge from public.users/});
+    let clock=0;vi.spyOn(performance,"now").mockImplementation(()=>clock+=10);
+    fireEvent.click(screen.getByRole("button",{name:"Routage automatique",exact:true}));
+    const next=structuredClone(value);next.views.all!.nodes["public.users"]!.x+=100;
+    rerender(<DiagramCanvas {...props} presentation={next}/>);
+    await waitFor(()=>expect(screen.getByRole("button",{name:"Routage automatique",exact:true})).toHaveProperty("disabled",false));
+    expect(change).not.toHaveBeenCalled();
+  });
   it("restores the live viewport when the current view is restored without remounting", async () => {
     const value = presentation(), change = vi.fn();
     const { container, rerender } = render(<DiagramCanvas graph={graph} presentation={value} onPresentationChange={change} />);
@@ -48,14 +89,14 @@ describe("DiagramCanvas", () => {
     const { container } = render(<Canvas />);
     fireEvent.keyDown(await screen.findByRole("group", { name: /Edge from public.users to public.users/ }), { key: "Enter" });
     const automatic = container.querySelector(".react-flow__edge-path")!.getAttribute("d");
-    for (const point of screen.getAllByRole("button", { name: /Point de routage/ })) {
+    for (const point of screen.getAllByRole("button", { name: /Déplacer le segment/ })) {
       const x = Number(point.getAttribute("cx")), y = Number(point.getAttribute("cy"));
       expect(x < 20 || x > 240 || y < 50 || y > 190).toBe(true);
     }
-    fireEvent.keyDown(screen.getByRole("button", { name: "Point de routage 1" }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("button", { name: "Déplacer le segment 1 horizontalement" }), { key: "ArrowRight" });
     expect(change.mock.calls.at(-1)?.[0].views.all.edges[parsed.graph!.relations[0]!.id].points.length).toBeGreaterThan(1);
     fireEvent.click(await screen.findByRole("button", { name: "Routage automatique" }));
-    expect(change.mock.calls.at(-1)?.[0].views.all.edges).toEqual({});
+    expect(change.mock.calls.at(-1)?.[0].views.all.edges[parsed.graph!.relations[0]!.id].mode).toBe("automatic");
     await waitFor(() => expect(container.querySelector(".react-flow__edge-path")?.getAttribute("d")).toBe(automatic));
   });
   it("persists viewport changes made by zoom controls", async () => {
@@ -70,8 +111,9 @@ describe("DiagramCanvas", () => {
     const change = vi.fn();
     render(<DiagramCanvas graph={graph} presentation={presentation()} onPresentationChange={change} />);
     fireEvent.keyDown(await screen.findByRole("group", { name: /Edge from public.users/ }), { key: "Enter" });
-    fireEvent.keyDown(screen.getByRole("button", { name: "Point de routage 1" }), { key: "ArrowRight" });
-    expect(change.mock.calls.at(-1)?.[0].views.all.edges["ref:1"].points).toHaveLength(1);
+    const control=screen.getAllByRole("button", { name: /Déplacer le segment/ })[0]!;
+    fireEvent.keyDown(control, { key: control.getAttribute("aria-label")!.endsWith("horizontalement") ? "ArrowRight" : "ArrowDown" });
+    expect(change.mock.calls.at(-1)?.[0].views.all.edges["ref:1"]).toMatchObject({mode:"manual",format:"orthogonal"});
   });
   it("automatically opens the minimap above 25 tables", () => {
     const large = { ...graph, tables: Array.from({ length: 26 }, (_, index) => ({ ...graph.tables[0]!, id: `public.table_${index}` })), relations: [] };
@@ -185,7 +227,7 @@ describe("DiagramCanvas", () => {
     expect(screen.getByText("+1 champs masqués")).toBeTruthy();
     expect(screen.getByRole("button", { name: /fit view/i })).toBeTruthy();
     await screen.findByRole("group", { name: "Table public.users" });
-    expect(container.querySelectorAll(".react-flow__edge-path")).toHaveLength(1);
+    await waitFor(()=>expect(container.querySelectorAll(".react-flow__edge-path")).toHaveLength(1));
     expect(container.querySelectorAll(".react-flow__handle.connectable")).toHaveLength(0);
   });
 

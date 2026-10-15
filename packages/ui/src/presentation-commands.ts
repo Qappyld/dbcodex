@@ -62,7 +62,7 @@ export function createView(document: PresentationDocument, input: { id: string; 
     const origin = view(draft, draft.activeViewId);
     draft.views[input.id] = { name: input.name, system: false, defaultDetail: origin.defaultDetail,
       nodes: Object.fromEntries([...new Set(input.tableIds)].map((id, index) => [id, origin.nodes[id] ?? defaultPosition(index)])),
-      groups: {}, edges: {}, viewport: { x: 0, y: 0, zoom: 1 } };
+      groups: structuredClone(origin.groups), edges: {}, viewport: { x: 0, y: 0, zoom: 1 } };
     draft.activeViewId = input.id;
   });
 }
@@ -108,15 +108,15 @@ export function groupTables(document: PresentationDocument, viewId: string, grou
 export function updateGroup(document: PresentationDocument, viewId: string, groupId: string, patch: Partial<Group>): PresentationDocument {
   return command(document, (draft) => { const current = view(draft, viewId); if (!Object.hasOwn(current.groups, groupId)) throw new Error("Groupe introuvable."); current.groups[groupId] = { ...current.groups[groupId]!, ...patch }; });
 }
-export function setRelationRoute(document: PresentationDocument, viewId: string, relationId: string, points: Point[]): PresentationDocument {
-  return command(document, (draft) => { view(draft, viewId).edges[relationId] = { points }; });
+export function setRelationRoute(document: PresentationDocument, viewId: string, relationId: string, points: Point[], metadata: Omit<View["edges"][string], "points"> = {}): PresentationDocument {
+  return command(document, (draft) => { view(draft, viewId).edges[relationId] = { points, ...metadata }; });
 }
 export function resetRelationRoute(document: PresentationDocument, viewId: string, relationId: string): PresentationDocument {
   return command(document, (draft) => { delete view(draft, viewId).edges[relationId]; });
 }
 export function searchTables(graph: SchemaGraph, current: View, query: string): string[] {
   const term = query.trim().toLocaleLowerCase();
-  return graph.tables.filter((table) => (current.system || Object.hasOwn(current.nodes, table.id)) &&
+  return graph.tables.filter((table) =>
     [table.id, table.schema, ...table.columns.map((column) => column.name), ...Object.values(current.groups).filter((group) => group.tableIds.includes(table.id)).map((group) => group.name)]
       .some((value) => value?.toLocaleLowerCase().includes(term))).map((table) => table.id);
 }

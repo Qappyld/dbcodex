@@ -8,6 +8,7 @@ const positionSchema = z.strictObject({
   y: z.number().finite(),
 });
 const nodeSchema = positionSchema.extend({
+  color: z.string().regex(/^#[a-fA-F0-9]{6}$/).optional(),
   detail: detailLevelSchema.optional(),
   hidden: z.boolean().optional(),
 });
@@ -19,6 +20,10 @@ const groupSchema = z.strictObject({
 });
 const edgeSchema = z.strictObject({
   points: z.array(positionSchema),
+  format: z.literal("orthogonal").optional(),
+  mode: z.enum(["manual", "automatic"]).optional(),
+  sourceSide: z.enum(["left", "right"]).optional(),
+  targetSide: z.enum(["left", "right"]).optional(),
 });
 const viewSchema = z.strictObject({
   name: nonEmpty,
@@ -28,6 +33,7 @@ const viewSchema = z.strictObject({
   groups: z.record(nonEmpty, groupSchema),
   edges: z.record(nonEmpty, edgeSchema),
   viewport: positionSchema.extend({ zoom: z.number().finite().min(0.1).max(4) }),
+  notes: z.record(nonEmpty, positionSchema.extend({ text: z.string(), width: z.number().positive().optional() })).optional(),
 });
 
 export const presentationSchema = z.strictObject({

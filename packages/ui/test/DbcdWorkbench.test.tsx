@@ -37,12 +37,12 @@ describe("DbcdWorkbench", () => {
     const { rerender } = render(<DbcdWorkbench session={session} bridge={host} projectPath="read-only.dbcd" readOnly />);
     fireEvent.click(screen.getByRole("button", { name: "Afficher l’éditeur" }));
     expect(screen.getByRole("textbox", { name: "DBML source" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Afficher l’inspecteur" }));
+    fireEvent.click(screen.getByRole("button", { name: "Afficher les vues" }));
     fireEvent.keyDown(screen.getByRole("separator", { name: "Largeur de l’éditeur" }), { key: "ArrowRight" });
-    fireEvent.keyDown(screen.getByRole("separator", { name: "Largeur de l’inspecteur" }), { key: "ArrowLeft" });
+    fireEvent.keyDown(screen.getByRole("separator", { name: "Largeur des vues" }), { key: "ArrowLeft" });
     expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("330px");
-    expect(screen.getByRole("region", { name: "Inspecteur" }).style.width).toBe("290px");
-    const divider = screen.getByRole("separator", { name: "Largeur de l’inspecteur" });
+    expect(screen.getByRole("region", { name: "Vues" }).style.width).toBe("290px");
+    const divider = screen.getByRole("separator", { name: "Largeur des vues" });
     const capture = vi.fn();
     Object.defineProperty(divider, "setPointerCapture", { value: capture });
     Object.defineProperty(divider, "releasePointerCapture", { value: vi.fn() });
@@ -50,12 +50,12 @@ describe("DbcdWorkbench", () => {
     fireEvent.pointerMove(divider, { pointerId: 2, clientX: 450 });
     fireEvent.pointerUp(divider, { pointerId: 2 });
     expect(capture).toHaveBeenCalledWith(2);
-    expect(screen.getByRole("region", { name: "Inspecteur" }).style.width).toBe("340px");
+    expect(screen.getByRole("region", { name: "Vues" }).style.width).toBe("340px");
     rerender(<DbcdWorkbench session={{ ...session, presentation: structuredClone(initial) }} bridge={host} projectPath="read-only.dbcd" readOnly />);
     expect(screen.getByRole("region", { name: "Éditeur DBML" }).style.width).toBe("330px");
-    expect(screen.getByRole("region", { name: "Inspecteur" }).style.width).toBe("340px");
-    fireEvent.click(screen.getByRole("button", { name: "Masquer l’inspecteur" }));
-    expect(screen.queryByRole("region", { name: "Inspecteur" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Vues" }).style.width).toBe("340px");
+    fireEvent.click(screen.getByRole("button", { name: "Masquer les vues" }));
+    expect(screen.queryByRole("region", { name: "Vues" })).toBeNull();
     expect(session.setPresentation).not.toHaveBeenCalled();
     expect(session.save).not.toHaveBeenCalled();
     expect(host.callTool).not.toHaveBeenCalled();
@@ -83,13 +83,13 @@ describe("DbcdWorkbench", () => {
   it("focuses the narrow inspector and returns focus to its trigger on Escape", () => {
     window.innerWidth = 800;
     render(<ProjectWorkbench result={openResult()} bridge={bridge()} />);
-    const trigger = screen.getByRole("button", { name: "Afficher l’inspecteur" });
+    const trigger = screen.getByRole("button", { name: "Afficher les vues" });
     trigger.focus();
     fireEvent.click(trigger);
-    const drawer = screen.getByRole("dialog", { name: "Inspecteur" });
+    const drawer = screen.getByRole("dialog", { name: "Vues" });
     expect(drawer.contains(document.activeElement)).toBe(true);
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Inspecteur" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Vues" })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -163,11 +163,11 @@ describe("DbcdWorkbench", () => {
   it("uses an inspector drawer below 900 pixels", () => {
     window.innerWidth = 800;
     render(<ProjectWorkbench result={openResult()} bridge={bridge()} />);
-    expect(screen.queryByRole("dialog", { name: "Inspecteur" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Afficher l’inspecteur" }));
-    expect(screen.getByRole("dialog", { name: "Inspecteur" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Fermer l’inspecteur" }));
-    expect(screen.queryByRole("dialog", { name: "Inspecteur" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Vues" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Afficher les vues" }));
+    expect(screen.getByRole("dialog", { name: "Vues" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Fermer les vues" }));
+    expect(screen.queryByRole("dialog", { name: "Vues" })).toBeNull();
   });
 
   it("preserves source, selection, positions, and the mounted editor across fullscreen and refusal", async () => {
@@ -184,7 +184,7 @@ describe("DbcdWorkbench", () => {
     expect(container.querySelector(".cm-editor")).toBe(cm);
     expect(view.state.doc.toString()).toBe("Table changed {}");
     expect(container.querySelector('[data-id="public.users"]')?.getAttribute("style")).toContain("translate(30px,50px)");
-    expect(screen.getByRole("region", { name: "Inspecteur" }).textContent).toContain("public.users");
+    expect(screen.getByRole("button", { name: "Centrer public.users" })).toHaveProperty("ariaPressed", "true");
     host.requestDisplayMode.mockRejectedValue(new Error("Declined"));
     fireEvent.click(screen.getByRole("button", { name: "Quitter le plein écran" }));
     await waitFor(() => expect(screen.getByText(/mode d’affichage.*indisponible/i)).toBeTruthy());

@@ -199,6 +199,30 @@ button {
 .workbench[data-narrow="true"] .editor-panel { min-width: 0; max-width: calc(100% - 140px); }
 
 .view-inspector { display: grid; gap: 12px; font-size: 12px; }
+.inspector-panel[hidden] { display: none; }
+.view-manager { display: grid; gap: 12px; }
+.tree-grouping { display: flex; align-items: center; gap: 8px; }
+.tree-grouping > label { flex: 1; min-width: 0; }
+.view-empty-state { position: absolute; inset: 20% 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--dbc-muted); pointer-events: none; }
+.view-picker { display: flex; position: relative; border: 1px solid var(--dbc-accent); border-radius: 5px; }
+.view-picker > button { border: 0; background: transparent; color: var(--dbc-accent); }
+.view-picker > button:first-child { display: flex; justify-content: space-between; gap: 8px; flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.view-popover { position: absolute; top: calc(100% + 4px); right: 0; min-width: 160px; z-index: 15; border: 1px solid var(--dbc-border); border-radius: 5px; padding: 4px; background: var(--dbc-surface); box-shadow: 0 4px 16px #00000020; }
+.view-popover > button { display: block; width: 100%; border: 0; text-align: left; }
+.view-list { left: 0; max-height: 320px; overflow: auto; }
+.view-list-row { display: flex; align-items: center; gap: 2px; }
+.view-list-row > button { border: 0; flex-shrink: 0; min-width: 28px; }
+.view-list-choice { display: flex; gap: 8px; flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.view-list-choice > span { min-width: 12px; }
+.view-list-choice[aria-current="true"] { color: var(--dbc-accent); }
+.view-popover .view-new { border-top: 1px solid var(--dbc-border); margin-top: 4px; }
+.view-save-actions { display: flex; justify-content: flex-end; align-items: center; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--dbc-border); }
+.view-save-menu { position: relative; }
+.workbench .view-save { background: var(--dbc-accent); color: var(--dbc-surface); }
+.view-dialog-backdrop { position: fixed; inset: 0; z-index: 100; background: #0008; display: grid; place-items: center; padding: 16px; }
+.view-dialog { width: min(460px, 100%); box-sizing: border-box; padding: 24px; border: 1px solid var(--dbc-border); border-radius: 8px; background: var(--dbc-surface); box-shadow: 0 8px 32px #0004; }
+.view-dialog .inspector-actions { justify-content: flex-end; }
+.workbench .view-delete { background: #b42332; color: white; }
 .view-inspector label { display: grid; gap: 5px; }
 .view-inspector input:not([type="checkbox"]), .view-inspector select { min-width: 0; max-width: 100%; width: 100%; min-height: 30px; color: var(--dbc-text); background: var(--dbc-surface); border: 1px solid var(--dbc-border); border-radius: 4px; }
 .inspector-actions { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -213,14 +237,52 @@ button {
 .flow-group button { margin: 5px; }
 .react-flow__node-tableGroup { height: 100%; }
 .relation-cardinality { fill: var(--dbc-text); font-size: 12px; paint-order: stroke; stroke: var(--dbc-bg); stroke-width: 4px; pointer-events: none; }
-.relation-direction-dot { fill: var(--dbc-accent); offset-path: none; animation: relation-travel 2s linear infinite; animation-play-state: paused; pointer-events: none; }
-.directed-relation:hover .relation-direction-dot, .directed-relation.is-selected .relation-direction-dot { animation-play-state: running; }
-.relation-static-arrow { display: none; pointer-events: none; }
+.relation-direction-dot { fill: var(--dbc-accent); stroke: var(--dbc-surface); stroke-width: 1.5px; pointer-events: none; }
+.relation-static-arrow { pointer-events: none; stroke-width: 1.5px; }
+.directed-relation.is-selected .react-flow__edge-path, .directed-relation:hover .react-flow__edge-path { stroke: var(--dbc-accent); stroke-width: 2px; }
 .relation-control { fill: var(--dbc-surface); stroke: var(--dbc-accent); stroke-width: 2px; cursor: move; }
 .relation-control:focus-visible { outline: none; stroke-width: 4px; }
-@keyframes relation-travel { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+.flow-table { overflow: visible; position: relative; }
+.flow-table footer.hidden-field-anchors { position: absolute; top: 23px; left: 0; right: 0; height: 0; padding: 0; border: 0; }
+.flow-table header { border-radius: 5px 5px 0 0; min-height: 46px; box-sizing: border-box; }
+.flow-table li, .flow-table footer { position: relative; }
+.flow-table .react-flow__handle { opacity: 0; width: 2px; height: 2px; min-width: 0; min-height: 0; border: 0; pointer-events: none; }
+.flow-table .is-related-field { background: color-mix(in srgb, var(--dbc-accent) 14%, var(--dbc-surface)); box-shadow: inset 3px 0 var(--dbc-accent); }
+.directed-relation { opacity: .75; transition: opacity 100ms; }
+.directed-relation.is-emphasized, .directed-relation.is-selected, .directed-relation:hover { opacity: 1; }
+.directed-relation.is-dimmed { opacity: .22; }
+.directed-relation.overview .relation-cardinality { display: none; }
+.directed-relation .react-flow__edge-path, .relation-static-arrow { vector-effect: non-scaling-stroke; }
+.relation-control { fill: transparent; stroke: transparent; stroke-width: 0; pointer-events: all; touch-action: none; }
+.relation-handle-visible { fill: var(--dbc-surface); stroke: var(--dbc-accent); stroke-width: 1.5px; pointer-events: none; }
+.route-handle.insertion .relation-handle-visible { fill: var(--dbc-accent); stroke: none; }
+.route-handle:has(.relation-control:focus-visible) .relation-handle-visible { stroke-width: 3px; }
+.relation-end-control { fill: var(--dbc-surface); stroke: var(--dbc-accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: ew-resize; }
+.relation-alignment-guide { stroke: var(--dbc-accent); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; pointer-events: none; opacity: .65; }
+.relation-route-tools { display: flex; align-items: center; border-left: 1px solid var(--dbc-border); padding-left: 4px; }
+.relation-route-tools button, .relation-route-tools summary { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; min-height: 30px; border: 0; background: transparent; color: var(--dbc-text); font-size: 12px; cursor: pointer; }
+.relation-route-tools details { position: relative; }
+.relation-route-tools summary { list-style: none; }
+.relation-route-tools summary::-webkit-details-marker { display: none; }
+.floating-tools .relation-route-tools details[open] > button { position: absolute; left: 50%; bottom: calc(100% + 16px); transform: translateX(-50%); width: 250px; max-width: min(250px, 70vw); text-align: left; padding: 10px 12px; border: 1px solid var(--dbc-border); border-radius: 6px; background: var(--dbc-surface); box-shadow: 0 4px 12px #00000020; z-index: 5; }
+.relation-route-tools summary:hover, .relation-route-tools details[open] summary { color: var(--dbc-accent); background: color-mix(in srgb, var(--dbc-accent) 12%, var(--dbc-surface)); border-radius: 4px; }
+.view-picker > button:first-child > .action-icon { align-self: center; }
+.view-save-menu > button { display: flex; align-items: center; justify-content: center; width: 32px; padding-inline: 6px; }
+.floating-tools .icon-tool { justify-content: center; width: 32px; flex-shrink: 0; }
+.floating-tools .group-create-popover { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: min(320px, calc(100vw - 48px)); padding: 16px; display: flex; flex-direction: column; gap: 14px; background: var(--dbc-surface); border: 1px solid var(--dbc-border); border-radius: 10px; box-shadow: 0 8px 28px #0002; text-align: left; z-index: 6; }
+.group-create-popover header { display: flex; flex-direction: column; gap: 4px; }
+.group-create-popover header strong { font-size: 14px; }
+.group-create-popover header span { color: var(--dbc-muted); font-size: 12px; }
+.group-create-popover label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.floating-tools .group-create-popover input:not([type=color]) { width: 100%; max-width: none; min-width: 0; padding: 8px 10px; }
+.group-create-popover label.group-create-color { flex-direction: row; align-items: center; justify-content: space-between; }
+.floating-tools .group-create-popover input[type=color] { width: 36px; height: 28px; padding: 2px; cursor: pointer; }
+.group-create-popover footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 2px; }
+.floating-tools .group-create-popover footer button { width: auto; max-width: none; min-height: 32px; padding: 6px 12px; white-space: nowrap; }
+.floating-tools .group-create-popover .group-create-submit:not(:disabled) { background: var(--dbc-accent); color: var(--dbc-surface); border-color: var(--dbc-accent); }
+.group-create-popover p[role=alert] { margin: 0; overflow-wrap: anywhere; color: var(--dbc-text); }
 @media (prefers-reduced-motion: reduce) {
-  .relation-direction-dot { animation: none; display: none; }
+  .relation-direction-dot { animation: none; }
   .relation-static-arrow { display: block; }
 }
 :root .project-launcher { padding: 24px; max-width: 640px; }

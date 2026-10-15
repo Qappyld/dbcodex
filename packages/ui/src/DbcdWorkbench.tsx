@@ -4,10 +4,13 @@ import { readDbcdProjectResult, type DisplayMode, type WorkbenchBridge } from ".
 import { useDocumentSession, type DocumentSession } from "./useDocumentSession.js";
 import { DbmlEditor } from "./DbmlEditor.js";
 import { DiagramCanvas } from "./DiagramCanvas.js";
+import { previewVisibility, withoutVisibilityPreview, type VisibilityPreview } from "./view-visibility.js";
 import { ViewInspector } from "./ViewInspector.js";
+import type { ViewNavigation } from "./ViewManager.js";
 import { HistoryPanel } from "./HistoryPanel.js";
-import { defaultPosition, setNodePosition, setNodeHidden, setActiveView, updateGroup, setPanels as changePanels } from "./presentation-commands.js";
+import { defaultPosition, setNodePosition, setNodeHidden, setActiveView, updateGroup, dbmlViewIds, setPanels as changePanels } from "./presentation-commands.js";
 import { entityAtOffset, entityRange, type EntitySelection } from "./source-navigation.js";
+import { ActionIcon } from "./ActionIcon.js";
 import { SessionRecoveryPanel } from "./SessionRecoveryPanel.js";
 
 const clamp = (width: number): number => Math.max(240, Math.min(600, width));
@@ -17,7 +20,7 @@ function PanelSeparator({ region, width, onChange }: { region: "editor" | "inspe
   const drag = useRef<{ id: number; x: number; width: number } | null>(null);
   const direction = region === "editor" ? 1 : -1;
   return <div className="panel-separator" role="separator" tabIndex={0} aria-orientation="vertical"
-    aria-label={region === "editor" ? "Largeur de l’éditeur" : "Largeur de l’inspecteur"}
+    aria-label={region === "editor" ? "Largeur de l’éditeur" : "Largeur des vues"}
     aria-valuemin={240} aria-valuemax={600} aria-valuenow={width}
     onKeyDown={(event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -42,7 +45,7 @@ export function ProjectWorkbench({ result, bridge, onSessionChange, onSelectionC
   const snapshot = readDbcdProjectResult(result)!;
   const session = useDocumentSession(result, bridge);
   return <DbcdWorkbench session={session} bridge={bridge} projectPath={snapshot.projectPath} readOnly={snapshot.readOnly}
-    onSessionChange={onSessionChange} onSelectionChange={onSelectionChange} />;
+    {...(onSessionChange ? { onSessionChange } : {})} {...(onSelectionChange ? { onSelectionChange } : {})} />;
 }
 
 export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, onSessionChange, onSelectionChange }: {
@@ -58,10 +61,14 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
   const [displayMode, setDisplayMode] = useState<DisplayMode>("inline");
   const [displayPending, setDisplayPending] = useState(false);
   const [displayMessage, setDisplayMessage] = useState("");
+  const [copyPending, setCopyPending] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   useEffect(() => { onSessionChange?.(session); }, [session, onSessionChange]);
   useEffect(() => { onSelectionChange?.(selectedIds); }, [selectedIds, onSelectionChange]);
+  const [visibilityPreview, setVisibilityPreview] = useState<VisibilityPreview | null>(null);
+  const viewNavigation = useRef<ViewNavigation | null>(null);
+  const displayedPresentation = session.graph ? previewVisibility(session.presentation, session.graph, visibilityPreview) : session.presentation;
   const [query, setQuery] = useState("");
   const [focusRequest, setFocusRequest] = useState<(EntitySelection & { nonce: number }) | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<EntitySelection | null>(null);
@@ -96,13 +103,17 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
       : { past: stack.slice(0, -1), future: [...diagramHistory.future, session.presentation] });
     session.setPresentation({ ...target, panels: session.presentation.panels });
   };
-  const selectSource = (selection: EntitySelection): void => {
+  const navigationSource = useRef(session.source); navigationSource.current = session.source;
+  const selectSource = async (selection: EntitySelection): Promise<void> => {
     setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
-    const range = session.graph && entityRange(session.graph, selection);
+    const source = session.source;
+    const result = await bridge.callTool("validate_dbcd_draft", { path: projectPath, sourceText: source }) as { structuredContent?: { graph?: import("@dbcodex/core").SchemaGraph } };
+    if (navigationSource.current !== source) return;
+    const range = result.structuredContent?.graph && entityRange(result.structuredContent.graph, selection);
     if (range) {
       if (panels.editorCollapsed) updatePanels({ editorCollapsed: false });
       setSourceRequest((previous) => ({ from: range.start.offset, to: range.end.offset, nonce: (previous?.nonce ?? 0) + 1 }));
-    }
+    } else setDisplayMessage("Définition introuvable dans le texte courant. Le brouillon est conservé.");
   };
   const focusDiagram = (selection: EntitySelection): void => {
     if (!readOnly) {
@@ -110,7 +121,16 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
       let viewId = next.activeViewId, current = next.views[viewId]!;
       const relation = selection.kind === "relation" ? session.graph?.relations.find((item) => item.id === selection.id) : undefined;
       const tableIds = relation ? [relation.source.tableId, relation.target.tableId] : [selection.tableId];
-      if (!current.system && tableIds.some((id) => !current.nodes[id])) { next = setActiveView(next, "all"); viewId = "all"; current = next.views.all!; }
+      const definition = session.graph?.views?.find(view => dbmlViewIds(session.graph!).get(view.id) === viewId);
+      const outsideView = tableIds.some(id => definition ? !definition.tableIds.includes(id) : !current.nodes[id]);
+      if (!current.system && outsideView && visibilityPreview && viewNavigation.current) {
+        viewNavigation.current("all", tableIds, () => {
+          setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
+          setFocusRequest(previous => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
+        });
+        return;
+      }
+      if (!current.system && outsideView) { next = setActiveView(next, "all"); viewId = "all"; current = next.views.all!; }
       for (const id of tableIds) if (current.nodes[id]?.hidden) next = setNodeHidden(next, viewId, id, false);
       for (const [groupId, group] of Object.entries(current.groups)) if (group.collapsed && tableIds.some((id) => group.tableIds.includes(id))) next = updateGroup(next, viewId, groupId, { collapsed: false });
       if (next !== session.presentation) changeDiagram(next);
@@ -118,7 +138,7 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
     setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
     setFocusRequest((previous) => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
   };
-  useEffect(() => { setDiagramHistory({ past: [], future: [] }); setReorganizeOpen(false); }, [projectPath]);
+  useEffect(() => { setDiagramHistory({ past: [], future: [] }); setReorganizeOpen(false);  setVisibilityPreview(null); }, [projectPath]);
   useEffect(() => { if (narrow && drawerOpen) drawerClose.current?.focus(); }, [narrow, drawerOpen]);
   const closeDrawer = (): void => {
     setDrawerOpen(false);
@@ -155,16 +175,17 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
       <strong title={projectPath}>{projectPath}</strong>
       <span role="status">{readOnly ? "Lecture seule" : session.saving ? "Enregistrement…" : session.dirty ? "Modifications non enregistrées" : "Enregistré"}</span>
       <span>{session.validating ? "Validation…" : invalid ? "DBML invalide" : "DBML valide"}</span>
-      <button type="button" disabled={readOnly || !!session.conflict || !session.dirty || session.saving || session.validating || invalid} onClick={() => void session.save()}>Enregistrer</button>
-      <button type="button" disabled={readOnly || !diagramHistory.past.length} onClick={() => travelDiagram(false)}>Annuler le diagramme</button>
-      <button type="button" disabled={readOnly || !diagramHistory.future.length} onClick={() => travelDiagram(true)}>Rétablir le diagramme</button>
-      <button type="button" disabled={readOnly || !session.graph} onClick={() => setReorganizeOpen(true)}>Réorganiser</button>
-      <button ref={historyTrigger} type="button" aria-expanded={historyOpen} onClick={() => setHistoryOpen(!historyOpen)}>Historique</button>
+      <button type="button" disabled={readOnly || !!session.conflict || !session.dirty || session.saving || session.validating || invalid} onClick={() => void session.save()} title="Enregistrer" aria-label="Enregistrer"><ActionIcon name="save" /><span className="action-label">Enregistrer</span></button>
+      {bridge.saveCopy && <button disabled={copyPending || session.validating || invalid} onClick={() => { setCopyPending(true); void bridge.saveCopy!({ sourceText: session.source, presentation: session.presentation }).catch(error => setDisplayMessage(error instanceof Error ? error.message : "Copie impossible.")).finally(() => setCopyPending(false)); }} title="Enregistrer une copie" aria-label="Enregistrer une copie"><ActionIcon name="copy" /><span className="action-label">Enregistrer une copie</span></button>}
+      <button type="button" disabled={readOnly || !diagramHistory.past.length} onClick={() => travelDiagram(false)} title="Annuler le diagramme" aria-label="Annuler le diagramme"><ActionIcon name="undo" /><span className="action-label">Annuler le diagramme</span></button>
+      <button type="button" disabled={readOnly || !diagramHistory.future.length} onClick={() => travelDiagram(true)} title="Rétablir le diagramme" aria-label="Rétablir le diagramme"><ActionIcon name="redo" /><span className="action-label">Rétablir le diagramme</span></button>
+      <button type="button" disabled={readOnly || !session.graph} onClick={() => setReorganizeOpen(true)} title="Réorganiser" aria-label="Réorganiser"><ActionIcon name="layout" /><span className="action-label">Réorganiser</span></button>
+      <button ref={historyTrigger} type="button" aria-expanded={historyOpen} onClick={() => setHistoryOpen(!historyOpen)} title="Historique" aria-label="Historique"><ActionIcon name="history" /><span className="action-label">Historique</span></button>
       <button ref={inspectorTrigger} type="button" aria-expanded={inspectorVisible}
-        onClick={() => narrow ? setDrawerOpen(true) : updatePanels({ inspectorCollapsed: !panels.inspectorCollapsed })}>
-        {narrow || panels.inspectorCollapsed ? "Afficher l’inspecteur" : "Masquer l’inspecteur"}
+        title={inspectorVisible ? "Masquer les vues" : "Afficher les vues"} aria-label={inspectorVisible ? "Masquer les vues" : "Afficher les vues"} onClick={() => narrow ? setDrawerOpen(true) : updatePanels({ inspectorCollapsed: !panels.inspectorCollapsed })}>
+        <ActionIcon name="views" /><span className="action-label">{narrow || panels.inspectorCollapsed ? "Afficher les vues" : "Masquer les vues"}</span>
       </button>
-      <button type="button" disabled={displayPending} onClick={() => void toggleDisplay()}>{displayMode === "inline" ? "Plein écran" : "Quitter le plein écran"}</button>
+      <button type="button" disabled={displayPending} title={displayMode === "inline" ? "Plein écran" : "Quitter le plein écran"} aria-label={displayMode === "inline" ? "Plein écran" : "Quitter le plein écran"} onClick={() => void toggleDisplay()}><ActionIcon name="fullscreen" /><span className="action-label">{displayMode === "inline" ? "Plein écran" : "Quitter le plein écran"}</span></button>
     </header>
     <SessionRecoveryPanel session={session} />
     {reorganizeOpen && <section role="dialog" aria-label="Réorganisation du diagramme"><p>Remplacer les positions et routages de la vue courante ? Cette action peut être annulée.</p>
@@ -194,20 +215,28 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
         </div>
       </section>
       {!panels.editorCollapsed && <PanelSeparator region="editor" width={clamp(panels.editor)} onChange={(editor) => updatePanels({ editor })} />}
-      {session.graph ? <DiagramCanvas graph={session.graph} presentation={session.presentation} onPresentationChange={changeDiagram} onSelectionChange={setSelectedId}
-        onEntitySelect={selectSource} selectedEntity={selectedEntity}
+      {session.graph ? <DiagramCanvas graph={session.graph} presentation={displayedPresentation} onPresentationChange={next => changeDiagram(withoutVisibilityPreview(next, session.presentation, visibilityPreview))} onSelectionChange={setSelectedId}
+        onEntitySelect={(selection) => void selectSource(selection)} selectedEntity={selectedEntity}
+        source={session.source} onSourceChange={session.setSource} onQueryChange={setQuery} onReorganize={() => setReorganizeOpen(true)}
         onSelectedTablesChange={setSelectedIds} query={query} focusRequest={focusRequest} readOnly={readOnly} />
         : <div className="flow-canvas empty-canvas">Corrigez le DBML pour afficher le diagramme.</div>}
-      {inspectorVisible && <>
-        {!narrow && <PanelSeparator region="inspector" width={clamp(panels.inspector)} onChange={(inspector) => updatePanels({ inspector })} />}
-        <aside role={narrow ? "dialog" : "region"} aria-label="Inspecteur" className={`inspector-panel${narrow ? " inspector-drawer" : ""}`}
+      {<>
+        {inspectorVisible && !narrow && <PanelSeparator region="inspector" width={clamp(panels.inspector)} onChange={(inspector) => updatePanels({ inspector })} />}
+        <aside hidden={!inspectorVisible} role={narrow ? "dialog" : "region"} aria-label="Vues" className={`inspector-panel${narrow ? " inspector-drawer" : ""}`}
           style={{ width: clamp(panels.inspector) }} onKeyDown={(event) => {
             if (event.key === "Escape" && narrow) { event.preventDefault(); event.stopPropagation(); closeDrawer(); }
           }}>
-          <header><h2>Inspecteur</h2>{narrow && <button ref={drawerClose} type="button" onClick={closeDrawer}>Fermer l’inspecteur</button>}</header>
-          {selectedTable ? <><h3>{selectedTable.id}</h3><p>{selectedTable.columns.length} champs</p></> : <p>Sélectionnez une table pour voir ses détails.</p>}
-          {session.graph && <ViewInspector graph={session.graph} presentation={session.presentation} source={session.source} selectedIds={selectedIds} query={query}
-            onQueryChange={setQuery} onSelectTable={(id) => { const selection: EntitySelection = { kind: "table", id, tableId: id }; selectSource(selection); focusDiagram(selection); }}
+          <header><h2>Vues</h2>{narrow && <button ref={drawerClose} type="button" onClick={closeDrawer}>Fermer les vues</button>}</header>
+          {session.graph && <ViewInspector key={projectPath} graph={session.graph} presentation={session.presentation} source={session.source} selectedIds={selectedIds} query={query}
+            navigationRef={viewNavigation} onVisibilityPreview={setVisibilityPreview} onQueryChange={setQuery} onSelectTable={(id) => {
+              const selection: EntitySelection = { kind: "table", id, tableId: id };
+              setSelectedEntity(selection); setSelectedId(id); setSelectedIds([id]);
+              let next = session.presentation;
+              for (const [groupId, group] of Object.entries(next.views[next.activeViewId]!.groups))
+                if (group.collapsed && group.tableIds.includes(id)) next = updateGroup(next, next.activeViewId, groupId, { collapsed: false });
+              if (next !== session.presentation) changeDiagram(next);
+              setFocusRequest(previous => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
+            }}
             onPresentationChange={changeDiagram} onSourceChange={(value) => { sourceOperation.current = true; session.setSource(value); }} readOnly={readOnly} />}
         </aside>
       </>}

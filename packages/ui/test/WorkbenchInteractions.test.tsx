@@ -9,25 +9,38 @@ import { setupFlowDom } from "./flow-dom.js";
 
 const source = "// keep\nTable users {\n id int [pk]\n team_id int\n}\nTable teams {\n id int [pk]\n}\nRef membership: users.team_id > teams.id\n";
 function result() { const opened = openResult(); return { ...opened, structuredContent: { ...opened.structuredContent, graph: parseDbml(source, "demo.dbcd").graph! }, _meta: { dbcodex: { ...opened._meta.dbcodex, sourceText: source } } }; }
-const bridge = () => ({ callTool: vi.fn().mockResolvedValue({ structuredContent: { saved: true } }), requestDisplayMode: vi.fn().mockResolvedValue(undefined) });
+const bridge = () => ({ callTool: vi.fn(async (name: string, args: Record<string, unknown>) => name === "validate_dbcd_draft" ? { structuredContent: parseDbml(args.sourceText as string, "demo.dbcd") } : { structuredContent: { saved: true } }), requestDisplayMode: vi.fn().mockResolvedValue(undefined) });
 beforeEach(() => { setupFlowDom(); Object.defineProperty(window, "innerWidth", { value: 1200, writable: true, configurable: true }); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("source navigation and diagram commands", () => {
-  it("navigates from diagram tables, columns, relations and search results to exact source ranges", async () => {
+  it("keeps single clicks graphical and navigates on double clicks to exact current ranges", async () => {
     const opened = result(), graph = opened.structuredContent.graph;
     const { container } = render(<ProjectWorkbench result={opened} bridge={bridge()} />);
     const editor = EditorView.findFromDOM(container.querySelector<HTMLElement>(".cm-editor")!)!;
     const assertSelected = (range: { start: { offset: number }; end: { offset: number } }) => expect(editor.state.selection.main).toMatchObject({ from: range.start.offset, to: range.end.offset });
     fireEvent.click(await screen.findByRole("group", { name: "Table public.users" }));
-    assertSelected(graph.tables.find((table) => table.id === "public.users")!.sourceRange!);
+    expect(editor.state.selection.main.empty).toBe(true);
+    fireEvent.doubleClick(screen.getByRole("group", { name: "Table public.users" }));
+    await waitFor(() => assertSelected(graph.tables.find((table) => table.id === "public.users")!.sourceRange!));
+    const selection = editor.state.selection.main;
     fireEvent.click(screen.getByRole("button", { name: "Champ public.users.team_id" }));
-    assertSelected(graph.tables.find((table) => table.id === "public.users")!.columns.find((column) => column.name === "team_id")!.sourceRange!);
-    fireEvent.keyDown(screen.getByRole("group", { name: /Edge from public.users/ }), { key: "Enter" });
-    assertSelected(graph.relations[0]!.sourceRange!);
+    expect(editor.state.selection.main).toEqual(selection);
+    fireEvent.doubleClick(screen.getByRole("group", { name: /Edge from public.users/ }));
+    await waitFor(() => assertSelected(graph.relations[0]!.sourceRange!));
     fireEvent.click(screen.getByRole("button", { name: "Centrer public.teams" }));
-    assertSelected(graph.tables.find((table) => table.id === "public.teams")!.sourceRange!);
+    assertSelected(graph.relations[0]!.sourceRange!);
     await waitFor(() => expect(container.querySelector<HTMLElement>(".react-flow__viewport")!.style.transform).not.toBe("translate(0px,0px) scale(1)"));
+  });
+  it("never selects an old range when the current draft cannot locate a definition", async () => {
+    const { container } = render(<ProjectWorkbench result={result()} bridge={bridge()} />);
+    const node = await screen.findByRole("group", { name: "Table public.users" });
+    const editor = EditorView.findFromDOM(container.querySelector<HTMLElement>(".cm-editor")!)!;
+    act(() => editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: "Table broken {" }, selection: { anchor: 0 } }));
+    fireEvent.doubleClick(node);
+    expect(await screen.findByText(/Définition introuvable/)).toBeTruthy();
+    expect(editor.state.doc.toString()).toBe("Table broken {");
+    expect(editor.state.selection.main.empty).toBe(true);
   });
   it("selects and centers a table, column and relation from source cursor movement", async () => {
     const opened = result(), graph = opened.structuredContent.graph;
@@ -53,7 +66,7 @@ describe("source navigation and diagram commands", () => {
     const editor = EditorView.findFromDOM(container.querySelector<HTMLElement>(".cm-editor")!)!;
     act(() => editor.dispatch({ selection: { anchor: graph.relations[0]!.sourceRange!.start.offset + 1 } }));
     expect(await screen.findByRole("group", { name: /Edge from public.users/ })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "Vue" })).toHaveProperty("value", "all");
+    expect(screen.getByRole("button", { name: "Choisir une vue" }).textContent).toContain("Default View");
     expect(screen.getByRole("group", { name: "Table public.teams" })).toBeTruthy();
   });
   it("undoes and redoes diagram movement independently of text and confirms reorganization", async () => {

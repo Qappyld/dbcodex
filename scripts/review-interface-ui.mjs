@@ -1,0 +1,86 @@
+import { _electron as electron } from 'file:///C:/Users/quentin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { resolve, basename, dirname } from 'node:path';
+import { createDbcdProject } from '../packages/core/dist/index.js';
+import assert from 'node:assert/strict';
+
+await mkdir('build/ui-review', { recursive: true });
+const path = resolve(`build/ui-review/interface-${Date.now()}.dbcd`);
+await createDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path), sourceText: await readFile('fixtures/commerce-7-tables.dbml', 'utf8') });
+const packagedExecutable = process.env.DBCODEX_EXECUTABLE;
+const app = await electron.launch({ executablePath: resolve(packagedExecutable || 'node_modules/electron/dist/electron.exe'),
+  args: packagedExecutable ? [path] : [resolve('packages/desktop/dist/main.js'), path],
+  env: Object.fromEntries(Object.entries(process.env).filter(([key]) => key !== 'ELECTRON_RUN_AS_NODE')) });
+const checks = [], errors = [];
+let initialTheme;
+try {
+  const page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
+  await page.locator('.react-flow__node-table').first().waitFor();
+  initialTheme = await page.locator('html').getAttribute('data-theme');
+  if (initialTheme === 'dark') await page.getByRole('button', { name: 'Thème clair', exact: true }).click();
+  await page.locator('html[data-theme=light]').waitFor();
+  const tools = page.getByRole('group', { name: 'Outils du diagramme', exact: true });
+  await tools.waitFor();
+  assert.equal(await tools.getByRole('button', { name: 'Routage automatique', exact: true }).count(), 1);
+  const minimap = tools.getByRole('button', { name: 'Afficher la mini-carte', exact: true });
+  assert.equal(await minimap.innerText(), '');
+  await minimap.click(); await page.locator('.react-flow__minimap').waitFor();
+  await tools.getByRole('button', { name: 'Masquer la mini-carte' }).click();
+  await page.locator('.react-flow__minimap').waitFor({ state: 'hidden' });
+  checks.push('Mini-carte icon toggle and automatic routing in floating toolbar');
+  if (await page.getByRole('button', { name: 'Afficher les vues', exact: true }).isVisible()) await page.getByRole('button', { name: 'Afficher les vues', exact: true }).click();
+  assert.equal(await page.locator('.view-inspector fieldset').count(), 0);
+  await page.getByRole('button', { name: 'Choisir une vue' }).click();
+  await page.screenshot({ path: resolve('build/ui-review/interface-views.png') });
+  await page.getByRole('button', { name: 'Choisir une vue' }).click();
+  checks.push('View panel has visibility controls without duplicate group management');
+  await page.locator('.react-flow__node-table').first().press('Enter');
+  const group = tools.getByRole('button', { name: 'Groupe', exact: true });
+  await group.click();
+  const dialog = page.getByRole('dialog', { name: 'Créer un groupe', exact: true });
+  await dialog.waitFor();
+  assert.equal(await page.getByLabel('Nom du groupe', { exact: true }).evaluate(element => element === document.activeElement), true);
+  await page.getByLabel('Nom du groupe', { exact: true }).fill('Gestion clients');
+  await page.screenshot({ path: resolve('build/ui-review/interface-group.png') });
+  const button = await dialog.getByRole('button', { name: 'Créer le groupe', exact: true }).boundingBox();
+  assert.ok(button.width > 90);
+  await page.getByLabel('Nom du groupe', { exact: true }).press('Escape');
+  await dialog.waitFor({ state: 'hidden' });
+  assert.equal(await group.evaluate(element => element === document.activeElement), true);
+  await group.click(); await page.getByLabel('Nom du groupe', { exact: true }).fill('Gestion clients');
+  await page.getByLabel('Nom du groupe', { exact: true }).press('Enter');
+  await dialog.waitFor({ state: 'hidden' });
+  await page.getByRole('button', { name: 'Réduire Gestion clients', exact: true }).click();
+  await page.getByRole('button', { name: 'Développer Gestion clients', exact: true }).click();
+  checks.push('Group creation: focus, Escape cancellation, Enter submit, collapse and expand');
+  await tools.getByRole('button', { name: 'Routage automatique', exact: true }).click();
+  await page.locator('.relation-route-tools[aria-busy=false]').waitFor();
+  await page.getByLabel('Options de routage automatique').click();
+  const routeOption = page.getByRole('button', { name: 'Recalculer toutes les relations, y compris les tracés manuels', exact: true });
+  await routeOption.waitFor({ state: 'visible' });
+  await page.screenshot({ path: resolve('build/ui-review/interface-routing.png') });
+  await routeOption.click();
+  await page.locator('.relation-route-tools[aria-busy=false]').waitFor();
+  await page.setViewportSize({ width: 850, height: 650 });
+  await page.locator('.react-flow__node-table').first().press('Enter');
+  await group.click(); await dialog.waitFor();
+  await page.screenshot({ path: resolve('build/ui-review/interface-compact.png') });
+  const bounds = await dialog.boundingBox();
+  assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 850);
+  assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= 650);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+  await page.getByLabel('Nom du groupe', { exact: true }).press('Escape');
+  await page.getByRole('button', { name: 'Thème sombre', exact: true }).click();
+  await page.locator('html[data-theme=dark]').waitFor();
+  await group.click(); await dialog.waitFor();
+  await page.screenshot({ path: resolve('build/ui-review/interface-dark.png') });
+  checks.push('Compact layout stays within canvas; dark theme');
+  assert.deepEqual(errors, []);
+  await writeFile('build/ui-review/interface-interactions.json', JSON.stringify({ passed: true, checks, errors }, null, 2));
+  console.log(JSON.stringify({ passed: true, checks }, null, 2));
+} finally {
+  const page = await app.firstWindow();
+  if (initialTheme && await page.locator('html').getAttribute('data-theme') !== initialTheme)
+    await page.getByRole('button', { name: initialTheme === 'dark' ? 'Thème sombre' : 'Thème clair', exact: true }).click();
+  await app.close();
+}

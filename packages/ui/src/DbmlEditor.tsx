@@ -72,6 +72,7 @@ export function DbmlEditor({ value, diagnostics, readOnly, onChange, onSave, onS
     const from = Math.min(editor.state.doc.length, Math.max(0, selectionRequest.from));
     const to = Math.min(editor.state.doc.length, Math.max(from, selectionRequest.to));
     editor.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: "center" }), annotations: diagramNavigation.of(true) });
+    editor.focus();
   }, [selectionRequest]);
 
   return <div ref={container} className="dbml-editor" />;
