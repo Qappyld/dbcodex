@@ -14,8 +14,10 @@ Le workflow compile, teste, package, signe et audite également en mode validati
 - Job : https://github.com/Qappyld/dbcodex/actions/runs/38698590716/job/116300985914
 - Première release publique existante : https://github.com/Qappyld/dbcodex-releases/releases/tag/v0.1.1
 
-## Étape restant à terminer
+## Token de publication configuré
 
-`RELEASES_TOKEN` n'est pas encore configuré. GitHub demande une réauthentification pour créer un token à permissions fines, limité à `Qappyld/dbcodex-releases` avec **Contents: Read and write**. Une demande GitHub Mobile a été déclenchée puis a expiré sans confirmation. La connexion et la création du nouvel identifiant demandent une intervention de l'utilisateur. Le token doit ensuite être enregistré sous ce nom dans les secrets Actions du dépôt privé.
+Après réauthentification et génération du token par l'utilisateur, `RELEASES_TOKEN` a été enregistré dans les secrets Actions du dépôt privé, sans afficher ni enregistrer sa valeur dans les fichiers locaux. Le token est limité à `Qappyld/dbcodex-releases` avec **Contents: Read and write** et Metadata en lecture seule. Son expiration est le **13 janvier 2027** ; il faudra renouveler le token et remplacer le secret avant cette date pour continuer les publications.
+
+Le workflow ciblé `check-release-access.yml` a validé avec ce secret l'authentification, le dépôt configuré public et non archivé, ainsi que la permission de push retournée par GitHub. Il n'a créé aucune release ni modifié de fichier dans le dépôt public. Exécution réussie : https://github.com/Qappyld/dbcodex/actions/runs/38701040283. La configuration des deux secrets et du workflow est terminée ; une véritable publication future reste à déclencher avec une nouvelle version.
 
 Une prochaine publication devra augmenter la version dans `release-config.json` ; la version publique 0.1.1 existante ne doit pas être remplacée. Le workflow refusera de recréer un tag déjà publié.
