@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { PresentationDocument } from "@dbcodex/core";
 import { readDbcdProjectResult, type DisplayMode, type WorkbenchBridge } from "./bridge.js";
 import { useDocumentSession, type DocumentSession } from "./useDocumentSession.js";
@@ -168,6 +168,42 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
     setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
     setFocusRequest((previous) => ({ ...selection, nonce: (previous?.nonce ?? 0) + 1 }));
   };
+  useLayoutEffect(() => bridge.subscribeToLiveRequest?.(request => {
+    if (request.action === "read") return {
+      projectPath, sourceText: session.source, presentation: session.presentation, graph,
+      diagnostics: [...session.diagnostics, ...semanticDiagnostics], generation: session.generation,
+      dirty: session.dirty, validating: session.validating, saving: session.saving,
+      readOnly, conflict: !!session.conflict, recovery: !!session.recovery,
+      graphIsLastValid: session.validating || session.diagnostics.some(item => item.severity === "error"),
+      revisions: session.revisions, selectedIds, selectedEntity, editorTab, historyOpen,
+    };
+    if (request.action !== "navigate" || !graph) throw Error("Navigation indisponible.");
+    let selection: EntitySelection | undefined;
+    if (request.kind === "table") {
+      const table = graph.tables.find(table => table.id === request.id);
+      if (table) selection = { kind: "table", id: table.id, tableId: table.id };
+    } else if (request.kind === "column") {
+      const table = graph.tables.find(table => table.columns.some(column => column.id === request.id));
+      if (table) selection = { kind: "column", id: request.id!, tableId: table.id };
+    } else if (request.kind === "relation") {
+      const relation = graph.relations.find(relation => relation.id === request.id);
+      if (relation) selection = { kind: "relation", id: relation.id, tableId: relation.source.tableId };
+    }
+    if (!selection) throw Error("Cible introuvable dans le diagramme courant.");
+    const view = displayedPresentation.views[displayedPresentation.activeViewId];
+    const relation = selection.kind === "relation" ? graph.relations.find(item => item.id === selection.id) : undefined;
+    const targets = relation ? [relation.source.tableId, relation.target.tableId] : [selection.tableId];
+    const definition = graph.views?.find(item => dbmlViewIds(graph).get(item.id) === displayedPresentation.activeViewId);
+    if (!view || targets.some(id => (!view.system && !view.nodes[id]) || view.nodes[id]?.hidden
+      || (definition && !definition.tableIds.includes(id))
+      || Object.values(view.groups).some(group => group.collapsed && group.tableIds.includes(id)))) {
+      throw Error("Cible masquée dans la vue courante. Affichez-la dans l’atelier avant de naviguer.");
+    }
+    // Navigation is transient: unlike focusDiagram, it never reveals nodes or changes views.
+    setSelectedEntity(selection); setSelectedId(selection.tableId); setSelectedIds([selection.tableId]);
+    setFocusRequest(previous => ({ ...selection!, nonce: (previous?.nonce ?? 0) + 1 }));
+    return { accepted: true, selection };
+  }));
   useEffect(() => { setDiagramHistory({ past: [], future: [] }); setReorganizeOpen(false); setEditorTab("dbml");setLookupRequest(null); setVisibilityPreview(null); }, [projectPath]);
   useEffect(() => { if (narrow && drawerOpen) drawerClose.current?.focus(); }, [narrow, drawerOpen]);
   const closeDrawer = (): void => {
@@ -197,6 +233,30 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
   const inspectorVisible = narrow ? drawerOpen : !panels.inspectorCollapsed;
   const invalid = session.diagnostics.some((diagnostic) => diagnostic.severity === "error");
   const semanticInvalid=semanticDiagnostics.some(d=>d.severity==="error");
+  const canSave = !readOnly && !session.conflict && session.dirty && !session.saving && !copyPending && !session.validating && !invalid && !semanticInvalid;
+  const saveAsBusy = useRef(false);
+  // The session validates the latest text itself, including an edit whose debounce is still pending.
+  const saveCurrent = () => { if (!readOnly && !session.conflict && session.dirty && !session.saving && !saveAsBusy.current) void session.save(); };
+  const saveAs = async () => {
+    if (!bridge.saveAs || saveAsBusy.current || session.saving) return;
+    saveAsBusy.current = true;
+    setCopyPending(true); setDisplayMessage("");
+    try { await bridge.saveAs({ sourceText: session.source, presentation: session.presentation }); }
+    catch (error) { setDisplayMessage(error instanceof Error ? error.message : "Enregistrement impossible."); }
+    finally { saveAsBusy.current = false; setCopyPending(false); }
+  };
+  const saveActions = useRef({ saveCurrent, saveAs });
+  saveActions.current = { saveCurrent, saveAs };
+  useEffect(() => {
+    const keyboard = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s") return;
+      event.preventDefault(); event.stopPropagation();
+      if (!event.repeat) { if (event.shiftKey) void saveActions.current.saveAs(); else saveActions.current.saveCurrent(); }
+    };
+    window.addEventListener("keydown", keyboard, true);
+    const unsubscribe = bridge.subscribeToSaveRequest?.(as => { if (as) void saveActions.current.saveAs(); else saveActions.current.saveCurrent(); });
+    return () => { window.removeEventListener("keydown", keyboard, true); unsubscribe?.(); };
+  }, [bridge]);
   const constructionLabel=session.presentation.model?.profile.mode==="sharepoint"?"SharePoint":session.presentation.model?.profile.mode==="dataverse"?"Dataverse":"Construction";
   const toggleEditor=(tab:typeof editorTab)=>{setEditorTab(tab);updatePanels({editorCollapsed:tab===editorTab?!panels.editorCollapsed:false});};
 
@@ -209,7 +269,8 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
       <span className="project-mode" title="Type fixé à la création du projet">{modeLabel(session.presentation.model?.profile)}{session.presentation.model?.profile.mode==="sql"?` · ${session.presentation.model.profile.dialect}`:""}</span>
       <span role="status">{readOnly ? "Lecture seule" : session.saving ? "Enregistrement…" : session.dirty ? "Modifications non enregistrées" : "Enregistré"}</span>
       <span>{session.validating ? "Validation…" : invalid ? "DBML invalide" : "DBML valide"}</span>
-      <button type="button" disabled={readOnly || !!session.conflict || !session.dirty || session.saving || session.validating || invalid || semanticInvalid} onClick={() => void session.save()} title="Enregistrer" aria-label="Enregistrer"><ActionIcon name="save" /><span className="action-label">Enregistrer</span></button>
+      <button type="button" disabled={!canSave} onClick={saveCurrent} title="Enregistrer (Ctrl+S)" aria-label="Enregistrer"><ActionIcon name="save" /><span className="action-label">Enregistrer</span></button>
+      {bridge.saveAs && <button type="button" disabled={copyPending || session.saving || session.validating || invalid || semanticInvalid} onClick={() => void saveAs()} title="Enregistrer sous… (Ctrl+Maj+S)" aria-label="Enregistrer sous"><ActionIcon name="save" /><span className="action-label">Enregistrer sous…</span></button>}
       {bridge.saveCopy && <button disabled={copyPending || session.validating || invalid} onClick={() => { setCopyPending(true); void bridge.saveCopy!({ sourceText: session.source, presentation: session.presentation }).catch(error => setDisplayMessage(error instanceof Error ? error.message : "Copie impossible.")).finally(() => setCopyPending(false)); }} title="Enregistrer une copie" aria-label="Enregistrer une copie"><ActionIcon name="copy" /><span className="action-label">Enregistrer une copie</span></button>}
       <button type="button" disabled={readOnly || historyBusy || session.saving || !!session.conflict || !diagramHistory.past.length} onClick={() => void travelDiagram(false)} title="Annuler le diagramme ou la construction" aria-label="Annuler le diagramme"><ActionIcon name="undo" /><span className="action-label">Annuler</span></button>
       <button type="button" disabled={readOnly || historyBusy || session.saving || !!session.conflict || !diagramHistory.future.length} onClick={() => void travelDiagram(true)} title="Rétablir le diagramme ou la construction" aria-label="Rétablir le diagramme"><ActionIcon name="redo" /><span className="action-label">Rétablir</span></button>
@@ -245,7 +306,7 @@ export function DbcdWorkbench({ session, bridge, projectPath, readOnly = false, 
           onClick={() => toggleEditor("dbml")}><span>DBML</span></button><button className="editor-toggle" type="button" aria-label={`Éditeur ${constructionLabel}`} aria-pressed={!panels.editorCollapsed&&editorTab==="builder"} aria-expanded={!panels.editorCollapsed&&editorTab==="builder"} onClick={()=>toggleEditor("builder")}><span>{constructionLabel}</span></button></nav>
         <div className="editor-content" hidden={panels.editorCollapsed}>
           <div className="dbml-pane" hidden={editorTab!=="dbml"}>
-          <DbmlEditor value={session.source} diagnostics={session.diagnostics} readOnly={readOnly} onChange={session.setSource} onSave={() => void session.save()}
+          <DbmlEditor value={session.source} diagnostics={session.diagnostics} readOnly={readOnly} onChange={session.setSource} onSave={saveCurrent}
             selectionRequest={sourceRequest} onSelectionChange={(offset) => { const selection = session.graph && entityAtOffset(session.graph, offset); if (selection) focusDiagram(selection); }} />
           {session.diagnostics.length > 0 && <ul className="diagnostics" aria-label="Diagnostics">{session.diagnostics.map((diagnostic, index) => <li key={index}>
             {diagnostic.location ? `L${diagnostic.location.start.line}:${diagnostic.location.start.column} — ` : ""}{diagnostic.message}

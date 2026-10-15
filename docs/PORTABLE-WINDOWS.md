@@ -8,6 +8,16 @@ Le dossier `data/` est créé à côté de cet EXE pour conserver les préféren
 
 Créer un projet, ouvrir un `.dbcd` ou importer un `.dbml`. Enregistrer avec le bouton ou Ctrl+S. L’export DBML contient le modèle enregistré ; enregistrer les modifications avant l’export. Ouvrir un autre projet crée une autre fenêtre.
 
+## Connexion MCP à partir de la version 0.1.6
+
+Pour permettre à un client MCP local de consulter le projet ouvert sans contrôler la souris, lancer l’EXE avec `--mcp` (par exemple depuis PowerShell : `& '.\DBCodex-0.1.6-win-x64.exe' --mcp`). La fenêtre s’ouvre normalement et le serveur MCP Streamable HTTP écoute sur `http://127.0.0.1:31425/mcp`. Un autre port peut être choisi avec `--mcp-port=31426`.
+
+Les paramètres de connexion sont écrits dans `%USERPROFILE%\.dbcodex\live\<identifiant>.json` : choisir celui dont `applicationRoot` correspond au dossier de cet EXE, puis reporter `url` et `httpHeaders.Authorization` dans le client MCP. Ces fichiers contiennent une clé privée locale : ne pas les partager. L’EXE unique ne doit pas être configuré comme serveur stdio ; son lanceur ne transmet pas la sortie standard.
+
+Les trois outils permettent de lister les projets ouverts, lire la source en mémoire (modifications non enregistrées comprises) et sélectionner/centrer une table, une colonne ou une relation visible. Une cible masquée est refusée sans modifier la vue. La passerelle ne propose pas d’écriture du schéma. La lecture transmet explicitement le contenu demandé à l’assistant et à son fournisseur.
+
+Le client doit prendre en charge HTTP local et l’en-tête d’authentification. Un client cloud ou situé sur un autre poste ne peut pas joindre cette adresse locale directement. Aucun tunnel distant n’est fourni. Fermer l’application arrête la connexion ; déplacer l’EXE dans un autre dossier demande de reprendre les nouveaux paramètres. Pour des processus distincts, utiliser des dossiers et des ports distincts.
+
 Clic simple : sélection graphique. Double-clic sur l’en-tête de table, une relation ou un groupe : définition DBML sélectionnée et éditeur ouvert. Avec un texte invalide, le dernier diagramme valide reste affiché ; la navigation refuse une plage incertaine.
 
 Les vues et groupes restent dans le projet. La barre du bas propose disposition, relations, grille, mini-carte, routage, détail, recherche, groupe, couleur et note. La mini-carte se commande par son icône. Maj+clic sélectionne plusieurs tables ; **Groupe** ouvre le formulaire de création avec nom et couleur. Entrée crée le groupe, Échap annule. Les groupes se réduisent ou se développent depuis leur en-tête et leur couleur se règle depuis le diagramme. Le panneau **Vues** reste consacré aux vues et à la visibilité des tables. Les notes et couleurs de table sont enregistrées avec la présentation et les révisions. L’historique permet de restaurer dans une nouvelle révision.
@@ -67,4 +77,4 @@ La version a été essayée sur l’hôte de développement Windows Server 2025 
 5. Déplacer le dossier portable avec un projet dans un sous-dossier. Vérifier thème et ouverture du récent. Remplacer seulement les fichiers applicatifs en conservant `data/`.
 6. Dans OneDrive, utiliser un projet disponible localement, tester déplacement, indisponibilité puis relocalisation. Modifier une copie du projet depuis un autre outil pendant une édition et vérifier le conflit et Enregistrer une copie.
 
-Le verrou concerne uniquement les instances locales. Aucun verrou entre deux PC via OneDrive, aucune synchronisation ou fusion automatique de bases n’est promis. Aucune connexion IA, discussion ou proposition n’est livrée dans cette version.
+Le verrou concerne uniquement les instances locales. Aucun verrou entre deux PC via OneDrive, aucune synchronisation ou fusion automatique de bases n’est promis. Aucun assistant intégré, fournisseur IA embarqué ou éditeur de propositions n’est livré ; la connexion facultative à un client externe passe par la passerelle MCP locale décrite ci-dessus.

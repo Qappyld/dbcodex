@@ -14,7 +14,11 @@ export function PortableApp() {
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const fileMenu = useRef<HTMLDetailsElement>(null);
   const fileTrigger = useRef<HTMLElement>(null);
+  const saveRequest = useRef<((saveAs: boolean) => void) | null>(null);
   const bridge = useMemo<WorkbenchBridge>(() => ({ refreshProjects: true, callTool: (name, args) => api.call(name, args),
+    subscribeToLiveRequest: handler => api.onLiveRequest(handler),
+    subscribeToSaveRequest: listener => { saveRequest.current = listener; return () => { saveRequest.current = null; }; },
+    saveAs: async input => { const next = await api.call("save_as", input); if (next) { setResult(next); await refresh(); } },
     saveCopy: async input => { await api.call("save_copy", input); },
     subscribeToTeardown: listener => api.onClose(listener), requestDisplayMode: async mode => { if (mode === "fullscreen") await document.documentElement.requestFullscreen(); else if (document.fullscreenElement) await document.exitFullscreen(); } }), []);
   const refresh = async () => setPrefs(await api.call("preferences"));
@@ -37,6 +41,8 @@ export function PortableApp() {
       <div className="file-menu-content">
         <button disabled={pending} onClick={() => { if(fileMenu.current)fileMenu.current.open=false;setNewProjectOpen(true); }}><ActionIcon name="new" />Nouveau projet</button>
         <button disabled={pending} onClick={() => void run("open")}><ActionIcon name="open" />Ouvrir un fichier .dbcd…<kbd>Ctrl+O</kbd></button>
+        <button disabled={pending || !result} onClick={() => { if (fileMenu.current) fileMenu.current.open = false; saveRequest.current?.(false); }}><ActionIcon name="save" />Enregistrer<kbd>Ctrl+S</kbd></button>
+        <button disabled={pending || !result} onClick={() => { if (fileMenu.current) fileMenu.current.open = false; saveRequest.current?.(true); }}><ActionIcon name="save" />Enregistrer sous…<kbd>Ctrl+Maj+S</kbd></button>
         <div className="recent-heading">Ouvrir un fichier récent</div>
         {!prefs?.recent?.length && <p className="recent-empty">Aucun fichier récent.</p>}
         <div className="recent-menu-list">{prefs?.recent?.map((item: any) => <button key={item.entry} disabled={pending} title={item.path} onClick={() => void run("open", { path: item.path })}><ActionIcon name="history" /><span><strong>{item.name}</strong><small>{item.path}</small>{unavailable.includes(item.path) && <small>Indisponible · cliquer pour réessayer</small>}</span></button>)}</div>
@@ -49,7 +55,7 @@ export function PortableApp() {
     <UpdatePanel api={api} />
     <button className="theme-button" title={prefs?.theme === "dark" ? "Thème clair" : "Thème sombre"} aria-label={prefs?.theme === "dark" ? "Thème clair" : "Thème sombre"} onClick={() => void run("theme", { theme: prefs?.theme === "dark" ? "light" : "dark" })}><ActionIcon name="theme" /></button></header>
     {prefs?.notice && <p className="portable-notice" role="status">{prefs.notice}</p>}{error && <p className="portable-error" role="alert">{error}<button onClick={() => setError("")}>Fermer</button></p>}
-    {result ? <ProjectWorkbench result={result} bridge={bridge} /> : <section className="portable-home"><h1>Vos schémas, dans un seul fichier.</h1><p>Créez un projet ou ouvrez un .dbcd pour éditer son DBML, organiser le diagramme et retrouver ses révisions.</p>
+    {result ? <ProjectWorkbench key={(result as any)._meta?.dbcodex?.projectId} result={result} bridge={bridge} /> : <section className="portable-home"><h1>Vos schémas, dans un seul fichier.</h1><p>Créez un projet ou ouvrez un .dbcd pour éditer son DBML, organiser le diagramme et retrouver ses révisions.</p>
       <div className="home-actions"><button disabled={pending} onClick={() => setNewProjectOpen(true)}><ActionIcon name="new" />Créer un projet</button><button disabled={pending} onClick={() => void run("open")}><ActionIcon name="open" />Ouvrir un fichier .dbcd</button></div><h2>Projets récents</h2>{!prefs?.recent?.length && <p>Aucun projet récent.</p>}<ul>{prefs?.recent?.map((item: any) => <li key={item.entry}><div><strong>{item.name}</strong><small title={item.path}>{item.path}</small>{unavailable.includes(item.path) && <span>Projet indisponible</span>}</div>
         <button disabled={pending} onClick={() => void run("open", { path: item.path })}>{unavailable.includes(item.path) ? "Réessayer" : "Ouvrir"}</button><button onClick={() => void run("locate", { entry: item.entry })}>Retrouver le fichier</button><button onClick={() => void run("remove_recent", { entry: item.entry })}>Retirer</button></li>)}</ul></section>}
     {newProjectOpen&&<NewProjectDialog busy={pending} onClose={()=>setNewProjectOpen(false)} onCreate={async profile=>{if(await run("create",{profile}))setNewProjectOpen(false);}}/>}

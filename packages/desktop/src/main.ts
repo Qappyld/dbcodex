@@ -10,6 +10,9 @@ import type { Server } from "node:net";
 import { PortableUpdater } from "./updater.js";
 import releaseConfig from "../../../release-config.json" with { type: "json" };
 import { existsSync } from "node:fs";
+import { liveEndpoint, liveToken, serveLive, writeLiveConnection, type LiveRequest } from "../../mcp/src/live-session.js";
+import { serveLiveHttp } from "../../mcp/src/live-http.js";
+import { randomUUID } from "node:crypto";
 const here = dirname(fileURLToPath(import.meta.url));
 const portableExecutable = app.isPackaged ? process.env.PORTABLE_EXECUTABLE_FILE : undefined;
 const portableRoot = portableExecutable ? dirname(portableExecutable) : dirname(process.execPath);
@@ -18,6 +21,29 @@ const sessions = new Map<number, Session>();
 let preferences: PreferencesStore;
 let updater: PortableUpdater;
 let updateClosing = false;
+const mcpMode = process.argv.includes("--mcp");
+const endpoint = liveEndpoint(app.isPackaged ? portableRoot : resolve(here, "../../.."));
+const pendingLive = new Map<string, { senderId: number; resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
+function askWindow(senderId: number, request: LiveRequest): Promise<unknown> {
+  const window = BrowserWindow.fromId(senderId);
+  if (!window || window.isDestroyed()) return Promise.reject(Error("Session fermée."));
+  return new Promise((resolveRequest, reject) => {
+    const id = randomUUID();
+    const timer = setTimeout(() => { pendingLive.delete(id); reject(Error("Atelier indisponible ou occupé.")); }, 5000);
+    pendingLive.set(id, { senderId: window.webContents.id, resolve: resolveRequest, reject, timer });
+    window.webContents.send("dbcodex:live-request", { id, request });
+  });
+}
+async function liveRequest(request: LiveRequest): Promise<unknown> {
+  if (request.action === "list") return { sessions: BrowserWindow.getAllWindows().flatMap(window => {
+    const session = sessions.get(window.webContents.id);
+    return session?.path ? [{ sessionId: String(window.id), path: session.path, readOnly: !session.lock }] : [];
+  }) };
+  const window = BrowserWindow.getAllWindows().find(window => String(window.id) === request.sessionId);
+  const session = window && sessions.get(window.webContents.id);
+  if (!window || !session?.path || session.closing) throw Error("Session introuvable ou en fermeture.");
+  return { sessionId: request.sessionId, path: session.path, state: await askWindow(window.id, request) };
+}
 function windowFor(path?: string) {
   const window = new BrowserWindow({ width: 1440, height: 940, minWidth: 850, minHeight: 580, title: "DBCodex", webPreferences: { preload: join(here, "preload.cjs"), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   sessions.set(window.webContents.id, {});
@@ -30,6 +56,24 @@ function windowFor(path?: string) {
   return window;
 }
 app.whenReady().then(() => {
+  ipcMain.on("dbcodex:live-response", (event, response) => {
+    const pending = pendingLive.get(response?.id);
+    if (!pending || pending.senderId !== event.sender.id) return;
+    clearTimeout(pending.timer); pendingLive.delete(response.id);
+    if (typeof response.error === "string") pending.reject(Error(response.error)); else pending.resolve(response.result);
+  });
+  void liveToken(endpoint).then(async token => {
+    await serveLive(endpoint, liveRequest, token);
+    if (mcpMode) {
+      const http = await serveLiveHttp(endpoint, token, Number(process.argv.find(value => value.startsWith("--mcp-port="))?.split("=")[1] ?? 31425));
+      const address = http.address();
+      if (address && typeof address === "object") await writeLiveConnection(endpoint, token, address.port, app.isPackaged ? portableRoot : resolve(here, "../../.."));
+    }
+  }).catch(error => {
+    // Another instance retains its endpoint; never steal it or close a user's window.
+    process.stderr.write(`Passerelle MCP indisponible : ${error instanceof Error ? error.message : "erreur locale"}\n`);
+    if (mcpMode) dialog.showErrorBox("Connexion MCP indisponible", "La passerelle locale n’a pas pu démarrer. Vérifiez que cette version de DBCodex et le port MCP ne sont pas déjà utilisés.");
+  });
   Menu.setApplicationMenu(null);
   preferences = new PreferencesStore(app.isPackaged ? portableRoot : resolve(here, "../../.."), join(app.getPath("userData"), "preferences"));
   updater = new PortableUpdater(releaseConfig, portableRoot, join(here, "apply-update.ps1"), app.isPackaged && process.platform === "win32" && process.arch === "x64", portableExecutable);
@@ -85,6 +129,29 @@ app.whenReady().then(() => {
       return result;
     }
     if (!session.path || !session.root) throw Error("Ouvrez un projet.");
+    if (name === "save_as") {
+      if (typeof args.sourceText !== "string" || !args.presentation) throw Error("Contenu du projet absent.");
+      const output = await dialog.showSaveDialog(window, {
+        title: "Enregistrer sous", defaultPath: join(session.root, `${basename(session.path, ".dbcd")} - copie.dbcd`),
+        filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }],
+      });
+      if (output.canceled || !output.filePath) return null;
+      const path = resolve(output.filePath);
+      if (existsSync(path)) throw Error("Ce fichier existe déjà. Choisissez un nouveau nom, ou utilisez Enregistrer pour le projet courant.");
+      // Build and validate the complete current document before changing the active session.
+      await createDbcdProject({ workspaceRoot: dirname(path), projectPath: basename(path), sourceText: args.sourceText, presentation: args.presentation as any });
+      const lock = await acquireProjectLock(path);
+      if (!lock) throw Error("La copie a été enregistrée, mais elle est déjà ouverte ailleurs. Le projet courant reste ouvert.");
+      let result;
+      try {
+        result = await createHandlers(dirname(path)).openDbcd({ path: basename(path) });
+        if ("isError" in result && result.isError) throw Error("La copie a été enregistrée, mais son ouverture a échoué.");
+      } catch (error) { lock.close(); throw error; }
+      session.lock?.close();
+      session.path = path; session.root = dirname(path); session.lock = lock;
+      window.setTitle(`${basename(path)} — DBCodex`); preferences.add(path);
+      return result;
+    }
     if (name === "save_copy") {
       if (typeof args.sourceText !== "string") throw Error("Source absente.");
       const output = await dialog.showSaveDialog(window, { title: "Enregistrer une copie récupérée", filters: [{ name: "Projet DBCodex", extensions: ["dbcd"] }] });

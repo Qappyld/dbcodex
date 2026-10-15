@@ -10,6 +10,8 @@ Le MCP propose `read_dbcd`, `validate_dbcd_changes` et `update_dbcd` pour lire u
 
 ### Version portable principale
 
+Les sources incluent une passerelle de session portable pour lire le document ouvert, ses modifications en mémoire et sélectionner une table, une colonne ou une relation sans Computer Use. Dans une version construite avec cette évolution, le lancement `--mcp` expose un MCP HTTP local authentifié ; voir [connexion à la session portable](docs/live-mcp.md). Le MCP historique sur fichiers reste distinct.
+
 La livraison locale de référence est **0.1.4**, désormais disponible en fichier unique : lancez `release/DBCodex-0.1.4-win-x64.exe`, sans extraction ni installation. Les préférences sont dans `release/data/`, à conserver avec l’EXE lors d’un déplacement. Cette version regroupe les vues, le routage, les mises à jour, les modes SharePoint, Dataverse et SQL et le nouvel historique détaillé. L’ancien dossier `release/DBCodex-win32-x64/` reste conservé pour la transition ; les sauvegardes et rapports sont dans `build/consolidation/`. Le ZIP est encore généré pour les mises à jour des éditions déjà distribuées. Les sources et compilations de développement ne constituent pas une seconde installation portable.
 
 ### Construction SharePoint, Dataverse et SQL
@@ -39,6 +41,8 @@ Exporte la version courante de fixtures/demo-shop.dbcd vers fixtures/demo-shop-e
 Ces exemples sont indépendants : l’import crée un nouveau projet et refuse d’écraser un fichier existant. Le projet de démonstration est déjà fourni ; choisissez un autre nom pour tester l’import. L’export refuse également d’écraser sa destination et exporte la version enregistrée, sans inclure le brouillon.
 
 L’éditeur, le diagramme et l’inspecteur partagent une session. Déplacez les tables, créez une vue, réglez le détail (noms, clés, tous les champs), puis cliquez sur **Enregistrer**. Chaque enregistrement explicite accepté crée une révision ; le DBML invalide et les conflits de génération empêchent l’enregistrement. Les brouillons récupérables ne sont pas des révisions. Aucune écriture spéculative de schéma ou de disposition n’est effectuée.
+
+**Ctrl+S** enregistre le travail courant depuis tous les panneaux de l’atelier. Dans l’application portable, **Fichier → Enregistrer sous…** ou **Ctrl+Maj+S** crée un nouveau `.dbcd` avec le DBML courant, les vues, la disposition et les propriétés métier, puis ouvre ce nouveau projet dans la même fenêtre. La copie démarre avec son propre historique ; le projet d’origine conserve le sien. Annuler conserve le projet courant. Choisissez une destination libre : un fichier existant n’est pas remplacé.
 
 Dans **Historique**, les révisions apparaissent de la plus récente à la plus ancienne, avec date, résumé, libellé éventuel et identifiant court. Sélectionner une révision charge son contenu à la demande et affiche les différences **de cette révision vers le travail courant**, brouillon inclus. Épingler protège une révision de la rétention automatique (90 jours et cible de 500 révisions ; les révisions épinglées et courantes sont conservées). **Restaurer** remplace le travail courant par le contenu sélectionné et crée une nouvelle révision ; enregistrez d’abord les modifications à conserver. Aucun commit Git n’est créé par le plugin.
 
