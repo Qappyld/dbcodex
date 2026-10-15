@@ -1,0 +1,23 @@
+name: Vérifier les accès de publication
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier le token limité au dépôt public
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository=$(node -p "JSON.parse(require('fs').readFileSync('release-config.json', 'utf8')).repository")
+          accessible=$(gh api "repos/$repository" --jq 'select(.private == false and .archived == false and .permissions.push == true) | .full_name')
+          if [ "$accessible" != "$repository" ]; then
+            echo 'Le token ne permet pas de publier dans le dépôt public configuré.' >&2
+            exit 1
+          fi
+          echo "Accès de publication vérifié pour $repository."
